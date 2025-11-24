@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghost_Trades - Trading Platform</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.umd.js"></script>
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="header-left">
+                <div class="site-branding">
+                    <h1>Ghost_Trades</h1>
+                    <span class="powered-by">powered by <span class="deriv-red">deriv</span></span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="balance-display" id="headerBalance" style="display: none;">
+                    <span class="balance-icon"></span>
+                    <span class="balance-amount" id="headerBalanceAmount">0.00 USD</span>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="nav-bar">
+            <a href="#" class="nav-item active">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">⚡</span>
+                <span class="nav-text">Speedbot</span>
+           
+                \</a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">🤖</span>
+                <span class="nav-text">Ghost_Ai</span>
+        </nav>
+    </header>
+
+    <main>
+        <section class="auth-container">
+            <h2>API Token Login</h2>
+            
+            <label for="apiTokenInput">Enter Your Deriv API Token:</label>
+            <input type="text" id="apiTokenInput" placeholder="API Token" required>
+            
+            <button id="loginButton" onclick="handleLogin()">Login</button>
+            
+            <p id="statusMessage" class="message">Please enter your API Token to start trading.</p>
+            
+            <div id="dashboard" class="dashboard-section" style="display: none;">
+                <hr>
+                <h3>Account Summary</h3>
+                <p>Login ID: <span id="loginIdDisplay">--</span></p>
+                <p>Balance: <span id="balanceDisplay">--</span></p>
+                <p>Active Symbols Loaded: <span id="symbolCountDisplay">--</span></p>
+
+                <hr>
+                <h3>📊 Live Ticker Watch</h3>
+                <div class="market-watch-container">
+                    <table id="tickerTable" class="ticker-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Current Price</th>
+                                <th>Change</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="trading-interface" class="trading-interface" style="display: none;">
+            
+
+            <div class="trading-controls">
+                <h3>Trade Controls</h3>
+                
+                <div class="control-group">
+                    <label for="marketSelector">Market:</label>
+                    <select id="marketSelector" onchange="handleMarketChange()">
+                        <option value="">Loading Markets...</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="stakeInput">Stake (USD):</label>
+                    <input type="number" id="stakeInput" value="1.00" min="0.35" step="0.5">
+                </div>
+
+                <div class="control-group">
+                    <label for="durationInput">Duration (Ticks):</label>
+                    <input type="number" id="durationInput" value="1" min="1" max="10">
+                </div>
+
+                <button id="buyButtonUp" onclick="sendPurchaseRequest('CALL')">Buy UP</button>
+                <button id="buyButtonDown" onclick="sendPurchaseRequest('PUT')">Buy DOWN</button>
+            </div>
+
+            <div id="tradeMessageContainer" class="message trade-message">
+                </div>
+            
+        </section>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
