@@ -584,8 +584,8 @@ function scanAndPlaceMultipleTrades() {
         }
     }
 
-    // Execute best S2 recovery trade (if in recovery mode)
-    if (validS2Markets.length > 0) {
+    // Execute best S2 recovery trade (if in recovery mode and no active S2)
+    if (validS2Markets.length > 0 && botState.activeS2Count < 1) {
         // Pick the market with the highest over 4 percentage
         validS2Markets.sort((a, b) => b.over4Percentage - a.over4Percentage);
         const selected = validS2Markets[0];
@@ -626,6 +626,11 @@ function executeTradeWithTracking(marketData) {
     // Track S1 symbols to avoid duplicates
     if (marketData.mode === 'S1') {
         activeS1Symbols.add(marketData.symbol);
+    }
+
+    // Track S2 count
+    if (marketData.mode === 'S2') {
+        botState.activeS2Count++;
     }
 
     // Show comprehensive digit analysis before purchase
