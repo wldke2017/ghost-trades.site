@@ -54,14 +54,7 @@ function connectAndAuthorize(token) {
         connection.send(JSON.stringify({ authorize: token }));
     };
 
-    connection.onmessage = (msg) => {
-        try {
-            const data = JSON.parse(msg.data);
-            handleResponse(data); // Call your existing response handler
-        } catch (e) {
-            console.error('Error parsing WebSocket message:', e);
-        }
-    };
+    connection.onmessage = handleIncomingMessage;
 
     connection.onerror = handleConnectionError;
     connection.onclose = handleConnectionClose;
