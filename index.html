@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.umd.js"></script>
 </head>
 <body>
     <!-- Toast Notification Container -->
@@ -211,7 +210,7 @@
                 <h3 class="controls-title">Trade Controls</h3>
                 <div class="control-group">
                     <label for="marketSelector">Market</label>
-                    <select id="marketSelector" onchange="handleMarketChange()"></select>
+                    <select id="marketSelector"></select>
                 </div>
                 <div class="control-group">
                     <label for="stakeInput">Stake Amount</label>
@@ -262,12 +261,6 @@
             </div>
             
             <div class="trading-main-area">
-                <div class="chart-container" id="chart-container">
-                    <div class="chart-loader">
-                        <div class="loader-spinner"></div>
-                        <p>Loading Chart...</p>
-                    </div>
-                </div>
                 
                 <div class="market-watch">
                     <h4>Market Watch</h4>
@@ -880,7 +873,6 @@
     <script src="utils.js"></script>
     <script src="connection.js"></script>
     <script src="trading.js"></script>
-    <script src="chart.js"></script>
     <script src="navigation.js"></script>
     <script src="ghost_ai_bot.js"></script>
     <script src="ghost_even_odd.js"></script>
