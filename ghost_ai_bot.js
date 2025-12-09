@@ -459,15 +459,35 @@ function scanAndPlaceMultipleTrades() {
         }
     }
 
-    // Execute only ONE S1 trade at a time to prevent over-trading
-    // Also check if we already have too many concurrent trades
+    // Execute S1 trades with proper locking
+    // Allow multiple concurrent trades but prevent duplicates on same symbol
     const activeTradeCount = Object.keys(activeContracts).length;
-    const maxConcurrentTrades = 1; // Limit to maximum 1 concurrent trade
+    const maxConcurrentTrades = 5; // Increased limit to allow more opportunities
 
     if (validS1Markets.length > 0 && activeTradeCount < maxConcurrentTrades) {
         // Sort by over percentage (highest first) and pick the best one
         validS1Markets.sort((a, b) => b.overPercentage - a.overPercentage);
         const selectedMarket = validS1Markets[0];
+        
+        // CRITICAL: Acquire lock BEFORE logging or any other action
+        if (!acquireTradeLock(selectedMarket.symbol, 'ghost_ai')) {
+            // Lock failed - another bot is already trading this symbol
+            // Try the next best market if available
+            let traded = false;
+            for (let i = 1; i < validS1Markets.length && i < 3; i++) {
+                const alternativeMarket = validS1Markets[i];
+                if (acquireTradeLock(alternativeMarket.symbol, 'ghost_ai')) {
+                    addBotLog(`🔄 ${selectedMarket.symbol} locked, trading alternative: ${alternativeMarket.symbol}`, 'info');
+                    executeTradeWithTracking(alternativeMarket);
+                    traded = true;
+                    break;
+                }
+            }
+            if (!traded) {
+                addBotLog(`⚠️ All top S1 markets locked by other bots`, 'warning');
+            }
+            return;
+        }
 
         addBotLog(`🎯 Found ${validS1Markets.length} valid S1 market(s) | Trading best: ${selectedMarket.symbol} (${selectedMarket.overPercentage.toFixed(1)}% over ${selectedMarket.prediction}) | Active trades: ${activeTradeCount}/${maxConcurrentTrades}`, 'info');
 
@@ -476,7 +496,10 @@ function scanAndPlaceMultipleTrades() {
 
         executeTradeWithTracking(selectedMarket);
     } else if (validS1Markets.length > 0 && activeTradeCount >= maxConcurrentTrades) {
-        addBotLog(`⚠️ Skipping S1 trades: ${activeTradeCount} active trades (max ${maxConcurrentTrades})`, 'warning');
+        // Only log occasionally to avoid spam
+        if (Math.random() < 0.05) {
+            addBotLog(`⚠️ Max concurrent trades reached: ${activeTradeCount}/${maxConcurrentTrades}`, 'warning');
+        }
     } else if (botState.s1Blocked && botState.martingaleStepCount === 0) {
         // Log reminder that S1 is blocked when not in recovery
         if (Math.random() < 0.01) { // Log occasionally to avoid spam
@@ -505,10 +528,13 @@ function scanAndPlaceMultipleTrades() {
 }
 
 function executeTradeWithTracking(marketData) {
-    // CRITICAL: Acquire trade lock before placing trade
-    if (!acquireTradeLock(marketData.symbol, 'ghost_ai')) {
-        addBotLog(`⚠️ Skipping ${marketData.symbol} - another bot is trading this symbol`, 'warning');
-        return;
+    // Lock should already be acquired by caller, but double-check
+    if (!globalTradeLocks[marketData.symbol] || globalTradeLocks[marketData.symbol].botType !== 'ghost_ai') {
+        console.warn(`⚠️ Trade lock not held for ${marketData.symbol}, acquiring now...`);
+        if (!acquireTradeLock(marketData.symbol, 'ghost_ai')) {
+            addBotLog(`⚠️ Failed to acquire lock for ${marketData.symbol}`, 'warning');
+            return;
+        }
     }
 
     // Track this as an active contract

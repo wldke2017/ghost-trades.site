@@ -587,6 +587,12 @@ function handleEvenOddTick(tick) {
         const enoughTimePassed = timeSinceLastTrade > 1000; // Reduced from 3000ms to 1000ms
 
         if (isNewPattern || enoughTimePassed) {
+            // CRITICAL: Acquire lock BEFORE any trade execution
+            if (!acquireTradeLock(symbol, 'ghost_eodd')) {
+                // Symbol is locked by another bot, skip this trade
+                return;
+            }
+            
             // Get current GLOBAL stake (can recover on ANY volatility)
             const stake = getCurrentStake();
             
@@ -616,13 +622,17 @@ function executePatternTrade(action, symbol, pattern, stake) {
     // Validate bot is still trading (check again in case of race condition)
     if (!evenOddBotState.isTrading) {
         addEvenOddBotLog(`⚠️ Bot stopped, skipping trade execution`, 'warning');
+        releaseTradeLock(symbol, 'ghost_eodd');
         return;
     }
     
-    // CRITICAL: Acquire trade lock before placing trade
-    if (!acquireTradeLock(symbol, 'ghost_eodd')) {
-        addEvenOddBotLog(`⚠️ Skipping ${symbol} - another bot is trading this symbol`, 'warning');
-        return;
+    // Lock should already be acquired by caller, but double-check
+    if (!globalTradeLocks[symbol] || globalTradeLocks[symbol].botType !== 'ghost_eodd') {
+        console.warn(`⚠️ Trade lock not held for ${symbol}, acquiring now...`);
+        if (!acquireTradeLock(symbol, 'ghost_eodd')) {
+            addEvenOddBotLog(`⚠️ Failed to acquire lock for ${symbol}`, 'warning');
+            return;
+        }
     }
     
     // Double check target/stop loss hasn't been hit

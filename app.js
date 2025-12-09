@@ -47,7 +47,7 @@ let marketFullTickDigits = {};
 // --- GLOBAL TRADE LOCK MECHANISM ---
 // Prevents duplicate trades on the same symbol from different bots
 let globalTradeLocks = {}; // { symbol: { timestamp, botType } }
-const TRADE_LOCK_DURATION = 2000; // 2 seconds lock per symbol
+const TRADE_LOCK_DURATION = 5000; // 5 seconds lock per symbol (increased for safety)
 // ----------------------------------------
 
 // --- Chart Setup ---
