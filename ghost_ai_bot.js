@@ -72,7 +72,10 @@ async function startGhostAiBot() {
     botState.runId = `bot-${Date.now()}`;
     
     // Increment runs count only when starting a new run
-    if (!botState.runsCount) botState.runsCount = 0;
+    // Use typeof to check if undefined/null, not falsy check (0 is falsy!)
+    if (typeof botState.runsCount === 'undefined' || botState.runsCount === null) {
+        botState.runsCount = 0;
+    }
     botState.runsCount++;
 
     // Clear logs but KEEP trade history (users need to see past trades)
@@ -226,10 +229,8 @@ async function stopGhostAiBot() {
         updateGhostAIButtonStates(false);
     }
 
-    // Clear trade history table when bot stops
-    if (botHistoryTableBody) {
-        botHistoryTableBody.innerHTML = '';
-    }
+    // DON'T clear trade history when bot stops - only clear via the clear button
+    // Trade history should persist until manually cleared by user
 
     addBotLog("🛑 Bot stopped by user.", 'warning');
     botState.runId = null;
