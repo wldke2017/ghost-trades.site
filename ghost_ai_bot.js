@@ -71,14 +71,18 @@ async function startGhostAiBot() {
     isBotRunning = true;
     botState.runId = `bot-${Date.now()}`;
 
-    // Reset UI and state
-    botHistoryTableBody.innerHTML = '';
+    // Clear logs but KEEP trade history (users need to see past trades)
     botLogContainer.innerHTML = '';
     
-    // Clear any stale contracts and locks
+    // Clear any stale contracts and locks from previous session
     activeContracts = {};
     activeS1Symbols.clear();
     clearAllTradeLocks();
+    
+    // Add session start marker in logs
+    addBotLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'info');
+    addBotLog(`🔄 New Bot Session Started`, 'info');
+    addBotLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'info');
     
     // Update button states (if updateGhostAIButtonStates function exists)
     if (typeof updateGhostAIButtonStates === 'function') {
@@ -687,3 +691,24 @@ function toggleBot() {
         startGhostAiBot();
     }
 }
+
+/**
+ * Clear Ghost AI trade history
+ */
+function clearGhostAIHistory() {
+    if (confirm('Are you sure you want to clear the trade history? This cannot be undone.')) {
+        if (botHistoryTableBody) {
+            botHistoryTableBody.innerHTML = '';
+        }
+        addBotLog('📋 Trade history cleared by user', 'info');
+        showToast('Trade history cleared', 'success');
+    }
+}
+
+// Add event listener for clear history button
+document.addEventListener('DOMContentLoaded', () => {
+    const clearHistoryBtn = document.getElementById('clear-ghost-ai-history');
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', clearGhostAIHistory);
+    }
+});

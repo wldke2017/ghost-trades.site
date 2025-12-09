@@ -453,17 +453,16 @@ async function startEvenOddBot() {
     // Initialize money management
     initializeMoneyManagement();
 
-    // Reset UI and state - Clear trade history table
-    const eoddBotHistoryTableBody = document.querySelector('#eodd-bot-history-table tbody');
-    if (eoddBotHistoryTableBody) {
-        eoddBotHistoryTableBody.innerHTML = '';
-    }
-    
-    // Clear log container
+    // Clear logs but KEEP trade history (users need to see past trades)
     const eoddBotLogContainer = document.getElementById('eodd-bot-log-container');
     if (eoddBotLogContainer) {
         eoddBotLogContainer.innerHTML = '';
     }
+    
+    // Add session start marker in logs
+    addEvenOddBotLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'info');
+    addEvenOddBotLog(`🔄 New Bot Session Started`, 'info');
+    addEvenOddBotLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'info');
 
     const activeCount = Object.values(activePatterns).filter(p => p.active).length;
     addEvenOddBotLog(`🤖 GHOST_E/ODD Pattern Bot Started`);
@@ -712,6 +711,20 @@ function toggleEvenOddBot() {
 }
 
 /**
+ * Clear Even/Odd trade history
+ */
+function clearEvenOddHistory() {
+    if (confirm('Are you sure you want to clear the trade history? This cannot be undone.')) {
+        const eoddBotHistoryTableBody = document.querySelector('#eodd-bot-history-table tbody');
+        if (eoddBotHistoryTableBody) {
+            eoddBotHistoryTableBody.innerHTML = '';
+        }
+        addEvenOddBotLog('📋 Trade history cleared by user', 'info');
+        showToast('Trade history cleared', 'success');
+    }
+}
+
+/**
  * Update all Ghost E/ODD button states
  */
 function updateEvenOddButtonStates(isRunning) {
@@ -762,6 +775,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const addCustomPatternBtn = document.getElementById('addCustomPattern');
     if (addCustomPatternBtn) {
         addCustomPatternBtn.addEventListener('click', addCustomPatternToConfig);
+    }
+    
+    // Add event listener for clear history button
+    const clearHistoryBtn = document.getElementById('clear-eodd-history');
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', clearEvenOddHistory);
     }
     
     // Add event listeners for pattern action dropdowns
