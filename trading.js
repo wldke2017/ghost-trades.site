@@ -96,7 +96,7 @@ function subscribeToAllVolatilities() {
 
     sendAPIRequest({ "forget_all": "ticks" });
 
-    volatilitySymbols.forEach(symbol => {
+    volatilitySymbols.forEach((symbol, index) => {
         sendAPIRequest({ "ticks_history": symbol, "adjust_start_time": 1, "count": 1, "end": "latest", "start": 1, "style": "ticks", "subscribe": 1 });
 
         // Initialize market tick history
@@ -106,7 +106,8 @@ function subscribeToAllVolatilities() {
         };
         marketFullTickDigits[symbol] = [];
 
-        // Fetch historical tick data for distribution analysis
+        // Fetch historical tick data for distribution analysis (1000 ticks immediately)
+        console.log(`📊 Fetching 1000 historical ticks for ${symbol}...`);
         fetchTickHistory(symbol);
 
         if (!document.getElementById(`row-${symbol}`)) {
@@ -180,6 +181,75 @@ function fetchTickHistory(symbol) {
 function handleMarketChange() {
     const newSymbol = marketSelector.value;
     requestMarketData(newSymbol);
+    updateDigitAnalysisDisplay(newSymbol);
+}
+
+/**
+ * Handles distribution market selector change
+ */
+function handleDistributionMarketChange() {
+    const distributionMarketSelector = document.getElementById('distributionMarketSelector');
+    if (distributionMarketSelector) {
+        const selectedSymbol = distributionMarketSelector.value;
+        updateDigitAnalysisDisplay(selectedSymbol);
+    }
+}
+
+/**
+ * Refreshes the distribution data by fetching new 1000 ticks
+ */
+function refreshDistributionData() {
+    const distributionMarketSelector = document.getElementById('distributionMarketSelector');
+    if (!distributionMarketSelector) return;
+    
+    const selectedSymbol = distributionMarketSelector.value;
+    
+    // Show loading state
+    const skeleton = document.getElementById('digitAnalysisSkeleton');
+    const content = document.getElementById('digitAnalysisContent');
+    if (skeleton && content) {
+        skeleton.style.display = 'block';
+        content.style.display = 'none';
+    }
+    
+    // Fetch fresh 1000 ticks
+    console.log(`🔄 Refreshing distribution data for ${selectedSymbol}...`);
+    fetchTickHistory(selectedSymbol);
+    
+    // Show toast notification
+    if (typeof showToast === 'function') {
+        showToast(`Refreshing ${selectedSymbol} distribution data...`, 'info');
+    }
+}
+
+/**
+ * Updates the last digit indicator (red dot) for the current market
+ * @param {string} symbol - The symbol to update indicator for
+ * @param {number} lastDigit - The last digit from the latest tick
+ */
+function updateLastDigitIndicator(symbol, lastDigit) {
+    // Check which market is selected for distribution display
+    const distributionMarketSelector = document.getElementById('distributionMarketSelector');
+    const selectedDistributionMarket = distributionMarketSelector ? distributionMarketSelector.value : null;
+    
+    // Only update if this is the currently selected distribution market
+    if (selectedDistributionMarket && selectedDistributionMarket !== symbol) {
+        return;
+    }
+
+    // Remove active class from all indicators
+    for (let i = 0; i <= 9; i++) {
+        const indicator = document.getElementById(`lastDigitIndicator${i}`);
+        if (indicator) {
+            indicator.classList.remove('active');
+        }
+    }
+
+    // Add active class to the current digit's indicator
+    const currentIndicator = document.getElementById(`lastDigitIndicator${lastDigit}`);
+    if (currentIndicator) {
+        currentIndicator.classList.add('active');
+    }
 }
 
 /**
@@ -328,4 +398,108 @@ function populateMarketSelector() {
     }
 
     console.log('📊 Market selector populated with options:', marketSelector.options.length);
+
+    // Initialize digit analysis display for the default market
+    updateDigitAnalysisDisplay(CHART_MARKET);
+}
+
+/**
+ * Updates the digit analysis display for the selected market
+ * @param {string} symbol - The symbol to display digit analysis for
+ */
+function updateDigitAnalysisDisplay(symbol) {
+    const skeleton = document.getElementById('digitAnalysisSkeleton');
+    const content = document.getElementById('digitAnalysisContent');
+
+    // Show loading skeleton
+    if (skeleton && content) {
+        skeleton.style.display = 'block';
+        content.style.display = 'none';
+    }
+
+    // Check if we have digit distribution data
+    const distribution = calculateFullDigitDistribution(symbol);
+
+    if (!distribution) {
+        // No data available yet, keep skeleton visible
+        console.log(`⏳ Waiting for digit distribution data for ${symbol}...`);
+        setTimeout(() => updateDigitAnalysisDisplay(symbol), 1000);
+        return;
+    }
+
+    console.log(`✅ Digit distribution for ${symbol}:`, distribution);
+    console.log(`   Total ticks analyzed: ${distribution.totalTicks}`);
+    console.log(`   Most appearing: ${distribution.mostAppearingDigit} (${distribution.counts[distribution.mostAppearingDigit]} times)`);
+    console.log(`   Least appearing: ${distribution.leastAppearingDigit} (${distribution.counts[distribution.leastAppearingDigit]} times)`);
+
+    // Hide skeleton and show content
+    if (skeleton && content) {
+        skeleton.style.display = 'none';
+        content.style.display = 'block';
+    }
+
+    // Update summary
+    const mostFrequentEl = document.getElementById('mostFrequentDigit');
+    const leastFrequentEl = document.getElementById('leastFrequentDigit');
+    const distributionCheckEl = document.getElementById('distributionCheck');
+    const tickCountEl = document.getElementById('distributionTickCount');
+
+    if (mostFrequentEl) {
+        mostFrequentEl.textContent = `${distribution.mostAppearingDigit} (${distribution.counts[distribution.mostAppearingDigit]} times)`;
+    }
+
+    if (leastFrequentEl) {
+        leastFrequentEl.textContent = `${distribution.leastAppearingDigit} (${distribution.counts[distribution.leastAppearingDigit]} times)`;
+    }
+
+    if (distributionCheckEl) {
+        const isValid = distribution.mostAppearingDigit > 4 && distribution.leastAppearingDigit < 4;
+        distributionCheckEl.textContent = isValid ? 'PASS' : 'FAIL';
+        distributionCheckEl.className = `summary-value ${isValid ? 'pass' : 'fail'}`;
+    }
+
+    if (tickCountEl) {
+        tickCountEl.textContent = `${distribution.totalTicks} ticks`;
+        tickCountEl.className = distribution.totalTicks >= 1000 ? 'summary-value' : 'summary-value warning';
+    }
+
+    // Sort digits by frequency to determine ranking
+    const sortedDigits = Object.entries(distribution.counts)
+        .map(([digit, count]) => ({ digit: parseInt(digit), count }))
+        .sort((a, b) => b.count - a.count);
+
+    // Update horizontal bars with color coding based on frequency ranking
+    for (let digit = 0; digit <= 9; digit++) {
+        const barEl = document.getElementById(`digitBar${digit}`);
+        const percentEl = document.getElementById(`digitPercent${digit}`);
+
+        if (barEl && percentEl) {
+            const count = distribution.counts[digit];
+            const percentage = (count / distribution.totalTicks) * 100;
+
+            barEl.style.width = `${percentage.toFixed(1)}%`;
+            percentEl.textContent = `${percentage.toFixed(1)}%`;
+
+            // Remove all color classes
+            barEl.classList.remove('most-frequent', 'second-frequent', 'third-frequent', 'least-frequent');
+
+            // Find the rank of this digit
+            const rank = sortedDigits.findIndex(item => item.digit === digit);
+
+            // Apply color based on ranking
+            // Green = most appearing (rank 0)
+            // Blue = 2nd most appearing (rank 1)
+            // Yellow = 3rd most appearing (rank 2)
+            // Red = least appearing (rank 9)
+            if (rank === 0) {
+                barEl.classList.add('most-frequent');
+            } else if (rank === 1) {
+                barEl.classList.add('second-frequent');
+            } else if (rank === 2) {
+                barEl.classList.add('third-frequent');
+            } else if (rank === 9) {
+                barEl.classList.add('least-frequent');
+            }
+        }
+    }
 }

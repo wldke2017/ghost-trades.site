@@ -22,6 +22,7 @@ function setupNavigation() {
         e.preventDefault();
         showSection('ghost-eodd');
     });
+
 }
 
 function showSection(sectionName) {
@@ -45,4 +46,5 @@ function showSection(sectionName) {
         initializeChart();
         requestMarketData(CHART_MARKET);
     }
+
 }

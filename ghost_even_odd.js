@@ -574,6 +574,11 @@ function handleEvenOddTick(tick) {
     const tradeDecision = determineTradeFromPattern(symbol);
 
     if (tradeDecision) {
+        const patternDisplay = document.getElementById('currentPatternDisplay');
+        if (patternDisplay) {
+            patternDisplay.textContent = `${tradeDecision.pattern} (${tradeDecision.pattern.toString().length})`;
+        }
+
         // Check if this is a new pattern or enough time has passed since last trade
         const isNewPattern = tradeDecision.pattern !== lastPattern.pattern;
         const enoughTimePassed = timeSinceLastTrade > 1000; // Reduced from 3000ms to 1000ms

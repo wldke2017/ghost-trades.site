@@ -2,8 +2,60 @@
 // UTILITY FUNCTIONS
 // ===================================
 
+/**
+ * Debug function to check distribution data status
+ * Call this from console: checkDistributionData()
+ */
+function checkDistributionData() {
+    console.log('=== DISTRIBUTION DATA STATUS ===');
+    
+    const distributionMarketSelector = document.getElementById('distributionMarketSelector');
+    const selectedSymbol = distributionMarketSelector?.value || 'unknown';
+    
+    console.log(`Selected Market: ${selectedSymbol}`);
+    console.log(`\nAll Markets Data:`);
+    
+    Object.keys(marketFullTickDigits).forEach(symbol => {
+        const tickCount = marketFullTickDigits[symbol]?.length || 0;
+        console.log(`  ${symbol}: ${tickCount} ticks`);
+        
+        if (tickCount > 0) {
+            const counts = {};
+            marketFullTickDigits[symbol].forEach(d => {
+                counts[d] = (counts[d] || 0) + 1;
+            });
+            console.log(`    Distribution:`, counts);
+        }
+    });
+    
+    console.log(`\nSelected Market (${selectedSymbol}) Details:`);
+    if (marketFullTickDigits[selectedSymbol]) {
+        console.log(`  Total ticks: ${marketFullTickDigits[selectedSymbol].length}`);
+        console.log(`  First 10 digits:`, marketFullTickDigits[selectedSymbol].slice(0, 10));
+        console.log(`  Last 10 digits:`, marketFullTickDigits[selectedSymbol].slice(-10));
+    } else {
+        console.log(`  ❌ No data available for ${selectedSymbol}`);
+    }
+    
+    console.log('=== END STATUS ===');
+}
+
+// Make it available globally
+window.checkDistributionData = checkDistributionData;
+
 // Toast Notification System
-function showToast(message, type = 'info', duration = 4000) {
+function showToast(message, type = 'info', duration = null) {
+    // Set default duration based on type for quicker clearing
+    if (duration === null) {
+        const durations = {
+            error: 2000,    // 2 seconds for errors
+            warning: 3000,  // 3 seconds for warnings
+            success: 3000,  // 3 seconds for success
+            info: 4000      // 4 seconds for info
+        };
+        duration = durations[type] || 4000;
+    }
+
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
@@ -15,19 +67,32 @@ function showToast(message, type = 'info', duration = 4000) {
         info: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="8" x2="12.01" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
     };
 
+    const closeIcon = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
     toast.innerHTML = `
         <div class="toast-icon">${icons[type] || icons.info}</div>
         <div class="toast-content">
             <div class="toast-message">${message}</div>
         </div>
+        <button class="toast-close" title="Close">${closeIcon}</button>
     `;
+
+    // Add close button event listener
+    const closeButton = toast.querySelector('.toast-close');
+    closeButton.addEventListener('click', () => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(400px)';
+        setTimeout(() => toast.remove(), 300);
+    });
 
     container.appendChild(toast);
 
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(400px)';
-        setTimeout(() => toast.remove(), 300);
+        if (toast.parentNode) { // Check if still in DOM
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(400px)';
+            setTimeout(() => toast.remove(), 300);
+        }
     }, duration);
 }
 

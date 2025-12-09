@@ -2,6 +2,11 @@
 // WEBSOCKET CONNECTION MANAGEMENT
 // ===================================
 
+// Global connection variables
+let connection = null;
+let reconnectAttempts = 0;
+let reconnectTimer = null;
+
 function connectToDeriv() {
     if (connection && (connection.readyState === WebSocket.OPEN || connection.readyState === WebSocket.CONNECTING)) {
         return;

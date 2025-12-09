@@ -170,6 +170,11 @@ async function stopGhostAiBot() {
         updateGhostAIButtonStates(false);
     }
 
+    // Clear trade history table when bot stops
+    if (botHistoryTableBody) {
+        botHistoryTableBody.innerHTML = '';
+    }
+
     addBotLog("🛑 Bot stopped by user.", 'warning');
     botState.runId = null;
     updateProfitLossDisplay();
@@ -451,16 +456,24 @@ function scanAndPlaceMultipleTrades() {
         }
     }
 
-    // Execute ALL valid S1 trades (no limit, no selection)
-    if (validS1Markets.length > 0) {
-        addBotLog(`🎯 Found ${validS1Markets.length} valid S1 market(s): ${validS1Markets.map(m => m.symbol).join(', ')} | Executing ALL`, 'info');
-        
-        for (const market of validS1Markets) {
-            const lastNStr = market.lastN.join(', ');
-            addBotLog(`✓ S1 Entry: ${market.symbol} | Last ${market.lastN.length}: [${lastNStr}] ≤ ${botState.s1MaxDigit} | Over ${market.prediction}%: ${market.overPercentage.toFixed(1)}% ≥ ${botState.s1Percentage}% | Most: ${market.mostDigit} (>4) | Least: ${market.leastDigit} (<4) | Stake: $${market.stake.toFixed(2)}`, 'info');
-            
-            executeTradeWithTracking(market);
-        }
+    // Execute only ONE S1 trade at a time to prevent over-trading
+    // Also check if we already have too many concurrent trades
+    const activeTradeCount = Object.keys(activeContracts).length;
+    const maxConcurrentTrades = 3; // Limit to maximum 3 concurrent trades
+
+    if (validS1Markets.length > 0 && activeTradeCount < maxConcurrentTrades) {
+        // Sort by over percentage (highest first) and pick the best one
+        validS1Markets.sort((a, b) => b.overPercentage - a.overPercentage);
+        const selectedMarket = validS1Markets[0];
+
+        addBotLog(`🎯 Found ${validS1Markets.length} valid S1 market(s) | Trading best: ${selectedMarket.symbol} (${selectedMarket.overPercentage.toFixed(1)}% over ${selectedMarket.prediction}) | Active trades: ${activeTradeCount}/${maxConcurrentTrades}`, 'info');
+
+        const lastNStr = selectedMarket.lastN.join(', ');
+        addBotLog(`✓ S1 Entry: ${selectedMarket.symbol} | Last ${selectedMarket.lastN.length}: [${lastNStr}] ≤ ${botState.s1MaxDigit} | Over ${selectedMarket.prediction}%: ${selectedMarket.overPercentage.toFixed(1)}% ≥ ${botState.s1Percentage}% | Most: ${selectedMarket.mostDigit} (>4) | Least: ${selectedMarket.leastDigit} (<4) | Stake: $${selectedMarket.stake.toFixed(2)}`, 'info');
+
+        executeTradeWithTracking(selectedMarket);
+    } else if (validS1Markets.length > 0 && activeTradeCount >= maxConcurrentTrades) {
+        addBotLog(`⚠️ Skipping S1 trades: ${activeTradeCount} active trades (max ${maxConcurrentTrades})`, 'warning');
     } else if (botState.s1Blocked && botState.martingaleStepCount === 0) {
         // Log reminder that S1 is blocked when not in recovery
         if (Math.random() < 0.01) { // Log occasionally to avoid spam

@@ -28,12 +28,9 @@ const OAUTH_CONFIG = {
 };
 
 // --- Core State ---
-let connection = null;
 let activeSymbols = [];
 let lastPrices = {};
 let currentContractId = null;
-let reconnectAttempts = 0;
-let reconnectTimer = null;
 
 // --- Bot Toggle State ---
 let isBotRunning = false; // NEW: State for the bot
@@ -64,6 +61,12 @@ const dashboard = document.getElementById('dashboard');
 const loginIdDisplay = document.getElementById('loginIdDisplay');
 const balanceDisplay = document.getElementById('balanceDisplay');
 const symbolCountDisplay = document.getElementById('symbolCountDisplay');
+
+// Navigation
+const dashboardNav = document.getElementById('dashboard-nav');
+const speedbotNav = document.getElementById('speedbot-nav');
+const ghostaiNav = document.getElementById('ghostai-nav');
+const ghosteoddNav = document.getElementById('ghost-eodd-nav');
 
 // Trading Interface
 const tradingInterface = document.getElementById('trading-interface');
@@ -126,11 +129,7 @@ let oauthState = {
     login_id: null
 };
 
-// Navigation
-const dashboardNav = document.getElementById('dashboard-nav');
-const speedbotNav = document.getElementById('speedbot-nav');
-const ghostaiNav = document.getElementById('ghostai-nav');
-const ghosteoddNav = document.getElementById('ghost-eodd-nav');
+// Navigation elements already declared above
 
 // ===================================
 // MESSAGE ROUTER
@@ -295,7 +294,28 @@ function handleIncomingMessage(msg) {
                 const quotes = data.history.quotes || [];
                 const digits = quotes.map(quote => parseInt(quote.toString().slice(-1)));
                 marketFullTickDigits[symbol] = digits.slice(-1000); // Keep last 1000
+                
+                // Log detailed information
                 console.log(`✅ Loaded ${digits.length} historical ticks for ${symbol} distribution analysis`);
+                console.log(`   Actual ticks stored: ${marketFullTickDigits[symbol].length}`);
+                
+                // Count digit distribution for verification
+                const counts = {};
+                marketFullTickDigits[symbol].forEach(d => {
+                    counts[d] = (counts[d] || 0) + 1;
+                });
+                console.log(`   Digit counts:`, counts);
+                
+                // Update the distribution display if this is the selected market
+                const distributionMarketSelector = document.getElementById('distributionMarketSelector');
+                if (distributionMarketSelector && distributionMarketSelector.value === symbol) {
+                    if (typeof updateDigitAnalysisDisplay === 'function') {
+                        console.log(`🔄 Updating distribution display for ${symbol}`);
+                        updateDigitAnalysisDisplay(symbol);
+                    }
+                } else {
+                    console.log(`ℹ️ Data loaded for ${symbol}, but currently viewing ${distributionMarketSelector?.value || 'unknown'}`);
+                }
             }
             break;
 
@@ -324,6 +344,22 @@ function handleIncomingMessage(msg) {
                     marketFullTickDigits[symbol].push(digit);
                     if (marketFullTickDigits[symbol].length > 1000) {
                         marketFullTickDigits[symbol].shift();
+                    }
+                    
+                    // Update the last digit indicator (red dot)
+                    if (typeof updateLastDigitIndicator === 'function') {
+                        updateLastDigitIndicator(symbol, digit);
+                    }
+                    
+                    // Update distribution display if this is the selected market (every 10 ticks to avoid too many updates)
+                    const distributionMarketSelector = document.getElementById('distributionMarketSelector');
+                    if (distributionMarketSelector && distributionMarketSelector.value === symbol) {
+                        // Update every 10 ticks
+                        if (marketFullTickDigits[symbol].length % 10 === 0) {
+                            if (typeof updateDigitAnalysisDisplay === 'function') {
+                                updateDigitAnalysisDisplay(symbol);
+                            }
+                        }
                     }
                 }
 
@@ -364,6 +400,11 @@ function handleIncomingMessage(msg) {
 
                     priceCell.textContent = price.toFixed(5);
                     lastPrices[symbol] = price;
+
+                    // Update digit analysis if this is the currently selected chart market
+                    if (symbol === CHART_MARKET && typeof updateDigitAnalysisDisplay === 'function') {
+                        updateDigitAnalysisDisplay(symbol);
+                    }
                 }
             }
             break;
@@ -434,6 +475,33 @@ function handleIncomingMessage(msg) {
                     });
                 }
             }
+            // Check if this is a Market Summary bot trade
+            else if (passthrough && passthrough.purpose === 'market_summary_trade' && passthrough.run_id === window.marketSummaryBotState.runId) {
+                if (contractInfo) {
+                    window.marketSummaryBotState.activeContracts[contractInfo.contract_id] = {
+                        symbol: passthrough.symbol,
+                        barrier: passthrough.barrier,
+                        type: passthrough.type,
+                        stake: passthrough.stake
+                    };
+
+                    addMarketSummaryLog(`✅ Contract opened: ${contractInfo.contract_id} | ${passthrough.symbol} ${passthrough.type} ${passthrough.barrier}`, 'info');
+
+                    sendAPIRequest({
+                        "proposal_open_contract": 1,
+                        "contract_id": contractInfo.contract_id,
+                        "subscribe": 1,
+                        "passthrough": {
+                            "purpose": "market_summary_trade",
+                            "run_id": window.marketSummaryBotState.runId,
+                            "symbol": passthrough.symbol,
+                            "barrier": passthrough.barrier,
+                            "type": passthrough.type,
+                            "stake": passthrough.stake
+                        }
+                    });
+                }
+            }
             else if (contractInfo) {
                 currentContractId = contractInfo.contract_id;
                 const payout = parseFloat(contractInfo.payout).toFixed(2);
@@ -460,6 +528,9 @@ function handleIncomingMessage(msg) {
 
                 // Check if it's a Ghost AI bot trade that we need to process
                 if (passthrough && passthrough.purpose === 'ghost_ai_trade' && passthrough.run_id === botState.runId) {
+
+                    // Debug: Log all trade results to ensure we're catching them
+                    console.log(`🤖 Ghost AI Trade Result: ${contract.symbol} | Strategy: ${passthrough.strategy || 'S1'} | Profit: ${contract.profit} | Contract: ${contract.contract_id}`);
 
                     // Add symbol and barrier info to the contract for history logging
                     contract.symbol = passthrough.symbol;
@@ -488,41 +559,55 @@ function handleIncomingMessage(msg) {
                         showToast(`🎉 ${strategyLabel} Win: +$${contract.profit.toFixed(2)} on ${contract.symbol}`, 'success', 10000);
                     }
 
+                    // --- Update P/L and Win/Loss counts immediately ---
+                    const profit = parseFloat(contract.profit);
+                    const isWin = profit > 0;
+
+                    // Update total P/L
+                    botState.totalPL += profit;
+
+                    // Update win/loss counts
+                    if (isWin) {
+                        botState.winCount++;
+                    } else {
+                        botState.lossCount++;
+                    }
+
+                    // Update win percentage immediately for all trades
+                    updateWinPercentage();
+
+                    // Update UI immediately after counts change
+                    updateProfitLossDisplay();
+
                     // --- Strategy-Specific Logic ---
                     if (contract.strategy === 'S1') {
-                        if (contract.profit < 0) {
+                        if (!isWin) {
                             // S1 Loss - Track consecutive losses
-                            botState.totalPL += contract.profit;
-                            botState.lossCount++;
                             botState.accumulatedStakesLost += passthrough.stake;
                             botState.martingaleStepCount = 1; // Activate S2 recovery
                             botState.s1LossSymbol = contract.symbol;
                             botState.s1ConsecutiveLosses++;
-                            
-                            addBotLog(`❌ S1 Loss #${botState.s1ConsecutiveLosses}: $${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${botState.totalPL.toFixed(2)}`, 'loss');
-                            
+
+                            addBotLog(`❌ S1 Loss #${botState.s1ConsecutiveLosses}: $${profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${botState.totalPL.toFixed(2)}`, 'loss');
+
                             // Check if we should block S1
                             if (botState.s1ConsecutiveLosses >= botState.s1MaxLosses) {
                                 botState.s1Blocked = true;
                                 addBotLog(`🚫 S1 BLOCKED after ${botState.s1ConsecutiveLosses} consecutive losses! Only S2 recovery trades allowed until losses recovered.`, 'error');
                             }
-                            
+
                             addBotLog(`🔄 S2 Recovery Mode Activated | Accumulated Loss: $${botState.accumulatedStakesLost.toFixed(2)}`, 'warning');
                         } else {
                             // S1 Win - Reset consecutive loss counter
-                            botState.totalPL += contract.profit;
-                            botState.winCount++;
                             botState.s1ConsecutiveLosses = 0; // Reset on win
-                            addBotLog(`✅ S1 Win: +$${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${botState.totalPL.toFixed(2)} | Consecutive losses reset`, 'win');
+                            addBotLog(`✅ S1 Win: +$${profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${botState.totalPL.toFixed(2)} | Consecutive losses reset`, 'win');
                         }
                     } else {
                         // S2 Recovery trades handle martingale
-                        if (contract.profit < 0) {
-                            botState.totalPL += contract.profit;
+                        if (!isWin) {
                             botState.martingaleStepCount++;
-                            botState.lossCount++;
 
-                            addBotLog(`❌ S2 Loss: $${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${botState.totalPL.toFixed(2)} | Martingale Step ${botState.martingaleStepCount}`, 'loss');
+                            addBotLog(`❌ S2 Loss: $${profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${botState.totalPL.toFixed(2)} | Martingale Step ${botState.martingaleStepCount}`, 'loss');
 
                             // Check for Stop-Loss
                             if (Math.abs(botState.totalPL) >= botState.stopLoss) {
@@ -533,29 +618,24 @@ function handleIncomingMessage(msg) {
 
                             // Accumulate stake amounts lost for martingale calculation
                             botState.accumulatedStakesLost += passthrough.stake;
-                        const accumulatedLosses = botState.accumulatedStakesLost;
-                        const recoveryMultiplier = 100 / botState.payoutPercentage;
-                        const nextStake = accumulatedLosses * recoveryMultiplier;
+                            const accumulatedLosses = botState.accumulatedStakesLost;
+                            const recoveryMultiplier = 100 / botState.payoutPercentage;
+                            const nextStake = accumulatedLosses * recoveryMultiplier;
 
-                        botState.currentStake = parseFloat(nextStake.toFixed(2));
-                        addBotLog(`📊 Accumulated Stakes Lost: $${botState.accumulatedStakesLost.toFixed(2)} | Next Stake: $${botState.currentStake.toFixed(2)}`, 'info');
+                            botState.currentStake = parseFloat(nextStake.toFixed(2));
+                            addBotLog(`📊 Accumulated Stakes Lost: $${botState.accumulatedStakesLost.toFixed(2)} | Next Stake: $${botState.currentStake.toFixed(2)}`, 'info');
 
-                        // Check for Max Martingale Steps after calculating stake
-                        if (botState.martingaleStepCount > botState.maxMartingaleSteps) {
-                            addBotLog(`🛑 Max Martingale Steps (${botState.maxMartingaleSteps}) Reached | Bot Stopped`, 'error');
-                            stopGhostAiBot();
-                            return;
-                        }
+                            // Check for Max Martingale Steps after calculating stake
+                            if (botState.martingaleStepCount > botState.maxMartingaleSteps) {
+                                addBotLog(`🛑 Max Martingale Steps (${botState.maxMartingaleSteps}) Reached | Bot Stopped`, 'error');
+                                stopGhostAiBot();
+                                return;
+                            }
 
-                        addBotLog(`⚠️ Recovery Mode: Stake → $${botState.currentStake.toFixed(2)} | Locked on ${botState.recoverySymbol}`, 'warning');
+                            addBotLog(`⚠️ Recovery Mode: Stake → $${botState.currentStake.toFixed(2)} | Locked on ${botState.recoverySymbol}`, 'warning');
                         } else {
                             // S2 Win - Reset martingale
-                            botState.totalPL += contract.profit;
-                            botState.winCount++;
-                            addBotLog(`✅ S2 Win: +$${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${botState.totalPL.toFixed(2)} | Martingale reset`, 'win');
-
-                            // Update win percentage
-                            updateWinPercentage();
+                            addBotLog(`✅ S2 Win: +$${profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${botState.totalPL.toFixed(2)} | Martingale reset`, 'win');
 
                             // Reset martingale state and unblock S1
                             botState.currentStake = botState.initialStake;
@@ -565,12 +645,12 @@ function handleIncomingMessage(msg) {
                             botState.s1LossSymbol = null;
                             botState.accumulatedStakesLost = 0.0;
                             botState.s1ConsecutiveLosses = 0; // Reset consecutive losses
-                            
+
                             if (botState.s1Blocked) {
                                 botState.s1Blocked = false;
                                 addBotLog(`✅ S1 UNBLOCKED! Losses recovered. S1 trades now allowed again.`, 'win');
                             }
-                            
+
                             addBotLog(`🔄 S2 Recovery Successful! Martingale reset | Back to base stake: $${botState.currentStake.toFixed(2)}`, 'info');
                         }
                     }
@@ -580,8 +660,6 @@ function handleIncomingMessage(msg) {
                         addBotLog(`🎉 Target Profit Reached: $${botState.totalPL.toFixed(2)} / $${botState.targetProfit.toFixed(2)}`, 'win');
                         stopGhostAiBot();
                     }
-                    
-                    updateProfitLossDisplay();
                 }
                 // Check if it's a GHOST_E/ODD bot trade
                 else if (passthrough && passthrough.purpose === 'ghost_even_odd_trade' && passthrough.run_id === evenOddBotState.runId) {
@@ -604,6 +682,54 @@ function handleIncomingMessage(msg) {
                     if (contract.profit > 0) {
                         showToast(`🎉 E/ODD Bot Win: +$${contract.profit.toFixed(2)} on ${contract.symbol}`, 'success', 10000);
                     }
+                // Check if it's a Market Summary bot trade
+                else if (passthrough && passthrough.purpose === 'market_summary_trade' && passthrough.run_id === window.marketSummaryBotState.runId) {
+                    contract.symbol = passthrough.symbol;
+                    contract.barrier = passthrough.barrier;
+                    contract.type = passthrough.type;
+
+                    sendAPIRequest({ "forget": contract.id });
+
+                    // Remove from active contracts
+                    if (window.marketSummaryBotState.activeContracts[contract.contract_id]) {
+                        delete window.marketSummaryBotState.activeContracts[contract.contract_id];
+                    }
+
+                    // Update profit/loss
+                    window.marketSummaryBotState.totalPL += contract.profit;
+
+                    if (contract.profit > 0) {
+                        window.marketSummaryBotState.winCount++;
+                        showToast(`🎉 Market Summary Win: +$${contract.profit.toFixed(2)} on ${contract.symbol}`, 'success', 10000);
+                        addMarketSummaryLog(`✅ Win: +$${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${window.marketSummaryBotState.totalPL.toFixed(2)}`, 'win');
+
+                        // Reset martingale on win
+                        window.marketSummaryBotState.currentStake = window.marketSummaryBotState.initialStake;
+                        window.marketSummaryBotState.martingaleStep = 0;
+                        window.marketSummaryBotState.accumulatedLoss = 0;
+                    } else {
+                        window.marketSummaryBotState.lossCount++;
+                        addMarketSummaryLog(`❌ Loss: $${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${window.marketSummaryBotState.totalPL.toFixed(2)}`, 'loss');
+
+                        // Apply martingale
+                        window.marketSummaryBotState.martingaleStep++;
+                        window.marketSummaryBotState.accumulatedLoss += Math.abs(contract.profit);
+                        window.marketSummaryBotState.currentStake = parseFloat((window.marketSummaryBotState.currentStake * window.marketSummaryBotState.martingaleMultiplier).toFixed(2));
+
+                        addMarketSummaryLog(`🔄 Martingale Step ${window.marketSummaryBotState.martingaleStep} | Next Stake: $${window.marketSummaryBotState.currentStake.toFixed(2)}`, 'warning');
+                    }
+
+                    // Check stop conditions
+                    if (window.marketSummaryBotState.totalPL >= window.marketSummaryBotState.targetProfit) {
+                        addMarketSummaryLog(`🎉 Target Profit Reached: $${window.marketSummaryBotState.totalPL.toFixed(2)}`, 'win');
+                        stopMarketSummaryBot();
+                    } else if (Math.abs(window.marketSummaryBotState.totalPL) >= window.marketSummaryBotState.stopLoss && window.marketSummaryBotState.totalPL < 0) {
+                        addMarketSummaryLog(`🛑 Stop Loss Hit: -$${Math.abs(window.marketSummaryBotState.totalPL).toFixed(2)}`, 'error');
+                        stopMarketSummaryBot();
+                    }
+
+                    updateMarketSummaryProfitDisplay();
+                }
 
                     // Update GLOBAL martingale (not symbol-specific)
                     const isWin = contract.profit > 0;
