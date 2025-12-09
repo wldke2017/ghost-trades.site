@@ -41,6 +41,31 @@ function updateProfitLossDisplay() {
     }
 }
 
+/**
+ * Cleanup stale contracts that have been active for too long (> 60 seconds)
+ * This prevents the bot from getting stuck due to missed contract updates
+ */
+function cleanupStaleContracts() {
+    const now = Date.now();
+    const maxAge = 60000; // 60 seconds
+    
+    for (const [contractId, info] of Object.entries(activeContracts)) {
+        const age = now - info.startTime;
+        if (age > maxAge) {
+            console.warn(`🧹 Cleaning up stale contract ${contractId} (${age}ms old) for ${info.symbol}`);
+            
+            if (info.strategy === 'S1') {
+                activeS1Symbols.delete(info.symbol);
+            }
+            
+            delete activeContracts[contractId];
+            releaseTradeLock(info.symbol, 'ghost_ai');
+            
+            addBotLog(`⚠️ Cleaned up stale contract for ${info.symbol} (was active for ${(age/1000).toFixed(1)}s)`, 'warning');
+        }
+    }
+}
+
 async function startGhostAiBot() {
     if (isBotRunning) return;
     isBotRunning = true;
@@ -49,6 +74,11 @@ async function startGhostAiBot() {
     // Reset UI and state
     botHistoryTableBody.innerHTML = '';
     botLogContainer.innerHTML = '';
+    
+    // Clear any stale contracts and locks
+    activeContracts = {};
+    activeS1Symbols.clear();
+    clearAllTradeLocks();
     
     // Update button states (if updateGhostAIButtonStates function exists)
     if (typeof updateGhostAIButtonStates === 'function') {
@@ -153,6 +183,16 @@ async function startGhostAiBot() {
     // Debug: Log current market data
     console.log('Bot started - Current market data:', marketTickHistory);
     console.log('Bot state:', botState);
+    
+    // Start periodic cleanup of stale contracts (every 30 seconds)
+    if (botLoopInterval) {
+        clearInterval(botLoopInterval);
+    }
+    botLoopInterval = setInterval(() => {
+        if (isBotRunning) {
+            cleanupStaleContracts();
+        }
+    }, 30000);
 }
 
 async function stopGhostAiBot() {

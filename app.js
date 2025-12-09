@@ -536,7 +536,8 @@ function handleIncomingMessage(msg) {
                 if (passthrough && passthrough.purpose === 'ghost_ai_trade' && passthrough.run_id === botState.runId) {
 
                     // Debug: Log all trade results to ensure we're catching them
-                    console.log(`🤖 Ghost AI Trade Result: ${contract.symbol} | Strategy: ${passthrough.strategy || 'S1'} | Profit: ${contract.profit} | Contract: ${contract.contract_id}`);
+                    console.log(`🤖 Ghost AI Trade Result: ${contract.symbol} | Strategy: ${passthrough.strategy || 'S1'} | Profit: ${contract.profit} | Contract ID: ${contract.contract_id}`);
+                    console.log(`🔍 Active contracts before cleanup:`, Object.keys(activeContracts));
 
                     // Add symbol and barrier info to the contract for history logging
                     contract.symbol = passthrough.symbol;
@@ -544,19 +545,51 @@ function handleIncomingMessage(msg) {
                     contract.strategy = passthrough.strategy || 'S1';
 
                     // Remove from active contracts tracking and release trade lock
-                    if (activeContracts[contract.contract_id]) {
-                        const contractInfo = activeContracts[contract.contract_id];
+                    // Try both contract_id and id (Deriv API can use either)
+                    const contractIdToRemove = contract.contract_id || contract.id;
+                    
+                    if (activeContracts[contractIdToRemove]) {
+                        const contractInfo = activeContracts[contractIdToRemove];
+                        
+                        console.log(`✅ Found and removing contract ${contractIdToRemove} from activeContracts`);
                         
                         // Remove from S1 symbols tracking if it was an S1 trade
                         if (contractInfo.strategy === 'S1') {
                             activeS1Symbols.delete(contractInfo.symbol);
                         }
                         
-                        delete activeContracts[contract.contract_id];
+                        delete activeContracts[contractIdToRemove];
                         
                         // Release trade lock for this symbol
                         releaseTradeLock(contract.symbol, 'ghost_ai');
+                    } else {
+                        // Contract not found - this is the bug!
+                        console.error(`❌ Contract ${contractIdToRemove} NOT found in activeContracts!`);
+                        console.error(`Available contracts:`, Object.keys(activeContracts));
+                        
+                        // Fallback: Clean up by symbol to prevent stuck state
+                        let foundAndRemoved = false;
+                        for (const [id, info] of Object.entries(activeContracts)) {
+                            if (info.symbol === contract.symbol) {
+                                console.log(`🔧 Fallback cleanup: Removing contract ${id} for symbol ${contract.symbol}`);
+                                if (info.strategy === 'S1') {
+                                    activeS1Symbols.delete(info.symbol);
+                                }
+                                delete activeContracts[id];
+                                releaseTradeLock(contract.symbol, 'ghost_ai');
+                                foundAndRemoved = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!foundAndRemoved) {
+                            console.error(`❌ Could not find any contract for symbol ${contract.symbol} to clean up`);
+                            // Force release lock anyway to prevent permanent lock
+                            releaseTradeLock(contract.symbol, 'ghost_ai');
+                        }
                     }
+                    
+                    console.log(`🔍 Active contracts after cleanup:`, Object.keys(activeContracts));
 
                     addBotTradeHistory(contract, contract.profit);
 
@@ -683,11 +716,25 @@ function handleIncomingMessage(msg) {
                     sendAPIRequest({ "forget": contract.id }); // Unsubscribe
 
                     // Remove from active contracts and release trade lock
-                    if (evenOddBotState.activeContracts[contract.contract_id]) {
-                        delete evenOddBotState.activeContracts[contract.contract_id];
+                    const contractIdToRemove = contract.contract_id || contract.id;
+                    
+                    if (evenOddBotState.activeContracts[contractIdToRemove]) {
+                        delete evenOddBotState.activeContracts[contractIdToRemove];
                         
                         // Release trade lock for this symbol
                         releaseTradeLock(contract.symbol, 'ghost_eodd');
+                    } else {
+                        console.error(`❌ E/ODD Contract ${contractIdToRemove} NOT found in activeContracts!`);
+                        
+                        // Fallback cleanup by symbol
+                        for (const [id, info] of Object.entries(evenOddBotState.activeContracts)) {
+                            if (info.symbol === contract.symbol) {
+                                console.log(`🔧 Fallback: Removing E/ODD contract ${id} for ${contract.symbol}`);
+                                delete evenOddBotState.activeContracts[id];
+                                releaseTradeLock(contract.symbol, 'ghost_eodd');
+                                break;
+                            }
+                        }
                     }
 
                     // Notification on win
