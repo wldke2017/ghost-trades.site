@@ -319,6 +319,8 @@ header {
     cursor: pointer;
     transition: all var(--transition-base);
     padding: 0;
+    z-index: 10;
+    position: relative;
 }
 
 .btn-logout:hover {
