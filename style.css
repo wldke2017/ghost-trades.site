@@ -2491,6 +2491,13 @@ h2, h3, h4 {
     margin-top: var(--spacing-md);
 }
 
+.bot-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+    margin-top: var(--spacing-md);
+}
+
 .stat-item {
     display: flex;
     flex-direction: column;

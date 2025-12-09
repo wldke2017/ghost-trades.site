@@ -70,6 +70,10 @@ async function startGhostAiBot() {
     if (isBotRunning) return;
     isBotRunning = true;
     botState.runId = `bot-${Date.now()}`;
+    
+    // Increment runs count only when starting a new run
+    if (!botState.runsCount) botState.runsCount = 0;
+    botState.runsCount++;
 
     // Clear logs but KEEP trade history (users need to see past trades)
     botLogContainer.innerHTML = '';
@@ -150,8 +154,13 @@ async function startGhostAiBot() {
     botState.lossCount = 0;
     botState.winPercentage = 0;
     botState.s1LossSymbol = null;
+    botState.totalStake = 0.0;
+    botState.totalPayout = 0.0;
+    // Don't reset runsCount - it should persist across runs
+    // botState.runsCount is incremented at the start of the function
 
     updateProfitLossDisplay();
+    updateBotStats();
 
     addBotLog(`🤖 Rammy Auto Strategy Started`);
     addBotLog(`📊 Analyzing last ${analysisDigits} digits + percentages + full distribution across ${Object.keys(marketTickHistory).length} markets`);
@@ -324,6 +333,29 @@ function updateWinPercentage() {
         }
 
         addBotLog(`📊 Win/Loss: ${botState.winCount}W/${botState.lossCount}L | Win Rate: ${botState.winPercentage.toFixed(1)}%`, 'info');
+    }
+    
+    updateBotStats();
+}
+
+/**
+ * Update and display bot statistics
+ */
+function updateBotStats() {
+    const totalStakeDisplay = document.getElementById('botTotalStakeDisplay');
+    const totalPayoutDisplay = document.getElementById('botTotalPayoutDisplay');
+    const runsCountDisplay = document.getElementById('botRunsCountDisplay');
+
+    if (totalStakeDisplay) {
+        totalStakeDisplay.textContent = `$${botState.totalStake.toFixed(2)}`;
+    }
+
+    if (totalPayoutDisplay) {
+        totalPayoutDisplay.textContent = `$${botState.totalPayout.toFixed(2)}`;
+    }
+
+    if (runsCountDisplay) {
+        runsCountDisplay.textContent = `${botState.runsCount}`;
     }
 }
 

@@ -120,6 +120,9 @@ let botState = {
     lossCount: 0, // Number of losses
     winPercentage: 0, // Win percentage
     s1LossSymbol: null, // Symbol where S1 loss occurred, to avoid in recovery
+    totalStake: 0.0, // Total stake across all trades
+    totalPayout: 0.0, // Total payout across all trades
+    runsCount: 0, // Number of times bot has been started
 };
 
 // --- Additional Bot State for Missing Elements ---
@@ -604,9 +607,23 @@ function handleIncomingMessage(msg) {
                     // --- Update P/L and Win/Loss counts immediately ---
                     const profit = parseFloat(contract.profit);
                     const isWin = profit > 0;
+                    const stake = parseFloat(passthrough.stake || 0);
+                    
+                    // Calculate payout correctly: for wins, payout = stake + profit; for losses, payout = 0
+                    const payout = isWin ? stake + profit : 0;
+
+                    // Debug log to verify calculations
+                    console.log(`📊 Trade Complete: Stake: $${stake.toFixed(2)} | Profit: $${profit.toFixed(2)} | Payout: $${payout.toFixed(2)}`);
 
                     // Update total P/L
                     botState.totalPL += profit;
+
+                    // Update total stake and payout
+                    botState.totalStake += stake;
+                    botState.totalPayout += payout;
+                    
+                    // Verify the math
+                    console.log(`📊 Running Totals: Total Stake: $${botState.totalStake.toFixed(2)} | Total Payout: $${botState.totalPayout.toFixed(2)} | Total P/L: $${botState.totalPL.toFixed(2)} | Calculated P/L: $${(botState.totalPayout - botState.totalStake).toFixed(2)}`);
 
                     // Update win/loss counts
                     if (isWin) {
