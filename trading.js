@@ -343,6 +343,10 @@ function handleLogin() {
         return;
     }
 
+    // Save the API token for session persistence
+    localStorage.setItem('deriv_token', apiToken);
+    localStorage.setItem('deriv_account_type', 'demo'); // Assume demo for manual login
+
     setButtonLoading(loginButton, true);
     statusMessage.textContent = "Authorizing your account...";
 
