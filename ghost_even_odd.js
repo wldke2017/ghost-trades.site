@@ -499,6 +499,9 @@ async function stopEvenOddBot() {
 
     evenOddBotState.isTrading = false;
     
+    // Clear all trade locks when stopping
+    clearAllTradeLocks();
+    
     // Update all button states
     updateEvenOddButtonStates(false);
     
@@ -616,25 +619,35 @@ function executePatternTrade(action, symbol, pattern, stake) {
         return;
     }
     
+    // CRITICAL: Acquire trade lock before placing trade
+    if (!acquireTradeLock(symbol, 'ghost_eodd')) {
+        addEvenOddBotLog(`⚠️ Skipping ${symbol} - another bot is trading this symbol`, 'warning');
+        return;
+    }
+    
     // Double check target/stop loss hasn't been hit
     if (mm.totalProfit >= mm.targetProfit) {
         addEvenOddBotLog(`⚠️ Target profit already reached, skipping trade`, 'warning');
+        releaseTradeLock(symbol, 'ghost_eodd');
         return;
     }
     
     if (Math.abs(mm.totalProfit) >= mm.stopLoss && mm.totalProfit < 0) {
         addEvenOddBotLog(`⚠️ Stop loss already hit, skipping trade`, 'warning');
+        releaseTradeLock(symbol, 'ghost_eodd');
         return;
     }
     
     // Validate stake amount
     if (stake < 0.35) {
         addEvenOddBotLog(`❌ ${symbol} Stake too low: $${stake.toFixed(2)} (minimum: $0.35)`, 'error');
+        releaseTradeLock(symbol, 'ghost_eodd');
         return;
     }
     
     if (stake > 2000) {
         addEvenOddBotLog(`❌ ${symbol} Stake too high: $${stake.toFixed(2)} (maximum: $2000)`, 'error');
+        releaseTradeLock(symbol, 'ghost_eodd');
         return;
     }
 

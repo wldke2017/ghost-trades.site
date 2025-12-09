@@ -43,6 +43,11 @@ let marketTickHistory = {};
 let marketDigitPercentages = {};
 // Stores the last 1000 digits for distribution analysis
 let marketFullTickDigits = {};
+
+// --- GLOBAL TRADE LOCK MECHANISM ---
+// Prevents duplicate trades on the same symbol from different bots
+let globalTradeLocks = {}; // { symbol: { timestamp, botType } }
+const TRADE_LOCK_DURATION = 2000; // 2 seconds lock per symbol
 // ----------------------------------------
 
 // --- Chart Setup ---
@@ -367,6 +372,7 @@ function handleIncomingMessage(msg) {
                 const row = document.getElementById(`row-${symbol}`);
                 if (row) {
                     // --- BOT TICK HANDLING ---
+                    // Pass tick to both bots - they will check trade locks internally
                     if (isBotRunning) {
                         handleBotTick(data.tick);
                     }
@@ -537,7 +543,7 @@ function handleIncomingMessage(msg) {
                     contract.barrier = passthrough.barrier;
                     contract.strategy = passthrough.strategy || 'S1';
 
-                    // Remove from active contracts tracking
+                    // Remove from active contracts tracking and release trade lock
                     if (activeContracts[contract.contract_id]) {
                         const contractInfo = activeContracts[contract.contract_id];
                         
@@ -547,6 +553,9 @@ function handleIncomingMessage(msg) {
                         }
                         
                         delete activeContracts[contract.contract_id];
+                        
+                        // Release trade lock for this symbol
+                        releaseTradeLock(contract.symbol, 'ghost_ai');
                     }
 
                     addBotTradeHistory(contract, contract.profit);
@@ -673,9 +682,12 @@ function handleIncomingMessage(msg) {
 
                     sendAPIRequest({ "forget": contract.id }); // Unsubscribe
 
-                    // Remove from active contracts
+                    // Remove from active contracts and release trade lock
                     if (evenOddBotState.activeContracts[contract.contract_id]) {
                         delete evenOddBotState.activeContracts[contract.contract_id];
+                        
+                        // Release trade lock for this symbol
+                        releaseTradeLock(contract.symbol, 'ghost_eodd');
                     }
 
                     // Notification on win

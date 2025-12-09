@@ -3,6 +3,63 @@
 // ===================================
 
 /**
+ * Attempts to acquire a trade lock for a symbol
+ * @param {string} symbol - The symbol to lock
+ * @param {string} botType - Type of bot requesting lock ('ghost_ai' or 'ghost_eodd')
+ * @returns {boolean} - True if lock acquired, false if symbol is already locked
+ */
+function acquireTradeLock(symbol, botType) {
+    const now = Date.now();
+    
+    // Check if there's an existing lock
+    if (globalTradeLocks[symbol]) {
+        const lock = globalTradeLocks[symbol];
+        const timeSinceLock = now - lock.timestamp;
+        
+        // If lock is still active (within duration)
+        if (timeSinceLock < TRADE_LOCK_DURATION) {
+            console.log(`⚠️ Trade lock active on ${symbol} by ${lock.botType} (${(TRADE_LOCK_DURATION - timeSinceLock)}ms remaining)`);
+            return false;
+        }
+        
+        // Lock has expired, can be overwritten
+        console.log(`🔓 Expired lock on ${symbol} from ${lock.botType}, acquiring new lock for ${botType}`);
+    }
+    
+    // Acquire the lock
+    globalTradeLocks[symbol] = {
+        timestamp: now,
+        botType: botType
+    };
+    
+    console.log(`🔒 Trade lock acquired on ${symbol} by ${botType} for ${TRADE_LOCK_DURATION}ms`);
+    return true;
+}
+
+/**
+ * Releases a trade lock for a symbol
+ * @param {string} symbol - The symbol to unlock
+ * @param {string} botType - Type of bot releasing lock
+ */
+function releaseTradeLock(symbol, botType) {
+    if (globalTradeLocks[symbol] && globalTradeLocks[symbol].botType === botType) {
+        delete globalTradeLocks[symbol];
+        console.log(`🔓 Trade lock released on ${symbol} by ${botType}`);
+    }
+}
+
+/**
+ * Clears all trade locks (useful when stopping bots)
+ */
+function clearAllTradeLocks() {
+    const count = Object.keys(globalTradeLocks).length;
+    globalTradeLocks = {};
+    if (count > 0) {
+        console.log(`🔓 Cleared ${count} trade lock(s)`);
+    }
+}
+
+/**
  * Debug function to check distribution data status
  * Call this from console: checkDistributionData()
  */

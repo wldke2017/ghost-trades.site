@@ -165,6 +165,9 @@ async function stopGhostAiBot() {
         botLoopInterval = null;
     }
 
+    // Clear all trade locks when stopping
+    clearAllTradeLocks();
+
     // Update button states (if updateGhostAIButtonStates function exists)
     if (typeof updateGhostAIButtonStates === 'function') {
         updateGhostAIButtonStates(false);
@@ -459,7 +462,7 @@ function scanAndPlaceMultipleTrades() {
     // Execute only ONE S1 trade at a time to prevent over-trading
     // Also check if we already have too many concurrent trades
     const activeTradeCount = Object.keys(activeContracts).length;
-    const maxConcurrentTrades = 3; // Limit to maximum 3 concurrent trades
+    const maxConcurrentTrades = 1; // Limit to maximum 1 concurrent trade
 
     if (validS1Markets.length > 0 && activeTradeCount < maxConcurrentTrades) {
         // Sort by over percentage (highest first) and pick the best one
@@ -502,6 +505,12 @@ function scanAndPlaceMultipleTrades() {
 }
 
 function executeTradeWithTracking(marketData) {
+    // CRITICAL: Acquire trade lock before placing trade
+    if (!acquireTradeLock(marketData.symbol, 'ghost_ai')) {
+        addBotLog(`⚠️ Skipping ${marketData.symbol} - another bot is trading this symbol`, 'warning');
+        return;
+    }
+
     // Track this as an active contract
     const contractId = `pending_${marketData.symbol}_${Date.now()}`;
     activeContracts[contractId] = {
