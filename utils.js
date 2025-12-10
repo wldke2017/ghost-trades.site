@@ -2,6 +2,17 @@
 // UTILITY FUNCTIONS
 // ===================================
 
+// Toggle collapsible sections
+function toggleSection(sectionId) {
+    const content = document.getElementById(sectionId);
+    const arrow = document.getElementById('arrow-' + sectionId);
+    
+    if (content && arrow) {
+        content.classList.toggle('collapsed');
+        arrow.classList.toggle('collapsed');
+    }
+}
+
 /**
  * Attempts to acquire a trade lock for a symbol
  * @param {string} symbol - The symbol to lock

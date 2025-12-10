@@ -191,7 +191,7 @@ function determineTradeFromPattern(symbol) {
         
         if (calculatedPattern === patternNum) {
             const action = patternConfig.action;
-            const patternStr = patternNum.toString();
+            const patternStr = convertPatternToDisplay(patternNum.toString());
             return { action: action, reason: `Pattern ${patternStr} → ${action === 'DIGITEVEN' ? 'EVEN' : 'ODD'}`, pattern: patternNum };
         }
     }
@@ -222,6 +222,20 @@ function loadActivePatterns() {
 }
 
 /**
+ * Convert pattern from O/E format to 1/2 format
+ */
+function convertPatternToNumeric(patternStr) {
+    return patternStr.toUpperCase().replace(/O/g, '1').replace(/E/g, '2');
+}
+
+/**
+ * Convert pattern from 1/2 format to O/E format
+ */
+function convertPatternToDisplay(patternStr) {
+    return patternStr.replace(/1/g, 'O').replace(/2/g, 'E');
+}
+
+/**
  * Add custom pattern
  */
 function addCustomPatternToConfig() {
@@ -230,15 +244,17 @@ function addCustomPatternToConfig() {
     
     if (!patternInput || !actionSelect) return;
     
-    const patternStr = patternInput.value.trim();
+    const patternStr = patternInput.value.trim().toUpperCase();
     
-    // Validate pattern (1-10 digits)
-    if (!/^[12]{1,10}$/.test(patternStr)) {
-        showToast('Invalid pattern! Use only 1s and 2s (1-10 digits)', 'error');
+    // Validate pattern (O and E, 1-10 digits)
+    if (!/^[OE]{1,10}$/i.test(patternStr)) {
+        showToast('Invalid pattern! Use only O and E (1-10 digits)', 'error');
         return;
     }
     
-    const pattern = parseInt(patternStr);
+    // Convert O/E to 1/2 for internal storage
+    const numericPattern = convertPatternToNumeric(patternStr);
+    const pattern = parseInt(numericPattern);
     const action = actionSelect.value;
     
     // Add to active patterns
@@ -247,18 +263,43 @@ function addCustomPatternToConfig() {
         active: true
     };
     
-    // Add checkbox to UI
+    // Add checkbox to UI with O/E display
     const container = document.querySelector('.pattern-checkboxes');
     if (container) {
         const label = document.createElement('label');
-        label.style.display = 'block';
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
         label.style.margin = '5px 0';
+        label.style.gap = '10px';
         label.style.color = 'var(--accent-color)';
         label.innerHTML = `
-            <input type="checkbox" class="pattern-checkbox" value="${pattern}" data-action="${action}" checked> 
-            ${patternStr} → ${action === 'DIGITEVEN' ? 'EVEN' : 'ODD'} (Custom)
+            <input type="checkbox" class="pattern-checkbox" value="${pattern}" data-action="${action}" checked>
+            <span style="flex: 0 0 auto;">${patternStr} →</span>
+            <select class="pattern-action-select" name="pattern-action-${pattern}" data-pattern="${pattern}" style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
+                <option value="DIGITEVEN" ${action === 'DIGITEVEN' ? 'selected' : ''}>EVEN</option>
+                <option value="DIGITODD" ${action === 'DIGITODD' ? 'selected' : ''}>ODD</option>
+            </select>
+            <span style="color: var(--accent-color); font-size: 0.9em;">(Custom)</span>
         `;
         container.appendChild(label);
+        
+        // Add event listener for the new dropdown
+        const newDropdown = label.querySelector('.pattern-action-select');
+        if (newDropdown) {
+            newDropdown.addEventListener('change', function() {
+                const pattern = this.getAttribute('data-pattern');
+                const newAction = this.value;
+                const checkbox = document.querySelector(`.pattern-checkbox[value="${pattern}"]`);
+                
+                if (checkbox) {
+                    checkbox.setAttribute('data-action', newAction);
+                    if (activePatterns[pattern]) {
+                        activePatterns[pattern].action = newAction;
+                        addEvenOddBotLog(`🔄 Pattern ${convertPatternToDisplay(pattern.toString())} action changed to ${newAction === 'DIGITEVEN' ? 'EVEN' : 'ODD'}`, 'info');
+                    }
+                }
+            });
+        }
     }
     
     showToast(`Custom pattern ${patternStr} → ${action === 'DIGITEVEN' ? 'EVEN' : 'ODD'} added!`, 'success');
@@ -578,7 +619,8 @@ function handleEvenOddTick(tick) {
     if (tradeDecision) {
         const patternDisplay = document.getElementById('currentPatternDisplay');
         if (patternDisplay) {
-            patternDisplay.textContent = `${tradeDecision.pattern} (${tradeDecision.pattern.toString().length})`;
+            const displayPattern = convertPatternToDisplay(tradeDecision.pattern.toString());
+            patternDisplay.textContent = `${displayPattern} (${tradeDecision.pattern.toString().length})`;
         }
 
         // Check if this is a new pattern or enough time has passed since last trade

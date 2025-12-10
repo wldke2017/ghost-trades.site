@@ -468,7 +468,13 @@
             </div>
             <div class="bot-grid">
                 <div class="bot-controls">
-                    <h4>Bot Configuration</h4>
+                    <h4 class="collapsible-header" onclick="toggleSection('bot-config-ghost-ai')">
+                        <span>Bot Configuration</span>
+                        <svg class="collapse-arrow" id="arrow-bot-config-ghost-ai" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </h4>
+                    <div class="collapsible-content" id="bot-config-ghost-ai">
                     <div class="control-group">
                         <label for="botInitialStake">Initial Stake</label>
                         <div class="input-with-unit">
@@ -507,8 +513,13 @@
                         <input type="number" id="botAnalysisDigits" name="botAnalysisDigits" value="15" min="10" max="100" title="Number of last digits to use for percentage analysis">
                     </div>
 
-                    <h5 style="margin-top: 20px; color: var(--primary-color);">S1 Strategy Configuration</h5>
-                    
+                    <h5 class="collapsible-header" style="margin-top: 20px; color: var(--primary-color);" onclick="toggleSection('s1-config')">
+                        <span>S1 Strategy Configuration</span>
+                        <svg class="collapse-arrow" id="arrow-s1-config" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </h5>
+                    <div class="collapsible-content" id="s1-config">
                     <div class="control-group">
                         <label style="display: flex; align-items: center; gap: 10px;">
                             <input type="checkbox" id="botS1UseDigitCheck" name="botS1UseDigitCheck" checked style="width: auto;">
@@ -550,9 +561,15 @@
                         <label for="botS1MaxLosses">S1: Max Consecutive Losses</label>
                         <input type="number" id="botS1MaxLosses" name="botS1MaxLosses" value="1" min="1" max="10" title="Stop S1 after this many consecutive losses until recovery">
                     </div>
+                    </div>
 
-                    <h5 style="margin-top: 20px; color: var(--accent-color);">S2 Recovery Configuration</h5>
-
+                    <h5 class="collapsible-header" style="margin-top: 20px; color: var(--accent-color);" onclick="toggleSection('s2-config')">
+                        <span>S2 Recovery Configuration</span>
+                        <svg class="collapse-arrow" id="arrow-s2-config" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </h5>
+                    <div class="collapsible-content" id="s2-config">
                     <div class="control-group">
                         <label style="display: flex; align-items: center; gap: 10px;">
                             <input type="checkbox" id="botS2UseDigitCheck" name="botS2UseDigitCheck" checked style="width: auto;">
@@ -597,6 +614,7 @@
                             <span class="unit">%</span>
                         </div>
                     </div>
+                    </div>
 
                     <button id="ghost-ai-toggle-button-bottom" class="btn-bot btn-start">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -604,13 +622,20 @@
                         </svg>
                         <span>Start Bot</span>
                     </button>
-
+                    </div>
                 </div>
 
                 <div class="bot-status">
-                    <h4>Activity Log</h4>
+                    <h4 class="collapsible-header" onclick="toggleSection('activity-log-ghost-ai')">
+                        <span>Activity Log</span>
+                        <svg class="collapse-arrow" id="arrow-activity-log-ghost-ai" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </h4>
+                    <div class="collapsible-content" id="activity-log-ghost-ai">
                     <div id="bot-log-container" class="bot-log">
                         <div class="log-info">[--:--:--] Waiting for initialization...</div>
+                    </div>
                     </div>
                 </div>
 
@@ -689,7 +714,13 @@
             </div>
             <div class="bot-grid">
                 <div class="bot-controls">
-                    <h4>Bot Configuration</h4>
+                    <h4 class="collapsible-header" onclick="toggleSection('bot-config-eodd')">
+                        <span>Bot Configuration</span>
+                        <svg class="collapse-arrow" id="arrow-bot-config-eodd" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </h4>
+                    <div class="collapsible-content" id="bot-config-eodd">
                     <div class="control-group">
                         <label for="eoddInitialStake">Initial Stake</label>
                         <div class="input-with-unit">
@@ -733,11 +764,11 @@
                     <div class="bot-info-panel">
                         <h5>Pattern Configuration</h5>
                         <div class="strategy-details">
-                            <p><strong>Select Active Patterns (1=ODD, 2=EVEN)</strong></p>
+                            <p><strong>Select Active Patterns (O=ODD, E=EVEN)</strong></p>
                             <div class="pattern-checkboxes" style="max-height: 200px; overflow-y: auto; margin: 10px 0;">
                                 <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
                                     <input type="checkbox" class="pattern-checkbox" name="pattern-22222" value="22222" data-action="DIGITODD">
-                                    <span style="flex: 0 0 auto;">22222 →</span>
+                                    <span style="flex: 0 0 auto;">EEEEE →</span>
                                     <select class="pattern-action-select" name="pattern-action-22222" data-pattern="22222" style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
                                         <option value="DIGITEVEN">EVEN</option>
                                         <option value="DIGITODD" selected>ODD</option>
@@ -745,7 +776,7 @@
                                 </label>
                                 <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
                                     <input type="checkbox" class="pattern-checkbox" name="pattern-11111" value="11111" data-action="DIGITEVEN">
-                                    <span style="flex: 0 0 auto;">11111 →</span>
+                                    <span style="flex: 0 0 auto;">OOOOO →</span>
                                     <select class="pattern-action-select" name="pattern-action-11111" data-pattern="11111" style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
                                         <option value="DIGITEVEN" selected>EVEN</option>
                                         <option value="DIGITODD">ODD</option>
@@ -753,7 +784,7 @@
                                 </label>
                                 <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
                                     <input type="checkbox" class="pattern-checkbox" name="pattern-12121" value="12121" data-action="DIGITODD">
-                                    <span style="flex: 0 0 auto;">12121 →</span>
+                                    <span style="flex: 0 0 auto;">OEOEO →</span>
                                     <select class="pattern-action-select" name="pattern-action-12121" data-pattern="12121" style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
                                         <option value="DIGITEVEN">EVEN</option>
                                         <option value="DIGITODD" selected>ODD</option>
@@ -761,7 +792,7 @@
                                 </label>
                                 <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
                                     <input type="checkbox" class="pattern-checkbox" name="pattern-21212" value="21212" data-action="DIGITEVEN">
-                                    <span style="flex: 0 0 auto;">21212 →</span>
+                                    <span style="flex: 0 0 auto;">EOEOE →</span>
                                     <select class="pattern-action-select" name="pattern-action-21212" data-pattern="21212" style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
                                         <option value="DIGITEVEN" selected>EVEN</option>
                                         <option value="DIGITODD">ODD</option>
@@ -769,7 +800,7 @@
                                 </label>
                                 <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
                                     <input type="checkbox" class="pattern-checkbox" name="pattern-22122" value="22122" data-action="DIGITODD">
-                                    <span style="flex: 0 0 auto;">22122 →</span>
+                                    <span style="flex: 0 0 auto;">EEOEE →</span>
                                     <select class="pattern-action-select" name="pattern-action-22122" data-pattern="22122" style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
                                         <option value="DIGITEVEN">EVEN</option>
                                         <option value="DIGITODD" selected>ODD</option>
@@ -777,7 +808,7 @@
                                 </label>
                                 <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
                                     <input type="checkbox" class="pattern-checkbox" name="pattern-11211" value="11211" data-action="DIGITODD">
-                                    <span style="flex: 0 0 auto;">11211 →</span>
+                                    <span style="flex: 0 0 auto;">OOEOO →</span>
                                     <select class="pattern-action-select" name="pattern-action-11211" data-pattern="11211" style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
                                         <option value="DIGITEVEN">EVEN</option>
                                         <option value="DIGITODD" selected>ODD</option>
@@ -785,7 +816,7 @@
                                 </label>
                                 <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
                                     <input type="checkbox" class="pattern-checkbox" name="pattern-11122" value="11122" data-action="DIGITEVEN">
-                                    <span style="flex: 0 0 auto;">11122 →</span>
+                                    <span style="flex: 0 0 auto;">OOOEE →</span>
                                     <select class="pattern-action-select" name="pattern-action-11122" data-pattern="11122" style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
                                         <option value="DIGITEVEN" selected>EVEN</option>
                                         <option value="DIGITODD">ODD</option>
@@ -793,7 +824,7 @@
                                 </label>
                                 <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
                                     <input type="checkbox" class="pattern-checkbox" name="pattern-22211" value="22211" data-action="DIGITODD">
-                                    <span style="flex: 0 0 auto;">22211 →</span>
+                                    <span style="flex: 0 0 auto;">EEEOO →</span>
                                     <select class="pattern-action-select" name="pattern-action-22211" data-pattern="22211" style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
                                         <option value="DIGITEVEN">EVEN</option>
                                         <option value="DIGITODD" selected>ODD</option>
@@ -803,8 +834,8 @@
 
                             <h5 style="margin-top: 15px;">Custom Pattern</h5>
                             <div class="control-group">
-                                <label for="customPattern">Pattern (1s and 2s, up to 10 digits, e.g., 1111111111)</label>
-                                <input type="text" id="customPattern" name="customPattern" placeholder="e.g., 1111111111" pattern="[12]{1,10}" maxlength="10" style="width: 100%;">
+                                <label for="customPattern">Pattern (O and E, up to 10 digits, e.g., OOOOOOOOOO)</label>
+                                <input type="text" id="customPattern" name="customPattern" placeholder="e.g., OOOOOOOOOO" pattern="[OEoe]{1,10}" maxlength="10" style="width: 100%;">
                             </div>
                             <div class="control-group">
                                 <label for="customPatternAction">Contract Type</label>
@@ -818,12 +849,20 @@
                             </button>
                         </div>
                     </div>
+                    </div>
                 </div>
 
                 <div class="bot-status">
-                    <h4>Activity Log</h4>
+                    <h4 class="collapsible-header" onclick="toggleSection('activity-log-eodd')">
+                        <span>Activity Log</span>
+                        <svg class="collapse-arrow" id="arrow-activity-log-eodd" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </h4>
+                    <div class="collapsible-content" id="activity-log-eodd">
                     <div id="eodd-bot-log-container" class="bot-log">
                         <div class="log-info">[--:--:--] Pattern analysis ready...</div>
+                    </div>
                     </div>
                 </div>
 

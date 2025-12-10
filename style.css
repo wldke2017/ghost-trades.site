@@ -91,6 +91,45 @@ body::before {
     z-index: 0;
 }
 
+/* --- Collapsible Sections --- */
+.collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    transition: var(--transition-base);
+    padding: 0.5rem 0;
+}
+
+.collapsible-header:hover {
+    opacity: 0.8;
+}
+
+.collapse-arrow {
+    width: 20px;
+    height: 20px;
+    transition: transform var(--transition-base);
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+.collapse-arrow.collapsed {
+    transform: rotate(-90deg);
+}
+
+.collapsible-content {
+    overflow: hidden;
+    transition: max-height var(--transition-slow), opacity var(--transition-base);
+    max-height: 5000px;
+    opacity: 1;
+}
+
+.collapsible-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+}
+
 /* --- Toast Notifications --- */
 .toast-container {
     position: fixed;
