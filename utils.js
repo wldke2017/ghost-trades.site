@@ -6,10 +6,26 @@
 function toggleSection(sectionId) {
     const content = document.getElementById(sectionId);
     const arrow = document.getElementById('arrow-' + sectionId);
+    const placeholder = document.getElementById('placeholder-' + sectionId);
     
     if (content && arrow) {
+        const isCollapsing = !content.classList.contains('collapsed');
+        
         content.classList.toggle('collapsed');
         arrow.classList.toggle('collapsed');
+        
+        // Show placeholder image when collapsed (only for activity logs)
+        if (placeholder) {
+            if (isCollapsing) {
+                placeholder.classList.add('show');
+                placeholder.style.display = 'block';
+            } else {
+                placeholder.classList.remove('show');
+                setTimeout(() => {
+                    placeholder.style.display = 'none';
+                }, 250); // Match transition duration
+            }
+        }
     }
 }
 

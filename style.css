@@ -130,6 +130,37 @@ body::before {
     opacity: 0;
 }
 
+.collapsed-placeholder {
+    display: none;
+    margin-top: 1rem;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: opacity var(--transition-base);
+}
+
+.collapsed-placeholder.show {
+    display: block;
+    animation: fadeIn var(--transition-base);
+}
+
+.collapsed-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    opacity: 0.6;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
 /* --- Toast Notifications --- */
 .toast-container {
     position: fixed;
