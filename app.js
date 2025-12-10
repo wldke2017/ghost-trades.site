@@ -663,6 +663,11 @@ function handleIncomingMessage(msg) {
                         }
                     } else {
                         // S2 Recovery trades handle martingale
+                        // Decrement S2 counter when contract completes
+                        if (botState.activeS2Count > 0) {
+                            botState.activeS2Count--;
+                        }
+                        
                         if (!isWin) {
                             botState.martingaleStepCount++;
 

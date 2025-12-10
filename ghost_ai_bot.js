@@ -159,6 +159,7 @@ async function startGhostAiBot() {
     botState.s1LossSymbol = null;
     botState.totalStake = 0.0;
     botState.totalPayout = 0.0;
+    botState.activeS2Count = 0; // Initialize S2 counter
     // Don't reset runsCount - it should persist across runs
     // botState.runsCount is incremented at the start of the function
 
@@ -584,10 +585,15 @@ function scanAndPlaceMultipleTrades() {
         }
     }
 
+    // Debug logging for S2 recovery state
+    if (botState.martingaleStepCount > 0 && validS2Markets.length === 0 && Math.random() < 0.02) {
+        addBotLog(`⏳ S2 Recovery: Scanning ${symbolsToScan.length} markets... No valid S2 conditions found yet. (Step ${botState.martingaleStepCount}, Active S2: ${botState.activeS2Count})`, 'info');
+    }
+
     // Execute best S2 recovery trade (if in recovery mode and no active S2)
     if (validS2Markets.length > 0 && botState.activeS2Count < 1) {
-        // Pick the market with the highest over 4 percentage
-        validS2Markets.sort((a, b) => b.over4Percentage - a.over4Percentage);
+        // Pick the market with the highest over percentage
+        validS2Markets.sort((a, b) => b.overPercentage - a.overPercentage);
         const selected = validS2Markets[0];
 
         // Calculate martingale stake for S2
