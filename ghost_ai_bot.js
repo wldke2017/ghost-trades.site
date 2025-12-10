@@ -104,16 +104,16 @@ async function startGhostAiBot() {
     const maxMartingaleSteps = parseInt(botMaxMartingale.value);
     
     // Load new configuration parameters
-    const analysisDigits = parseInt(document.getElementById('botAnalysisDigits')?.value || 20);
+    const analysisDigits = parseInt(document.getElementById('botAnalysisDigits')?.value || 15);
     const s1UseDigitCheck = document.getElementById('botS1UseDigitCheck')?.checked ?? true;
-    const s1CheckDigits = parseInt(document.getElementById('botS1CheckDigits')?.value || 2);
-    const s1MaxDigit = parseInt(document.getElementById('botS1MaxDigit')?.value || 2);
+    const s1CheckDigits = parseInt(document.getElementById('botS1CheckDigits')?.value || 4);
+    const s1MaxDigit = parseInt(document.getElementById('botS1MaxDigit')?.value || 3);
     const s1UsePercentage = document.getElementById('botS1UsePercentage')?.checked ?? true;
     const s1Prediction = parseInt(document.getElementById('botS1Prediction')?.value || 2);
-    const s1Percentage = parseFloat(document.getElementById('botS1Percentage')?.value || 65);
-    const s1MaxLosses = parseInt(document.getElementById('botS1MaxLosses')?.value || 2);
+    const s1Percentage = parseFloat(document.getElementById('botS1Percentage')?.value || 70);
+    const s1MaxLosses = parseInt(document.getElementById('botS1MaxLosses')?.value || 1);
     const s2UseDigitCheck = document.getElementById('botS2UseDigitCheck')?.checked ?? true;
-    const s2CheckDigits = parseInt(document.getElementById('botS2CheckDigits')?.value || 5);
+    const s2CheckDigits = parseInt(document.getElementById('botS2CheckDigits')?.value || 6);
     const s2MaxDigit = parseInt(document.getElementById('botS2MaxDigit')?.value || 4);
     const s2UsePercentage = document.getElementById('botS2UsePercentage')?.checked ?? true;
     const s2Prediction = parseInt(document.getElementById('botS2Prediction')?.value || 5);
@@ -245,7 +245,7 @@ function calculateDigitPercentages(symbol) {
     if (allDigits.length === 0) return null;
 
     // Use configured analysis digits count
-    const analysisCount = botState.analysisDigits || 20;
+    const analysisCount = botState.analysisDigits || 15;
     const digits = allDigits.slice(-analysisCount);
     const percentages = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
     const total = digits.length;
@@ -437,10 +437,10 @@ function scanAndPlaceMultipleTrades() {
         // Check S1 conditions (only if not blocked)
         // Skip if this symbol already has an active S1 trade or if S1 is blocked
         if (!activeS1Symbols.has(symbol) && !botState.s1Blocked) {
-            const checkCount = botState.s1CheckDigits || 2;
-            const maxDigit = botState.s1MaxDigit || 2;
+            const checkCount = botState.s1CheckDigits || 4;
+            const maxDigit = botState.s1MaxDigit || 3;
             const prediction = botState.s1Prediction || 2;
-            const minPercentage = botState.s1Percentage || 65;
+            const minPercentage = botState.s1Percentage || 70;
             const useDigitCheck = botState.s1UseDigitCheck ?? true;
             const usePercentage = botState.s1UsePercentage ?? true;
             
@@ -486,7 +486,7 @@ function scanAndPlaceMultipleTrades() {
 
         // Check S2 conditions (only if in recovery mode)
         if (botState.martingaleStepCount > 0) {
-            const checkCount = botState.s2CheckDigits || 5;
+            const checkCount = botState.s2CheckDigits || 6;
             const maxDigit = botState.s2MaxDigit || 4;
             const prediction = botState.s2Prediction || 5;
             const minPercentage = botState.s2Percentage || 45;

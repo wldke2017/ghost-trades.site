@@ -504,7 +504,7 @@
 
                     <div class="control-group">
                         <label for="botAnalysisDigits">Analysis Digits (Last N)</label>
-                        <input type="number" id="botAnalysisDigits" name="botAnalysisDigits" value="20" min="10" max="100" title="Number of last digits to use for percentage analysis">
+                        <input type="number" id="botAnalysisDigits" name="botAnalysisDigits" value="15" min="10" max="100" title="Number of last digits to use for percentage analysis">
                     </div>
 
                     <h5 style="margin-top: 20px; color: var(--primary-color);">S1 Strategy Configuration</h5>
@@ -518,12 +518,12 @@
 
                     <div class="control-group">
                         <label for="botS1CheckDigits">S1: Check Last N Digits</label>
-                        <input type="number" id="botS1CheckDigits" name="botS1CheckDigits" value="2" min="1" max="10" title="Number of last digits to check for S1 condition">
+                        <input type="number" id="botS1CheckDigits" name="botS1CheckDigits" value="4" min="1" max="10" title="Number of last digits to check for S1 condition">
                     </div>
 
                     <div class="control-group">
                         <label for="botS1MaxDigit">S1: Max Digit Value</label>
-                        <input type="number" id="botS1MaxDigit" name="botS1MaxDigit" value="2" min="0" max="9" title="All last N digits must be ≤ this value">
+                        <input type="number" id="botS1MaxDigit" name="botS1MaxDigit" value="3" min="0" max="9" title="All last N digits must be ≤ this value">
                     </div>
 
                     <div class="control-group">
@@ -541,14 +541,14 @@
                     <div class="control-group">
                         <label for="botS1Percentage">S1: Min Percentage</label>
                         <div class="input-with-unit">
-                            <input type="number" id="botS1Percentage" name="botS1Percentage" value="65" min="0" max="100">
+                            <input type="number" id="botS1Percentage" name="botS1Percentage" value="70" min="0" max="100">
                             <span class="unit">%</span>
                         </div>
                     </div>
 
                     <div class="control-group">
                         <label for="botS1MaxLosses">S1: Max Consecutive Losses</label>
-                        <input type="number" id="botS1MaxLosses" name="botS1MaxLosses" value="2" min="1" max="10" title="Stop S1 after this many consecutive losses until recovery">
+                        <input type="number" id="botS1MaxLosses" name="botS1MaxLosses" value="1" min="1" max="10" title="Stop S1 after this many consecutive losses until recovery">
                     </div>
 
                     <h5 style="margin-top: 20px; color: var(--accent-color);">S2 Recovery Configuration</h5>
@@ -562,7 +562,7 @@
 
                     <div class="control-group">
                         <label for="botS2CheckDigits">S2: Check Last N Digits</label>
-                        <input type="number" id="botS2CheckDigits" name="botS2CheckDigits" value="5" min="1" max="10" title="Number of last digits to check for S2 condition">
+                        <input type="number" id="botS2CheckDigits" name="botS2CheckDigits" value="6" min="1" max="10" title="Number of last digits to check for S2 condition">
                     </div>
 
                     <div class="control-group">
