@@ -84,6 +84,7 @@ async function startGhostAiBot() {
     // Clear any stale contracts and locks from previous session
     activeContracts = {};
     activeS1Symbols.clear();
+    expectedStakes = {}; // Clear expected stakes
     clearAllTradeLocks();
     
     // Add session start marker in logs
@@ -371,6 +372,10 @@ let activeContracts = {}; // { contractId: { symbol, strategy: 'S1' or 'S2', sta
 // Track which symbols have active S1 trades to avoid duplicates
 let activeS1Symbols = new Set();
 
+// CRITICAL: Track expected stakes for pending trades to prevent duplicates
+// Format: { symbol: stake_amount }
+let expectedStakes = {};
+
 function handleBotTick(tick) {
     if (!isBotRunning) {
         return;
@@ -547,6 +552,12 @@ function scanAndPlaceMultipleTrades() {
         validS1Markets.sort((a, b) => b.overPercentage - a.overPercentage);
         const selectedMarket = validS1Markets[0];
         
+        // CRITICAL: Check if symbol already has active S1 trade BEFORE acquiring lock
+        if (activeS1Symbols.has(selectedMarket.symbol)) {
+            console.log(`⚠️ ${selectedMarket.symbol} already has active S1 trade, skipping`);
+            return;
+        }
+        
         // CRITICAL: Acquire lock BEFORE logging or any other action
         if (!acquireTradeLock(selectedMarket.symbol, 'ghost_ai')) {
             // Lock failed - another bot is already trading this symbol
@@ -554,7 +565,16 @@ function scanAndPlaceMultipleTrades() {
             let traded = false;
             for (let i = 1; i < validS1Markets.length && i < 3; i++) {
                 const alternativeMarket = validS1Markets[i];
+                
+                // Check if alternative also has active S1
+                if (activeS1Symbols.has(alternativeMarket.symbol)) {
+                    continue;
+                }
+                
                 if (acquireTradeLock(alternativeMarket.symbol, 'ghost_ai')) {
+                    // CRITICAL FIX: Add to activeS1Symbols IMMEDIATELY after acquiring lock
+                    activeS1Symbols.add(alternativeMarket.symbol);
+                    console.log(`🔒 Added ${alternativeMarket.symbol} to activeS1Symbols (alternative)`);
                     addBotLog(`🔄 ${selectedMarket.symbol} locked, trading alternative: ${alternativeMarket.symbol}`, 'info');
                     executeTradeWithTracking(alternativeMarket);
                     traded = true;
@@ -562,10 +582,14 @@ function scanAndPlaceMultipleTrades() {
                 }
             }
             if (!traded) {
-                addBotLog(`⚠️ All top S1 markets locked by other bots`, 'warning');
+                addBotLog(`⚠️ All top S1 markets locked by other bots or have active trades`, 'warning');
             }
             return;
         }
+
+        // CRITICAL FIX: Add to activeS1Symbols IMMEDIATELY after acquiring lock to prevent race condition
+        activeS1Symbols.add(selectedMarket.symbol);
+        console.log(`🔒 Added ${selectedMarket.symbol} to activeS1Symbols`);
 
         addBotLog(`🎯 Found ${validS1Markets.length} valid S1 market(s) | Trading best: ${selectedMarket.symbol} (${selectedMarket.overPercentage.toFixed(1)}% over ${selectedMarket.prediction}) | Active trades: ${activeTradeCount}/${maxConcurrentTrades}`, 'info');
 
@@ -596,6 +620,31 @@ function scanAndPlaceMultipleTrades() {
         validS2Markets.sort((a, b) => b.overPercentage - a.overPercentage);
         const selected = validS2Markets[0];
 
+        // CRITICAL: Acquire lock for S2 trade to prevent duplicates
+        if (!acquireTradeLock(selected.symbol, 'ghost_ai')) {
+            console.log(`⚠️ S2 Recovery: ${selected.symbol} is locked, trying next market`);
+            
+            // Try alternative markets
+            for (let i = 1; i < validS2Markets.length && i < 3; i++) {
+                const alternative = validS2Markets[i];
+                if (acquireTradeLock(alternative.symbol, 'ghost_ai')) {
+                    selected.symbol = alternative.symbol;
+                    selected.lastN = alternative.lastN;
+                    selected.overPercentage = alternative.overPercentage;
+                    selected.mostDigit = alternative.mostDigit;
+                    selected.leastDigit = alternative.leastDigit;
+                    addBotLog(`🔄 S2 using alternative market: ${alternative.symbol}`, 'info');
+                    break;
+                }
+            }
+            
+            // If no lock acquired, skip this cycle
+            if (!globalTradeLocks[selected.symbol] || globalTradeLocks[selected.symbol].botType !== 'ghost_ai') {
+                addBotLog(`⚠️ All S2 markets locked, will retry next cycle`, 'warning');
+                return;
+            }
+        }
+
         // Calculate martingale stake for S2
         const accumulatedLosses = botState.accumulatedStakesLost;
         const recoveryMultiplier = 100 / botState.payoutPercentage;
@@ -620,17 +669,12 @@ function executeTradeWithTracking(marketData) {
         }
     }
 
-    // Track this as an active contract
-    const contractId = `pending_${marketData.symbol}_${Date.now()}`;
-    activeContracts[contractId] = {
-        symbol: marketData.symbol,
-        strategy: marketData.mode,
-        stake: marketData.stake,
-        startTime: Date.now()
-    };
+    // CRITICAL FIX: Don't create pending contract here - let app.js handle it when buy response comes
+    // This prevents duplicate contract tracking with different IDs
 
-    // Track S1 symbols to avoid duplicates
-    if (marketData.mode === 'S1') {
+    // Note: activeS1Symbols.add() is now done immediately after lock acquisition in scanAndPlaceMultipleTrades()
+    // to prevent race conditions. Keeping this as a safety check in case executeTradeWithTracking is called directly.
+    if (marketData.mode === 'S1' && !activeS1Symbols.has(marketData.symbol)) {
         activeS1Symbols.add(marketData.symbol);
     }
 
@@ -680,6 +724,37 @@ function sendBotPurchase(prediction, stake, symbol) {
 function sendBotPurchaseWithStrategy(prediction, stake, symbol, strategy, contractType = null) {
     console.log('sendBotPurchase: Preparing to send purchase for', symbol, 'prediction', prediction, 'stake', stake, 'strategy', strategy);
 
+    // CRITICAL: Check if we already have a pending trade on this symbol (stake-based duplicate detection)
+    if (expectedStakes[symbol] !== undefined) {
+        console.error(`❌ DUPLICATE DETECTED: ${symbol} already has pending trade with stake $${expectedStakes[symbol]}! Blocking duplicate.`);
+        addBotLog(`❌ Prevented duplicate purchase on ${symbol} (expected stake: $${expectedStakes[symbol].toFixed(2)})`, 'error');
+        
+        // Clean up
+        if (strategy === 'S1') {
+            activeS1Symbols.delete(symbol);
+            console.log(`🔓 Removed ${symbol} from activeS1Symbols due to duplicate detection`);
+        }
+        releaseTradeLock(symbol, 'ghost_ai');
+        return;
+    }
+
+    // CRITICAL: Validate we have a valid trade lock
+    if (!globalTradeLocks[symbol] || globalTradeLocks[symbol].botType !== 'ghost_ai') {
+        console.error(`❌ LOCK VALIDATION FAILED: No valid lock for ${symbol}! Aborting purchase.`);
+        addBotLog(`❌ Lock validation failed for ${symbol}`, 'error');
+        
+        // Clean up if S1
+        if (strategy === 'S1') {
+            activeS1Symbols.delete(symbol);
+            console.log(`🔓 Removed ${symbol} from activeS1Symbols due to lock validation failure`);
+        }
+        return;
+    }
+
+    // CRITICAL: Record expected stake for this symbol to prevent duplicates
+    expectedStakes[symbol] = stake;
+    console.log(`📝 Recorded expected stake for ${symbol}: $${stake.toFixed(2)}`);
+
     // Determine contract type
     let finalContractType;
     if (contractType) {
@@ -721,7 +796,18 @@ function sendBotPurchaseWithStrategy(prediction, stake, symbol, strategy, contra
         console.log('sendBotPurchase: Request sent successfully');
     }).catch(error => {
         console.error('sendBotPurchase: Request failed:', error);
-        botState.isTrading = false; // Reset trading flag on failure
+        
+        // CRITICAL: Clean up on failure
+        delete expectedStakes[symbol]; // Remove expected stake
+        console.log(`🗑️ Removed expected stake for ${symbol} due to purchase failure`);
+        
+        if (strategy === 'S1') {
+            activeS1Symbols.delete(symbol);
+            console.log(`🔓 Removed ${symbol} from activeS1Symbols due to purchase failure`);
+        }
+        releaseTradeLock(symbol, 'ghost_ai');
+        
+        addBotLog(`❌ Purchase failed for ${symbol}: ${error.message || 'Unknown error'}`, 'error');
     });
 }
 
