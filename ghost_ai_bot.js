@@ -121,6 +121,7 @@ async function startGhostAiBot() {
     const s2UseDigitCheck = document.getElementById('botS2UseDigitCheck')?.checked ?? true;
     const s2CheckDigits = parseInt(document.getElementById('botS2CheckDigits')?.value || 6);
     const s2MaxDigit = parseInt(document.getElementById('botS2MaxDigit')?.value || 4);
+    const s1ContractType = document.getElementById('botS1ContractType')?.value || 'OVER';
     const s2UsePercentage = document.getElementById('botS2UsePercentage')?.checked ?? true;
     const s2Prediction = parseInt(document.getElementById('botS2Prediction')?.value || 5);
     const s2ContractType = document.getElementById('botS2ContractType')?.value || 'UNDER';
@@ -141,6 +142,7 @@ async function startGhostAiBot() {
     botState.s1Prediction = s1Prediction;
     botState.s1Percentage = s1Percentage;
     botState.s1PercentageOperator = s1PercentageOperator;
+    botState.s1ContractType = s1ContractType;
     botState.s1MaxLosses = s1MaxLosses;
     botState.s1ConsecutiveLosses = 0; // Track consecutive S1 losses
     botState.s1Blocked = false; // Flag to block S1 after max losses
@@ -192,7 +194,7 @@ async function startGhostAiBot() {
     if (s1UseDigitCheck) s1Conditions.push(`Last ${s1CheckDigits} ≤ ${s1MaxDigit}`);
     if (s1UsePercentage) s1Conditions.push(`Over ${s1Prediction}% ${s1PercentageOperator} ${s1Percentage}%`);
     s1Conditions.push(`Most digit >4 & Least digit <4`);
-    addBotLog(`📈 S1: ${s1Conditions.join(' & ')} → OVER ${s1Prediction} | Max Losses: ${s1MaxLosses}`);
+    addBotLog(`📈 S1: ${s1Conditions.join(' & ')} → ${s1ContractType} ${s1Prediction} | Max Losses: ${s1MaxLosses}`);
     
     // Build S2 condition string
     let s2Conditions = [];
@@ -527,6 +529,7 @@ function scanAndPlaceMultipleTrades() {
                             mostDigit: fullDistribution.mostAppearingDigit,
                             leastDigit: fullDistribution.leastAppearingDigit,
                             prediction: prediction,
+                            contractType: botState.s1ContractType,
                             stake: botState.initialStake
                         });
                     }
@@ -649,7 +652,7 @@ function scanAndPlaceMultipleTrades() {
 
         const lastNStr = selectedMarket.lastN.join(', ');
         const s1Operator = botState.s1PercentageOperator || '>=';
-        addBotLog(`✓ S1 Entry: ${selectedMarket.symbol} | Last ${selectedMarket.lastN.length}: [${lastNStr}] ≤ ${botState.s1MaxDigit} | Over ${selectedMarket.prediction}%: ${selectedMarket.overPercentage.toFixed(1)}% ${s1Operator} ${botState.s1Percentage}% | Most: ${selectedMarket.mostDigit} (>4) | Least: ${selectedMarket.leastDigit} (<4) | Stake: $${selectedMarket.stake.toFixed(2)}`, 'info');
+        addBotLog(`✓ S1 Entry: ${selectedMarket.symbol} | Last ${selectedMarket.lastN.length}: [${lastNStr}] ≤ ${botState.s1MaxDigit} | ${selectedMarket.contractType} ${selectedMarket.prediction}%: ${selectedMarket.overPercentage.toFixed(1)}% ${s1Operator} ${botState.s1Percentage}% | Most: ${selectedMarket.mostDigit} (>4) | Least: ${selectedMarket.leastDigit} (<4) | Stake: $${selectedMarket.stake.toFixed(2)}`, 'info');
 
         executeTradeWithTracking(selectedMarket);
     } else if (validS1Markets.length > 0 && activeTradeCount >= maxConcurrentTrades) {
