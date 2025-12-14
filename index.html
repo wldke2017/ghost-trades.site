@@ -515,11 +515,11 @@
 
                     <h5 class="collapsible-header" style="margin-top: 20px; color: var(--primary-color);" onclick="toggleSection('s1-config')">
                         <span>S1 Strategy Configuration</span>
-                        <svg class="collapse-arrow" id="arrow-s1-config" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg class="collapse-arrow collapsed" id="arrow-s1-config" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </h5>
-                    <div class="collapsible-content" id="s1-config">
+                    <div class="collapsible-content collapsed" id="s1-config">
                     <div class="control-group">
                         <label style="display: flex; align-items: center; gap: 10px;">
                             <input type="checkbox" id="botS1UseDigitCheck" name="botS1UseDigitCheck" checked style="width: auto;">
@@ -574,11 +574,11 @@
 
                     <h5 class="collapsible-header" style="margin-top: 20px; color: var(--accent-color);" onclick="toggleSection('s2-config')">
                         <span>S2 Recovery Configuration</span>
-                        <svg class="collapse-arrow" id="arrow-s2-config" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg class="collapse-arrow collapsed" id="arrow-s2-config" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </h5>
-                    <div class="collapsible-content" id="s2-config">
+                    <div class="collapsible-content collapsed" id="s2-config">
                     <div class="control-group">
                         <label style="display: flex; align-items: center; gap: 10px;">
                             <input type="checkbox" id="botS2UseDigitCheck" name="botS2UseDigitCheck" checked style="width: auto;">
@@ -646,14 +646,14 @@
                 <div class="bot-status">
                     <h4 class="collapsible-header" onclick="toggleSection('activity-log-ghost-ai')">
                         <span>Activity Log</span>
-                        <svg class="collapse-arrow" id="arrow-activity-log-ghost-ai" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg class="collapse-arrow collapsed" id="arrow-activity-log-ghost-ai" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </h4>
-                    <div class="collapsed-placeholder" id="placeholder-activity-log-ghost-ai" style="display: none;">
+                    <div class="collapsed-placeholder" id="placeholder-activity-log-ghost-ai" style="display: block;">
                         <img src="images/back.jpg" alt="Activity Log Collapsed" class="collapsed-image">
                     </div>
-                    <div class="collapsible-content" id="activity-log-ghost-ai">
+                    <div class="collapsible-content collapsed" id="activity-log-ghost-ai">
                     <div id="bot-log-container" class="bot-log">
                         <div class="log-info">[--:--:--] Waiting for initialization...</div>
                     </div>
