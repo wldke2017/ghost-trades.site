@@ -533,8 +533,20 @@
                     </div>
 
                     <div class="control-group">
-                        <label for="botS1MaxDigit">S1: Max Digit Value</label>
-                        <input type="number" id="botS1MaxDigit" name="botS1MaxDigit" value="3" min="0" max="9" title="All last N digits must be ≤ this value">
+                        <label>S1: Digit Comparison</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select id="botS1DigitOperator" name="botS1DigitOperator" class="control-select" style="flex: 0 0 auto; width: 60px; padding: 8px 4px; font-size: 18px; text-align: center;" title="Comparison operator for digits">
+                                <option value="<=" selected>≤</option>
+                                <option value=">=">≥</option>
+                                <option value="=">=</option>
+                                <option value="<"><</option>
+                                <option value=">">></option>
+                            </select>
+                            <div class="input-with-unit" style="flex: 1;">
+                                <input type="number" id="botS1MaxDigit" name="botS1MaxDigit" value="3" min="0" max="9" title="Comparison value for digits">
+                                <span class="unit">Value</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="control-group">
@@ -600,8 +612,20 @@
                     </div>
 
                     <div class="control-group">
-                        <label for="botS2MaxDigit">S2: Max Digit Value</label>
-                        <input type="number" id="botS2MaxDigit" name="botS2MaxDigit" value="4" min="0" max="9" title="All last N digits must be ≤ this value">
+                        <label>S2: Digit Comparison</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select id="botS2DigitOperator" name="botS2DigitOperator" class="control-select" style="flex: 0 0 auto; width: 60px; padding: 8px 4px; font-size: 18px; text-align: center;" title="Comparison operator for digits">
+                                <option value="<=" selected>≤</option>
+                                <option value=">=">≥</option>
+                                <option value="=">=</option>
+                                <option value="<"><</option>
+                                <option value=">">></option>
+                            </select>
+                            <div class="input-with-unit" style="flex: 1;">
+                                <input type="number" id="botS2MaxDigit" name="botS2MaxDigit" value="4" min="0" max="9" title="Comparison value for digits">
+                                <span class="unit">Value</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="control-group">

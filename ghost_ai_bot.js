@@ -122,9 +122,11 @@ async function startGhostAiBot() {
     const s2CheckDigits = parseInt(document.getElementById('botS2CheckDigits')?.value || 6);
     const s2MaxDigit = parseInt(document.getElementById('botS2MaxDigit')?.value || 4);
     const s1ContractType = document.getElementById('botS1ContractType')?.value || 'OVER';
+    const s1DigitOperator = document.getElementById('botS1DigitOperator')?.value || '<=';
     const s2UsePercentage = document.getElementById('botS2UsePercentage')?.checked ?? true;
     const s2Prediction = parseInt(document.getElementById('botS2Prediction')?.value || 5);
     const s2ContractType = document.getElementById('botS2ContractType')?.value || 'UNDER';
+    const s2DigitOperator = document.getElementById('botS2DigitOperator')?.value || '<=';
     const s2Percentage = parseFloat(document.getElementById('botS2Percentage')?.value || 45);
     const s2PercentageOperator = document.getElementById('botS2PercentageOperator')?.value || '>=';
 
@@ -143,6 +145,7 @@ async function startGhostAiBot() {
     botState.s1Percentage = s1Percentage;
     botState.s1PercentageOperator = s1PercentageOperator;
     botState.s1ContractType = s1ContractType;
+    botState.s1DigitOperator = s1DigitOperator;
     botState.s1MaxLosses = s1MaxLosses;
     botState.s1ConsecutiveLosses = 0; // Track consecutive S1 losses
     botState.s1Blocked = false; // Flag to block S1 after max losses
@@ -152,6 +155,7 @@ async function startGhostAiBot() {
     botState.s2UsePercentage = s2UsePercentage;
     botState.s2Prediction = s2Prediction;
     botState.s2ContractType = s2ContractType;
+    botState.s2DigitOperator = s2DigitOperator;
     botState.s2Percentage = s2Percentage;
     botState.s2PercentageOperator = s2PercentageOperator;
     botState.currentStake = botState.initialStake;
@@ -191,14 +195,14 @@ async function startGhostAiBot() {
     
     // Build S1 condition string
     let s1Conditions = [];
-    if (s1UseDigitCheck) s1Conditions.push(`Last ${s1CheckDigits} ≤ ${s1MaxDigit}`);
+    if (s1UseDigitCheck) s1Conditions.push(`Last ${s1CheckDigits} ${s1DigitOperator} ${s1MaxDigit}`);
     if (s1UsePercentage) s1Conditions.push(`Over ${s1Prediction}% ${s1PercentageOperator} ${s1Percentage}%`);
     s1Conditions.push(`Most digit >4 & Least digit <4`);
     addBotLog(`📈 S1: ${s1Conditions.join(' & ')} → ${s1ContractType} ${s1Prediction} | Max Losses: ${s1MaxLosses}`);
     
     // Build S2 condition string
     let s2Conditions = [];
-    if (s2UseDigitCheck) s2Conditions.push(`Last ${s2CheckDigits} ≤ ${s2MaxDigit}`);
+    if (s2UseDigitCheck) s2Conditions.push(`Last ${s2CheckDigits} ${s2DigitOperator} ${s2MaxDigit}`);
     if (s2UsePercentage) s2Conditions.push(`Over ${s2Prediction}% ${s2PercentageOperator} ${s2Percentage}%`);
     s2Conditions.push(`Most digit >4 & Least digit <4`);
     addBotLog(`📉 S2: ${s2Conditions.join(' & ')} → ${s2ContractType} ${s2Prediction}`);
@@ -503,7 +507,7 @@ function scanAndPlaceMultipleTrades() {
             
             // Only check digit condition if enabled
             if (useDigitCheck) {
-                digitCheckPassed = lastN.every(d => d <= maxDigit);
+                digitCheckPassed = lastN.every(d => compareWithOperator(d, botState.s1DigitOperator, botState.s1MaxDigit));
             }
             
             // Only check percentage condition if enabled
@@ -555,7 +559,7 @@ function scanAndPlaceMultipleTrades() {
             
             // Only check digit condition if enabled
             if (useDigitCheck) {
-                digitCheckPassed = lastN.every(d => d <= maxDigit);
+                digitCheckPassed = lastN.every(d => compareWithOperator(d, botState.s2DigitOperator, botState.s2MaxDigit));
             }
             
             // Only check percentage condition if enabled
@@ -652,7 +656,7 @@ function scanAndPlaceMultipleTrades() {
 
         const lastNStr = selectedMarket.lastN.join(', ');
         const s1Operator = botState.s1PercentageOperator || '>=';
-        addBotLog(`✓ S1 Entry: ${selectedMarket.symbol} | Last ${selectedMarket.lastN.length}: [${lastNStr}] ≤ ${botState.s1MaxDigit} | ${selectedMarket.contractType} ${selectedMarket.prediction}%: ${selectedMarket.overPercentage.toFixed(1)}% ${s1Operator} ${botState.s1Percentage}% | Most: ${selectedMarket.mostDigit} (>4) | Least: ${selectedMarket.leastDigit} (<4) | Stake: $${selectedMarket.stake.toFixed(2)}`, 'info');
+        addBotLog(`✓ S1 Entry: ${selectedMarket.symbol} | Last ${selectedMarket.lastN.length}: [${lastNStr}] ${botState.s1DigitOperator} ${botState.s1MaxDigit} | ${selectedMarket.contractType} ${selectedMarket.prediction}%: ${selectedMarket.overPercentage.toFixed(1)}% ${s1Operator} ${botState.s1Percentage}% | Most: ${selectedMarket.mostDigit} (>4) | Least: ${selectedMarket.leastDigit} (<4) | Stake: $${selectedMarket.stake.toFixed(2)}`, 'info');
 
         executeTradeWithTracking(selectedMarket);
     } else if (validS1Markets.length > 0 && activeTradeCount >= maxConcurrentTrades) {
@@ -727,7 +731,7 @@ function scanAndPlaceMultipleTrades() {
 
         const lastNStr = selected.lastN.join(', ');
         const s2Operator = botState.s2PercentageOperator || '>=';
-        addBotLog(`✓ S2 Recovery: ${validS2Markets.length} market(s) valid | Trading ${selected.symbol} | Last ${selected.lastN.length}: [${lastNStr}] ≤ ${botState.s2MaxDigit} | Over ${selected.prediction}%: ${selected.overPercentage.toFixed(1)}% ${s2Operator} ${botState.s2Percentage}% | Most: ${selected.mostDigit} (>4) | Least: ${selected.leastDigit} (<4) | ${selected.contractType} ${selected.prediction} | Stake: $${selected.stake.toFixed(2)}`, 'warning');
+        addBotLog(`✓ S2 Recovery: ${validS2Markets.length} market(s) valid | Trading ${selected.symbol} | Last ${selected.lastN.length}: [${lastNStr}] ${botState.s2DigitOperator} ${botState.s2MaxDigit} | Over ${selected.prediction}%: ${selected.overPercentage.toFixed(1)}% ${s2Operator} ${botState.s2Percentage}% | Most: ${selected.mostDigit} (>4) | Least: ${selected.leastDigit} (<4) | ${selected.contractType} ${selected.prediction} | Stake: $${selected.stake.toFixed(2)}`, 'warning');
         
         executeTradeWithTracking(selected);
     }
