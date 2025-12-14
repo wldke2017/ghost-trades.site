@@ -86,6 +86,124 @@ function clearAllTradeLocks() {
     }
 }
 
+// ===================================
+// STAKE-BASED DUPLICATE PREVENTION
+// ===================================
+
+// Track expected stakes for pending trades (replaces trade locks)
+let expectedStakes = {}; // { symbol: stake_amount }
+
+// Track active trade signatures to prevent exact duplicates
+let activeTradeSignatures = new Set(); // Set of "symbol|prediction|stake" strings
+
+/**
+ * Check if a symbol can be traded with the given stake (stake-based duplicate prevention)
+ * @param {string} symbol - The symbol to check
+ * @param {number} stake - The stake amount for the trade
+ * @param {string} botType - Type of bot ('ghost_ai' or 'ghost_eodd')
+ * @returns {boolean} - True if trade is allowed, false if duplicate
+ */
+function canPlaceStakeBasedTrade(symbol, stake, botType = 'ghost_ai') {
+    const existingStake = expectedStakes[symbol];
+
+    console.log(`🔍 [${botType}] canPlaceStakeBasedTrade called: ${symbol}, stake=$${stake}, existing=${existingStake}`);
+
+    if (existingStake === undefined) {
+        // No pending trade on this symbol - allow it
+        console.log(`✅ [${botType}] ${symbol}: No existing stake, ALLOWING trade`);
+        return true;
+    }
+
+    // ANY existing stake blocks new trades - prevents race conditions
+    console.log(`🚫 [${botType}] ${symbol}: BLOCKED by existing stake $${existingStake}`);
+    return false;
+}
+
+/**
+ * Record a pending trade using stake-based tracking
+ * @param {string} symbol - The symbol being traded
+ * @param {number} stake - The stake amount
+ * @param {string} botType - Type of bot
+ */
+function recordPendingStake(symbol, stake, botType = 'ghost_ai') {
+    expectedStakes[symbol] = stake;
+    console.log(`🔒 [${botType}] ${symbol}: Stake $${stake} recorded as pending`);
+}
+
+/**
+ * Clear pending stake when trade completes or fails
+ * @param {string} symbol - The symbol to clear
+ * @param {string} botType - Type of bot
+ */
+function clearPendingStake(symbol, botType = 'ghost_ai') {
+    if (expectedStakes[symbol] !== undefined) {
+        const stake = expectedStakes[symbol];
+        delete expectedStakes[symbol];
+        console.log(`🔓 [${botType}] ${symbol}: Stake $${stake} cleared`);
+    }
+}
+
+/**
+ * Record a trade signature to prevent exact duplicates
+ * @param {string} symbol - Trading symbol
+ * @param {number} prediction - Barrier/prediction value
+ * @param {number} stake - Stake amount
+ * @param {string} botType - Bot type identifier
+ */
+function recordTradeSignature(symbol, prediction, stake, botType = 'ghost_ai') {
+    const signature = `${symbol}|${prediction}|${stake}`;
+    activeTradeSignatures.add(signature);
+    console.log(`📝 [${botType}] Recorded trade signature: ${signature}`);
+}
+
+/**
+ * Check if exact trade signature already exists (prevents identical trades)
+ * @param {string} symbol - Trading symbol
+ * @param {number} prediction - Barrier/prediction value
+ * @param {number} stake - Stake amount
+ * @param {string} botType - Bot type identifier
+ * @returns {boolean} - False if exact duplicate exists, true if allowed
+ */
+function isTradeSignatureUnique(symbol, prediction, stake, botType = 'ghost_ai') {
+    const signature = `${symbol}|${prediction}|${stake}`;
+    const exists = activeTradeSignatures.has(signature);
+
+    if (exists) {
+        console.log(`🚫 [${botType}] Duplicate trade signature blocked: ${signature}`);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Clear a trade signature when trade completes
+ * @param {string} symbol - Trading symbol
+ * @param {number} prediction - Barrier/prediction value
+ * @param {number} stake - Stake amount
+ * @param {string} botType - Bot type identifier
+ */
+function clearTradeSignature(symbol, prediction, stake, botType = 'ghost_ai') {
+    const signature = `${symbol}|${prediction}|${stake}`;
+    activeTradeSignatures.delete(signature);
+    console.log(`🗑️ [${botType}] Cleared trade signature: ${signature}`);
+}
+
+/**
+ * Clear all pending stakes (useful when stopping bots)
+ */
+function clearAllPendingStakes() {
+    const stakeCount = Object.keys(expectedStakes).length;
+    const signatureCount = activeTradeSignatures.size;
+
+    expectedStakes = {};
+    activeTradeSignatures.clear();
+
+    if (stakeCount > 0 || signatureCount > 0) {
+        console.log(`🔓 Cleared ${stakeCount} pending stake(s) and ${signatureCount} trade signature(s)`);
+    }
+}
+
 /**
  * Debug function to check distribution data status
  * Call this from console: checkDistributionData()

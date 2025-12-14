@@ -560,10 +560,14 @@ function handleIncomingMessage(msg) {
                         
                         console.log(`✅ Found and removing contract ${contractIdToRemove} from activeContracts`);
                         
-                        // CRITICAL: Remove expected stake for this symbol
+                        // CRITICAL: Remove expected stake and trade signature for this symbol
                         if (expectedStakes[contractInfo.symbol] !== undefined) {
+                            const stake = expectedStakes[contractInfo.symbol];
                             delete expectedStakes[contractInfo.symbol];
                             console.log(`🗑️ Removed expected stake for ${contractInfo.symbol}`);
+
+                            // Also clear the trade signature
+                            clearTradeSignature(contractInfo.symbol, passthrough.barrier, stake, 'ghost_ai');
                         }
                         
                         // Remove from S1 symbols tracking if it was an S1 trade
@@ -595,10 +599,14 @@ function handleIncomingMessage(msg) {
                             if (info.symbol === contract.symbol && info.strategy === targetStrategy) {
                                 console.log(`🔧 Fallback cleanup: Removing contract ${id} for symbol ${contract.symbol} (${targetStrategy})`);
                                 
-                                // CRITICAL: Remove expected stake (fallback)
+                                // CRITICAL: Remove expected stake and signature (fallback)
                                 if (expectedStakes[info.symbol] !== undefined) {
+                                    const stake = expectedStakes[info.symbol];
                                     delete expectedStakes[info.symbol];
                                     console.log(`🗑️ Removed expected stake for ${info.symbol} (fallback)`);
+
+                                    // Also clear the trade signature (fallback)
+                                    clearTradeSignature(info.symbol, passthrough.barrier, stake, 'ghost_ai');
                                 }
                                 
                                 if (info.strategy === 'S1') {
@@ -623,10 +631,14 @@ function handleIncomingMessage(msg) {
                             // Force cleanup to prevent permanent lock
                             console.log(`🔧 Force cleanup: Removing ${contract.symbol} from activeS1Symbols and releasing lock`);
                             
-                            // CRITICAL: Remove expected stake (force cleanup)
+                            // CRITICAL: Remove expected stake and signature (force cleanup)
                             if (expectedStakes[contract.symbol] !== undefined) {
+                                const stake = expectedStakes[contract.symbol];
                                 delete expectedStakes[contract.symbol];
                                 console.log(`🗑️ Removed expected stake for ${contract.symbol} (force cleanup)`);
+
+                                // Also clear the trade signature (force cleanup)
+                                clearTradeSignature(contract.symbol, passthrough.barrier, stake, 'ghost_ai');
                             }
                             
                             activeS1Symbols.delete(contract.symbol);

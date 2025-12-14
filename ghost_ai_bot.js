@@ -59,7 +59,7 @@ function cleanupStaleContracts() {
             }
             
             delete activeContracts[contractId];
-            releaseTradeLock(info.symbol, 'ghost_ai');
+            clearPendingStake(info.symbol, 'ghost_ai');
             
             addBotLog(`⚠️ Cleaned up stale contract for ${info.symbol} (was active for ${(age/1000).toFixed(1)}s)`, 'warning');
         }
@@ -70,7 +70,7 @@ async function startGhostAiBot() {
     if (isBotRunning) return;
     isBotRunning = true;
     botState.runId = `bot-${Date.now()}`;
-    
+
     // Increment runs count only when starting a new run
     // Use typeof to check if undefined/null, not falsy check (0 is falsy!)
     if (typeof botState.runsCount === 'undefined' || botState.runsCount === null) {
@@ -78,15 +78,19 @@ async function startGhostAiBot() {
     }
     botState.runsCount++;
 
+    // Start bot timer
+    botStartTime = Date.now();
+    startBotTimer();
+
     // Clear logs but KEEP trade history (users need to see past trades)
     botLogContainer.innerHTML = '';
-    
+
     // Clear any stale contracts and locks from previous session
     activeContracts = {};
     activeS1Symbols.clear();
     expectedStakes = {}; // Clear expected stakes
-    clearAllTradeLocks();
-    
+    clearAllPendingStakes();
+
     // Add session start marker in logs
     addBotLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'info');
     addBotLog(`🔄 New Bot Session Started`, 'info');
@@ -112,6 +116,7 @@ async function startGhostAiBot() {
     const s1UsePercentage = document.getElementById('botS1UsePercentage')?.checked ?? true;
     const s1Prediction = parseInt(document.getElementById('botS1Prediction')?.value || 2);
     const s1Percentage = parseFloat(document.getElementById('botS1Percentage')?.value || 70);
+    const s1PercentageOperator = document.getElementById('botS1PercentageOperator')?.value || '>=';
     const s1MaxLosses = parseInt(document.getElementById('botS1MaxLosses')?.value || 1);
     const s2UseDigitCheck = document.getElementById('botS2UseDigitCheck')?.checked ?? true;
     const s2CheckDigits = parseInt(document.getElementById('botS2CheckDigits')?.value || 6);
@@ -120,6 +125,7 @@ async function startGhostAiBot() {
     const s2Prediction = parseInt(document.getElementById('botS2Prediction')?.value || 5);
     const s2ContractType = document.getElementById('botS2ContractType')?.value || 'UNDER';
     const s2Percentage = parseFloat(document.getElementById('botS2Percentage')?.value || 45);
+    const s2PercentageOperator = document.getElementById('botS2PercentageOperator')?.value || '>=';
 
     // Initialize bot state following XML structure
     botState.initialStake = initialStake;
@@ -134,6 +140,7 @@ async function startGhostAiBot() {
     botState.s1UsePercentage = s1UsePercentage;
     botState.s1Prediction = s1Prediction;
     botState.s1Percentage = s1Percentage;
+    botState.s1PercentageOperator = s1PercentageOperator;
     botState.s1MaxLosses = s1MaxLosses;
     botState.s1ConsecutiveLosses = 0; // Track consecutive S1 losses
     botState.s1Blocked = false; // Flag to block S1 after max losses
@@ -144,6 +151,7 @@ async function startGhostAiBot() {
     botState.s2Prediction = s2Prediction;
     botState.s2ContractType = s2ContractType;
     botState.s2Percentage = s2Percentage;
+    botState.s2PercentageOperator = s2PercentageOperator;
     botState.currentStake = botState.initialStake;
     botState.totalProfit = 0.0;
     botState.totalLoss = 0.0;
@@ -182,14 +190,14 @@ async function startGhostAiBot() {
     // Build S1 condition string
     let s1Conditions = [];
     if (s1UseDigitCheck) s1Conditions.push(`Last ${s1CheckDigits} ≤ ${s1MaxDigit}`);
-    if (s1UsePercentage) s1Conditions.push(`Over ${s1Prediction}% ≥ ${s1Percentage}%`);
+    if (s1UsePercentage) s1Conditions.push(`Over ${s1Prediction}% ${s1PercentageOperator} ${s1Percentage}%`);
     s1Conditions.push(`Most digit >4 & Least digit <4`);
     addBotLog(`📈 S1: ${s1Conditions.join(' & ')} → OVER ${s1Prediction} | Max Losses: ${s1MaxLosses}`);
     
     // Build S2 condition string
     let s2Conditions = [];
     if (s2UseDigitCheck) s2Conditions.push(`Last ${s2CheckDigits} ≤ ${s2MaxDigit}`);
-    if (s2UsePercentage) s2Conditions.push(`Over ${s2Prediction}% ≥ ${s2Percentage}%`);
+    if (s2UsePercentage) s2Conditions.push(`Over ${s2Prediction}% ${s2PercentageOperator} ${s2Percentage}%`);
     s2Conditions.push(`Most digit >4 & Least digit <4`);
     addBotLog(`📉 S2: ${s2Conditions.join(' & ')} → ${s2ContractType} ${s2Prediction}`);
     
@@ -217,6 +225,9 @@ async function stopGhostAiBot() {
     if (!isBotRunning) return;
     isBotRunning = false;
 
+    // Stop bot timer
+    stopBotTimer();
+
     // Also clear the toggle interval if running
     if (botLoopInterval) {
         clearInterval(botLoopInterval);
@@ -224,7 +235,7 @@ async function stopGhostAiBot() {
     }
 
     // Clear all trade locks when stopping
-    clearAllTradeLocks();
+    clearAllPendingStakes();
 
     // Update button states (if updateGhostAIButtonStates function exists)
     if (typeof updateGhostAIButtonStates === 'function') {
@@ -237,6 +248,31 @@ async function stopGhostAiBot() {
     addBotLog("🛑 Bot stopped by user.", 'warning');
     botState.runId = null;
     updateProfitLossDisplay();
+}
+
+/**
+ * Helper function to compare values using operator
+ * @param {number} actual - The actual value
+ * @param {string} operator - The comparison operator (>, >=, =, <=, <)
+ * @param {number} expected - The expected value
+ * @returns {boolean} - True if comparison passes
+ */
+function compareWithOperator(actual, operator, expected) {
+    switch (operator) {
+        case '>':
+            return actual > expected;
+        case '>=':
+            return actual >= expected;
+        case '=':
+            return actual === expected;
+        case '<=':
+            return actual <= expected;
+        case '<':
+            return actual < expected;
+        default:
+            console.warn(`Unknown operator: ${operator}, defaulting to >=`);
+            return actual >= expected;
+    }
 }
 
 /**
@@ -362,9 +398,12 @@ function updateBotStats() {
     }
 }
 
-// Performance optimization: Track last scan time to avoid excessive scanning
+// Performance optimization: Track last scan time and trade placement to avoid excessive scanning
 let lastScanTime = 0;
-const SCAN_COOLDOWN = 500; // Only scan every 500ms max
+const SCAN_COOLDOWN = 100; // Base cooldown between scans
+let lastTradeTime = 0;
+const TRADE_COOLDOWN = 100; // No scans for 5 seconds after a trade is placed
+let isScanning = false; // Atomic scan lock to prevent simultaneous scans
 
 // Track active contracts per symbol to support multiple concurrent trades
 let activeContracts = {}; // { contractId: { symbol, strategy: 'S1' or 'S2', stake, startTime } }
@@ -372,9 +411,11 @@ let activeContracts = {}; // { contractId: { symbol, strategy: 'S1' or 'S2', sta
 // Track which symbols have active S1 trades to avoid duplicates
 let activeS1Symbols = new Set();
 
-// CRITICAL: Track expected stakes for pending trades to prevent duplicates
-// Format: { symbol: stake_amount }
-let expectedStakes = {};
+// expectedStakes is now managed globally in utils.js
+
+// Bot timer variables
+let botStartTime = null;
+let botTimerInterval = null;
 
 function handleBotTick(tick) {
     if (!isBotRunning) {
@@ -415,11 +456,13 @@ function handleBotTick(tick) {
         updateTechnicalIndicators();
     }
 
-    // 4. Scan and place trades with cooldown to prevent excessive scanning
+    // 4. Scan and place trades with atomic lock and dual cooldown to prevent simultaneous scanning
     // NOTE: We can now have multiple active trades simultaneously
-    if (now - lastScanTime > SCAN_COOLDOWN) {
+    if (!isScanning && now - lastScanTime > SCAN_COOLDOWN && now - lastTradeTime > TRADE_COOLDOWN) {
+        isScanning = true; // Set atomic lock
         lastScanTime = now;
         scanAndPlaceMultipleTrades();
+        isScanning = false; // Release atomic lock
     }
 }
 
@@ -464,7 +507,8 @@ function scanAndPlaceMultipleTrades() {
             // Only check percentage condition if enabled
             if (usePercentage) {
                 const overPercentage = percentages[`over${prediction}`] || 0;
-                percentageCheckPassed = overPercentage >= minPercentage;
+                const operator = botState.s1PercentageOperator || '>=';
+                percentageCheckPassed = compareWithOperator(overPercentage, operator, minPercentage);
             }
 
             // Both conditions must pass (or be disabled)
@@ -514,7 +558,8 @@ function scanAndPlaceMultipleTrades() {
             // Only check percentage condition if enabled
             if (usePercentage) {
                 const overPercentage = percentages[`over${prediction}`] || 0;
-                percentageCheckPassed = overPercentage >= minPercentage;
+                const operator = botState.s2PercentageOperator || '>=';
+                percentageCheckPassed = compareWithOperator(overPercentage, operator, minPercentage);
             }
 
             // Both conditions must pass (or be disabled)
@@ -543,9 +588,9 @@ function scanAndPlaceMultipleTrades() {
     }
 
     // Execute S1 trades with proper locking
-    // Allow multiple concurrent trades but prevent duplicates on same symbol
+    // Allow only ONE concurrent trade to prevent simultaneous purchases
     const activeTradeCount = Object.keys(activeContracts).length;
-    const maxConcurrentTrades = 5; // Increased limit to allow more opportunities
+    const maxConcurrentTrades = 1; // Limit to 1 concurrent trade
 
     if (validS1Markets.length > 0 && activeTradeCount < maxConcurrentTrades) {
         // Sort by over percentage (highest first) and pick the best one
@@ -558,43 +603,53 @@ function scanAndPlaceMultipleTrades() {
             return;
         }
         
-        // CRITICAL: Acquire lock BEFORE logging or any other action
-        if (!acquireTradeLock(selectedMarket.symbol, 'ghost_ai')) {
-            // Lock failed - another bot is already trading this symbol
+        // DUAL PREVENTION: Check both stake-based and signature-based duplicate prevention
+        console.log(`🎯 [S1] Checking trade: ${selectedMarket.symbol}, stake=$${selectedMarket.stake}, prediction=${selectedMarket.prediction}`);
+
+        if (!canPlaceStakeBasedTrade(selectedMarket.symbol, selectedMarket.stake, 'ghost_ai') ||
+            !isTradeSignatureUnique(selectedMarket.symbol, selectedMarket.prediction, selectedMarket.stake, 'ghost_ai')) {
+            console.log(`🚫 [S1] Trade BLOCKED for ${selectedMarket.symbol}`);
             // Try the next best market if available
             let traded = false;
             for (let i = 1; i < validS1Markets.length && i < 3; i++) {
                 const alternativeMarket = validS1Markets[i];
-                
+
                 // Check if alternative also has active S1
                 if (activeS1Symbols.has(alternativeMarket.symbol)) {
                     continue;
                 }
-                
-                if (acquireTradeLock(alternativeMarket.symbol, 'ghost_ai')) {
-                    // CRITICAL FIX: Add to activeS1Symbols IMMEDIATELY after acquiring lock
+
+                if (canPlaceStakeBasedTrade(alternativeMarket.symbol, alternativeMarket.stake, 'ghost_ai') &&
+                    isTradeSignatureUnique(alternativeMarket.symbol, alternativeMarket.prediction, alternativeMarket.stake, 'ghost_ai')) {
+                    // Record both stake and signature
+                    recordPendingStake(alternativeMarket.symbol, alternativeMarket.stake, 'ghost_ai');
+                    recordTradeSignature(alternativeMarket.symbol, alternativeMarket.prediction, alternativeMarket.stake, 'ghost_ai');
                     activeS1Symbols.add(alternativeMarket.symbol);
                     console.log(`🔒 Added ${alternativeMarket.symbol} to activeS1Symbols (alternative)`);
-                    addBotLog(`🔄 ${selectedMarket.symbol} locked, trading alternative: ${alternativeMarket.symbol}`, 'info');
+                    addBotLog(`🔄 ${selectedMarket.symbol} blocked, trading alternative: ${alternativeMarket.symbol}`, 'info');
                     executeTradeWithTracking(alternativeMarket);
                     traded = true;
                     break;
                 }
             }
             if (!traded) {
-                addBotLog(`⚠️ All top S1 markets locked by other bots or have active trades`, 'warning');
+                addBotLog(`⚠️ All top S1 markets blocked by duplicate prevention`, 'warning');
             }
             return;
         }
 
-        // CRITICAL FIX: Add to activeS1Symbols IMMEDIATELY after acquiring lock to prevent race condition
+        // DUAL RECORDING: Record both stake and signature
+        console.log(`✅ [S1] Trade ALLOWED for ${selectedMarket.symbol}, recording protections`);
+        recordPendingStake(selectedMarket.symbol, selectedMarket.stake, 'ghost_ai');
+        recordTradeSignature(selectedMarket.symbol, selectedMarket.prediction, selectedMarket.stake, 'ghost_ai');
         activeS1Symbols.add(selectedMarket.symbol);
         console.log(`🔒 Added ${selectedMarket.symbol} to activeS1Symbols`);
 
         addBotLog(`🎯 Found ${validS1Markets.length} valid S1 market(s) | Trading best: ${selectedMarket.symbol} (${selectedMarket.overPercentage.toFixed(1)}% over ${selectedMarket.prediction}) | Active trades: ${activeTradeCount}/${maxConcurrentTrades}`, 'info');
 
         const lastNStr = selectedMarket.lastN.join(', ');
-        addBotLog(`✓ S1 Entry: ${selectedMarket.symbol} | Last ${selectedMarket.lastN.length}: [${lastNStr}] ≤ ${botState.s1MaxDigit} | Over ${selectedMarket.prediction}%: ${selectedMarket.overPercentage.toFixed(1)}% ≥ ${botState.s1Percentage}% | Most: ${selectedMarket.mostDigit} (>4) | Least: ${selectedMarket.leastDigit} (<4) | Stake: $${selectedMarket.stake.toFixed(2)}`, 'info');
+        const s1Operator = botState.s1PercentageOperator || '>=';
+        addBotLog(`✓ S1 Entry: ${selectedMarket.symbol} | Last ${selectedMarket.lastN.length}: [${lastNStr}] ≤ ${botState.s1MaxDigit} | Over ${selectedMarket.prediction}%: ${selectedMarket.overPercentage.toFixed(1)}% ${s1Operator} ${botState.s1Percentage}% | Most: ${selectedMarket.mostDigit} (>4) | Least: ${selectedMarket.leastDigit} (<4) | Stake: $${selectedMarket.stake.toFixed(2)}`, 'info');
 
         executeTradeWithTracking(selectedMarket);
     } else if (validS1Markets.length > 0 && activeTradeCount >= maxConcurrentTrades) {
@@ -620,53 +675,73 @@ function scanAndPlaceMultipleTrades() {
         validS2Markets.sort((a, b) => b.overPercentage - a.overPercentage);
         const selected = validS2Markets[0];
 
-        // CRITICAL: Acquire lock for S2 trade to prevent duplicates
-        if (!acquireTradeLock(selected.symbol, 'ghost_ai')) {
-            console.log(`⚠️ S2 Recovery: ${selected.symbol} is locked, trying next market`);
-            
-            // Try alternative markets
+        // Calculate martingale stake for S2 FIRST
+        const accumulatedLosses = botState.accumulatedStakesLost;
+        const recoveryMultiplier = 100 / botState.payoutPercentage;
+        const calculatedStake = parseFloat((accumulatedLosses * recoveryMultiplier).toFixed(2));
+
+        // DUAL PREVENTION: Check both stake and signature for S2 with REAL stake
+        console.log(`🎯 [S2] Checking recovery trade: ${selected.symbol}, stake=$${calculatedStake}, prediction=${selected.prediction}`);
+        if (!canPlaceStakeBasedTrade(selected.symbol, calculatedStake, 'ghost_ai') ||
+            !isTradeSignatureUnique(selected.symbol, selected.prediction, calculatedStake, 'ghost_ai')) {
+            console.log(`🚫 [S2] Trade BLOCKED for ${selected.symbol}`);
+
+            // Try alternative markets with calculated stake
+            let traded = false;
             for (let i = 1; i < validS2Markets.length && i < 3; i++) {
                 const alternative = validS2Markets[i];
-                if (acquireTradeLock(alternative.symbol, 'ghost_ai')) {
+                if (canPlaceStakeBasedTrade(alternative.symbol, calculatedStake, 'ghost_ai') &&
+                    isTradeSignatureUnique(alternative.symbol, alternative.prediction, calculatedStake, 'ghost_ai')) {
+                    // Record both stake and signature for the alternative
+                    console.log(`✅ [S2] Trade ALLOWED for ${alternative.symbol}, recording protections`);
+                    recordPendingStake(alternative.symbol, calculatedStake, 'ghost_ai');
+                    recordTradeSignature(alternative.symbol, alternative.prediction, calculatedStake, 'ghost_ai');
                     selected.symbol = alternative.symbol;
                     selected.lastN = alternative.lastN;
                     selected.overPercentage = alternative.overPercentage;
                     selected.mostDigit = alternative.mostDigit;
                     selected.leastDigit = alternative.leastDigit;
                     addBotLog(`🔄 S2 using alternative market: ${alternative.symbol}`, 'info');
+                    traded = true;
                     break;
                 }
             }
-            
-            // If no lock acquired, skip this cycle
-            if (!globalTradeLocks[selected.symbol] || globalTradeLocks[selected.symbol].botType !== 'ghost_ai') {
-                addBotLog(`⚠️ All S2 markets locked, will retry next cycle`, 'warning');
+            if (!traded) {
+                addBotLog(`⚠️ All top S2 markets blocked by duplicate prevention`, 'warning');
                 return;
             }
+        } else {
+            // Record both stake and signature for the selected market
+            console.log(`✅ [S2] Trade ALLOWED for ${selected.symbol}, recording protections`);
+            recordPendingStake(selected.symbol, calculatedStake, 'ghost_ai');
+            recordTradeSignature(selected.symbol, selected.prediction, calculatedStake, 'ghost_ai');
         }
 
-        // Calculate martingale stake for S2
-        const accumulatedLosses = botState.accumulatedStakesLost;
-        const recoveryMultiplier = 100 / botState.payoutPercentage;
-        selected.stake = parseFloat((accumulatedLosses * recoveryMultiplier).toFixed(2));
+        // Set the calculated stake
+        selected.stake = calculatedStake;
         botState.currentStake = selected.stake;
         botState.recoverySymbol = selected.symbol;
 
         const lastNStr = selected.lastN.join(', ');
-        addBotLog(`✓ S2 Recovery: ${validS2Markets.length} market(s) valid | Trading ${selected.symbol} | Last ${selected.lastN.length}: [${lastNStr}] ≤ ${botState.s2MaxDigit} | Over ${selected.prediction}%: ${selected.overPercentage.toFixed(1)}% ≥ ${botState.s2Percentage}% | Most: ${selected.mostDigit} (>4) | Least: ${selected.leastDigit} (<4) | ${selected.contractType} ${selected.prediction} | Stake: $${selected.stake.toFixed(2)}`, 'warning');
+        const s2Operator = botState.s2PercentageOperator || '>=';
+        addBotLog(`✓ S2 Recovery: ${validS2Markets.length} market(s) valid | Trading ${selected.symbol} | Last ${selected.lastN.length}: [${lastNStr}] ≤ ${botState.s2MaxDigit} | Over ${selected.prediction}%: ${selected.overPercentage.toFixed(1)}% ${s2Operator} ${botState.s2Percentage}% | Most: ${selected.mostDigit} (>4) | Least: ${selected.leastDigit} (<4) | ${selected.contractType} ${selected.prediction} | Stake: $${selected.stake.toFixed(2)}`, 'warning');
         
         executeTradeWithTracking(selected);
     }
 }
 
 function executeTradeWithTracking(marketData) {
-    // Lock should already be acquired by caller, but double-check
-    if (!globalTradeLocks[marketData.symbol] || globalTradeLocks[marketData.symbol].botType !== 'ghost_ai') {
-        console.warn(`⚠️ Trade lock not held for ${marketData.symbol}, acquiring now...`);
-        if (!acquireTradeLock(marketData.symbol, 'ghost_ai')) {
-            addBotLog(`⚠️ Failed to acquire lock for ${marketData.symbol}`, 'warning');
+    // CRITICAL: Set trade cooldown to prevent immediate re-scanning
+    lastTradeTime = Date.now();
+
+    // Stake-based prevention should already be in place, but double-check
+    if (expectedStakes[marketData.symbol] !== marketData.stake) {
+        console.warn(`⚠️ Stake-based prevention not in place for ${marketData.symbol}:$${marketData.stake}`);
+        if (!canPlaceStakeBasedTrade(marketData.symbol, marketData.stake, 'ghost_ai')) {
+            addBotLog(`⚠️ Failed stake-based check for ${marketData.symbol}`, 'warning');
             return;
         }
+        recordPendingStake(marketData.symbol, marketData.stake, 'ghost_ai');
     }
 
     // CRITICAL FIX: Don't create pending contract here - let app.js handle it when buy response comes
@@ -724,36 +799,40 @@ function sendBotPurchase(prediction, stake, symbol) {
 function sendBotPurchaseWithStrategy(prediction, stake, symbol, strategy, contractType = null) {
     console.log('sendBotPurchase: Preparing to send purchase for', symbol, 'prediction', prediction, 'stake', stake, 'strategy', strategy);
 
-    // CRITICAL: Check if we already have a pending trade on this symbol (stake-based duplicate detection)
-    if (expectedStakes[symbol] !== undefined) {
-        console.error(`❌ DUPLICATE DETECTED: ${symbol} already has pending trade with stake $${expectedStakes[symbol]}! Blocking duplicate.`);
-        addBotLog(`❌ Prevented duplicate purchase on ${symbol} (expected stake: $${expectedStakes[symbol].toFixed(2)})`, 'error');
-        
+    // STAKE-BASED: Check for duplicate trades (exact same stake = same trade, different stake = different trade type)
+    const existingStake = expectedStakes[symbol];
+    if (existingStake !== undefined && existingStake !== stake) {
+        // Different stake on same symbol - block this different trade type
+        console.error(`❌ STAKE CONFLICT: ${symbol} has pending stake $${existingStake}, can't place $${stake}`);
+        addBotLog(`❌ Stake conflict on ${symbol} (pending: $${existingStake}, requested: $${stake})`, 'error');
+
         // Clean up
         if (strategy === 'S1') {
             activeS1Symbols.delete(symbol);
-            console.log(`🔓 Removed ${symbol} from activeS1Symbols due to duplicate detection`);
+            console.log(`🔓 Removed ${symbol} from activeS1Symbols due to stake conflict`);
         }
-        releaseTradeLock(symbol, 'ghost_ai');
         return;
     }
 
-    // CRITICAL: Validate we have a valid trade lock
-    if (!globalTradeLocks[symbol] || globalTradeLocks[symbol].botType !== 'ghost_ai') {
-        console.error(`❌ LOCK VALIDATION FAILED: No valid lock for ${symbol}! Aborting purchase.`);
-        addBotLog(`❌ Lock validation failed for ${symbol}`, 'error');
-        
+    // STAKE-BASED: Validate we have recorded the pending stake
+    if (expectedStakes[symbol] !== stake) {
+        console.error(`❌ STAKE VALIDATION FAILED: Expected stake ${expectedStakes[symbol]} != ${stake} for ${symbol}! Aborting purchase.`);
+        addBotLog(`❌ Stake validation failed for ${symbol}`, 'error');
+
         // Clean up if S1
         if (strategy === 'S1') {
             activeS1Symbols.delete(symbol);
-            console.log(`🔓 Removed ${symbol} from activeS1Symbols due to lock validation failure`);
+            console.log(`🔓 Removed ${symbol} from activeS1Symbols due to stake validation failure`);
         }
         return;
     }
 
-    // CRITICAL: Record expected stake for this symbol to prevent duplicates
-    expectedStakes[symbol] = stake;
-    console.log(`📝 Recorded expected stake for ${symbol}: $${stake.toFixed(2)}`);
+    // Stake should already be recorded by the stake-based system
+    // If not recorded yet, record it now (defensive programming)
+    if (expectedStakes[symbol] === undefined) {
+        expectedStakes[symbol] = stake;
+        console.log(`📝 Recorded expected stake for ${symbol}: $${stake.toFixed(2)}`);
+    }
 
     // Determine contract type
     let finalContractType;
@@ -794,19 +873,19 @@ function sendBotPurchaseWithStrategy(prediction, stake, symbol, strategy, contra
 
     sendAPIRequest(purchaseRequest).then(() => {
         console.log('sendBotPurchase: Request sent successfully');
+        // Keep stake locked until trade completes - cleanup happens in app.js
     }).catch(error => {
         console.error('sendBotPurchase: Request failed:', error);
-        
-        // CRITICAL: Clean up on failure
+
+        // CRITICAL: Clean up on failure - remove stake lock immediately
         delete expectedStakes[symbol]; // Remove expected stake
         console.log(`🗑️ Removed expected stake for ${symbol} due to purchase failure`);
-        
+
         if (strategy === 'S1') {
             activeS1Symbols.delete(symbol);
             console.log(`🔓 Removed ${symbol} from activeS1Symbols due to purchase failure`);
         }
-        releaseTradeLock(symbol, 'ghost_ai');
-        
+
         addBotLog(`❌ Purchase failed for ${symbol}: ${error.message || 'Unknown error'}`, 'error');
     });
 }
@@ -832,6 +911,61 @@ function clearGhostAIHistory() {
         }
         addBotLog('📋 Trade history cleared by user', 'info');
         showToast('Trade history cleared', 'success');
+    }
+}
+
+/**
+ * Format elapsed time in HH:MM:SS format
+ */
+function formatElapsedTime(milliseconds) {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Update bot timer display
+ */
+function updateBotTimer() {
+    if (!botStartTime) return;
+
+    const elapsed = Date.now() - botStartTime;
+    const timeString = formatElapsedTime(elapsed);
+
+    const timerDisplay = document.getElementById('botTimerDisplay');
+    if (timerDisplay) {
+        timerDisplay.textContent = timeString;
+    }
+}
+
+/**
+ * Start the bot timer
+ */
+function startBotTimer() {
+    // Update immediately
+    updateBotTimer();
+
+    // Update every second
+    botTimerInterval = setInterval(updateBotTimer, 1000);
+}
+
+/**
+ * Stop the bot timer
+ */
+function stopBotTimer() {
+    if (botTimerInterval) {
+        clearInterval(botTimerInterval);
+        botTimerInterval = null;
+    }
+    botStartTime = null;
+
+    // Reset display
+    const timerDisplay = document.getElementById('botTimerDisplay');
+    if (timerDisplay) {
+        timerDisplay.textContent = '00:00:00';
     }
 }
 

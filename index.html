@@ -551,9 +551,18 @@
 
                     <div class="control-group">
                         <label for="botS1Percentage">S1: Min Percentage</label>
-                        <div class="input-with-unit">
-                            <input type="number" id="botS1Percentage" name="botS1Percentage" value="70" min="0" max="100">
-                            <span class="unit">%</span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select id="botS1PercentageOperator" name="botS1PercentageOperator" class="control-select" style="flex: 0 0 auto; width: 60px; padding: 8px 4px; font-size: 18px; text-align: center;" title="Comparison operator">
+                                <option value=">">></option>
+                                <option value=">=" selected>≥</option>
+                                <option value="=">=</option>
+                                <option value="<=">≤</option>
+                                <option value="<"><</option>
+                            </select>
+                            <div class="input-with-unit" style="flex: 1;">
+                                <input type="number" id="botS1Percentage" name="botS1Percentage" value="70" min="0" max="100">
+                                <span class="unit">%</span>
+                            </div>
                         </div>
                     </div>
 
@@ -609,9 +618,18 @@
 
                     <div class="control-group">
                         <label for="botS2Percentage">S2: Min Percentage</label>
-                        <div class="input-with-unit">
-                            <input type="number" id="botS2Percentage" name="botS2Percentage" value="45" min="0" max="100">
-                            <span class="unit">%</span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select id="botS2PercentageOperator" name="botS2PercentageOperator" class="control-select" style="flex: 0 0 auto; width: 60px; padding: 8px 4px; font-size: 18px; text-align: center;" title="Comparison operator">
+                                <option value=">">></option>
+                                <option value=">=" selected>≥</option>
+                                <option value="=">=</option>
+                                <option value="<=">≤</option>
+                                <option value="<"><</option>
+                            </select>
+                            <div class="input-with-unit" style="flex: 1;">
+                                <input type="number" id="botS2Percentage" name="botS2Percentage" value="45" min="0" max="100">
+                                <span class="unit">%</span>
+                            </div>
                         </div>
                     </div>
                     </div>
@@ -669,6 +687,10 @@
                             </div>
                         </div>
                         <div class="bot-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">Timer</div>
+                                <div class="stat-value" id="botTimerDisplay">00:00:00</div>
+                            </div>
                             <div class="stat-item">
                                 <div class="stat-label">Win Rate</div>
                                 <div class="stat-value" id="botWinRateDisplay">0.0%</div>
