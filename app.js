@@ -934,9 +934,9 @@ function handleOAuthRedirectAndInit() {
     }
 
     // 2. Check for old-style access_token format (fallback)
-    if (hash.includes('access_token')) {
+    if (search.includes('access_token')) {
         // Token found in URL fragment (after a successful OAuth redirect)
-        const params = new URLSearchParams(hash.substring(1));
+        const params = new URLSearchParams(search.substring(1));
         const token = params.get('access_token');
 
         if (token) {
@@ -945,7 +945,7 @@ function handleOAuthRedirectAndInit() {
             localStorage.setItem('deriv_token', token);
 
             // Clean the URL fragment (highly recommended for security)
-            window.location.hash = '';
+            window.history.replaceState({}, document.title, window.location.pathname);
 
             // Connect and start the authorized session
             connectAndAuthorize(token);
