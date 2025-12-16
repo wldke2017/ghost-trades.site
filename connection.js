@@ -296,14 +296,14 @@ function handleDerivOAuthTokens(token1, token2, acct1, acct2, accountType) {
             throw new Error('No valid token found for the requested account type');
         }
 
-        oauthState.access_token = selectedToken;
-        oauthState.account_type = accountType;
-        oauthState.account_id = selectedAccount;
+        window.oauthState.access_token = selectedToken;
+        window.oauthState.account_type = accountType;
+        window.oauthState.account_id = selectedAccount;
 
         console.log('✅ Stored OAuth state:', {
-            access_token: oauthState.access_token ? 'present' : 'missing',
-            account_type: oauthState.account_type,
-            account_id: oauthState.account_id
+            access_token: window.oauthState.access_token ? 'present' : 'missing',
+            account_type: window.oauthState.account_type,
+            account_id: window.oauthState.account_id
         });
 
         // 🔥 CRITICAL FIX: Save token to localStorage for session persistence
@@ -377,7 +377,7 @@ async function connectToDerivWithOAuth() {
  */
 function authorizeWithOAuthToken() {
     return new Promise((resolve, reject) => {
-        if (!oauthState.access_token) {
+        if (!window.oauthState.access_token) {
             reject(new Error('No access token available'));
             return;
         }
@@ -385,8 +385,8 @@ function authorizeWithOAuthToken() {
         console.log('Authorizing with OAuth token...');
 
         const authRequest = {
-            "authorize": oauthState.access_token,
-            "passthrough": { "purpose": "oauth_login", "account_type": oauthState.account_type }
+            "authorize": window.oauthState.access_token,
+            "passthrough": { "purpose": "oauth_login", "account_type": window.oauthState.account_type }
         };
 
         // Set up promise handlers that will be called from app.js message handler
