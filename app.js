@@ -130,7 +130,7 @@ let emaValue = null;
 let smaValue = null;
 
 // --- OAuth State ---
-let oauthState = {
+window.oauthState = {
     access_token: null,
     refresh_token: null,
     account_type: ACCOUNT_TYPES.DEMO, // Default to demo
@@ -223,7 +223,7 @@ function handleIncomingMessage(msg) {
                 setButtonLoading(loginButton, false);
 
                 // Store login ID in oauthState
-                oauthState.login_id = data.authorize.loginid;
+                window.oauthState.login_id = data.authorize.loginid;
                 
                 // 🔥 CRITICAL FIX: Save login ID to localStorage
                 localStorage.setItem('deriv_login_id', data.authorize.loginid);
@@ -963,9 +963,9 @@ function handleOAuthRedirectAndInit() {
         console.log('Account type:', storedAccountType, 'Account ID:', storedAccountId);
         
         // Restore OAuth state
-        oauthState.access_token = storedToken;
-        oauthState.account_type = storedAccountType || 'demo';
-        oauthState.account_id = storedAccountId;
+        window.oauthState.access_token = storedToken;
+        window.oauthState.account_type = storedAccountType || 'demo';
+        window.oauthState.account_id = storedAccountId;
         
         // Show loading message
         if (statusMessage) {
