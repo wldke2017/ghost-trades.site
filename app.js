@@ -20,7 +20,7 @@ const OAUTH_CONFIG = {
     app_id: '111038',
     authorization_url: 'https://oauth.deriv.com/oauth2/authorize',
     token_url: 'https://oauth.deriv.com/oauth2/token',
-    redirect_uri: window.location.origin + window.location.pathname, // Dynamic redirect URI
+    redirect_uri: 'https://ghost-trades.site/', // Hardcoded for hosted domain
     scope: 'read,trade,payments,trading_information,admin',
     brand: 'deriv',
     language: 'EN',
