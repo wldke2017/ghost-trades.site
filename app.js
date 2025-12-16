@@ -924,10 +924,10 @@ function handleIncomingMessage(msg) {
 
 function handleOAuthRedirectAndInit() {
     console.log('🔄 Checking for OAuth redirect...');
-    const hash = window.location.hash;
+    const search = window.location.search;
 
     // 1. Check if we're returning from OAuth callback (Deriv uses token1/acct1 format)
-    if (hash && (hash.includes('token1=') || hash.includes('acct1='))) {
+    if (search && (search.includes('token1=') || search.includes('acct1='))) {
         console.log('✅ OAuth callback detected - connection.js will handle it');
         // Don't do anything here - connection.js handleOAuthCallback() will process this
         return;

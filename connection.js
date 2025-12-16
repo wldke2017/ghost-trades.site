@@ -153,7 +153,7 @@ function sendAPIRequest(request) {
 // ===================================
 
 // Check if we're returning from OAuth callback (implicit flow uses hash fragment)
-if (window.location.hash.includes('token1=') || window.location.hash.includes('acct1=')) {
+if (window.location.search.includes('token1=') || window.location.search.includes('acct1=')) {
     handleOAuthCallback();
 }
 
@@ -164,7 +164,7 @@ function handleOAuthCallback() {
     console.log('🔄 OAuth callback detected, processing...');
 
     // For implicit flow, tokens are in the hash fragment, not query string
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hashParams = new URLSearchParams(window.location.search.substring(1));
     console.log('All hash parameters:', Object.fromEntries(hashParams.entries()));
 
     const code = hashParams.get('code');
