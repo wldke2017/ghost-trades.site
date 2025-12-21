@@ -318,6 +318,17 @@ function switchAccount(token, accountId) {
 
     console.log('✅ Account switched to:', accountId, `(${window.oauthState.account_type})`);
 
+    // 🔥 THE FIX: Show the dashboard immediately
+    if (typeof showSection === 'function') {
+        // Hide login screen
+        const loginInterface = document.querySelector('.auth-container');
+        if (loginInterface) {
+            loginInterface.style.display = 'none';
+        }
+        // Show dashboard
+        showSection('dashboard');
+    }
+
     // Connect with the new token
     connectAndAuthorize(token);
 }

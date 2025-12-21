@@ -193,27 +193,6 @@ function handleIncomingMessage(msg) {
 
     switch (data.msg_type) {
         case 'authorize':
-            // Data Request (Good! This fetches the balance and markets)
-            console.log('🔄 Authorization successful, requesting balance and symbols...');
-            connection.send(JSON.stringify({ 'balance': 1, 'subscribe': 1 }));
-            connection.send(JSON.stringify({ active_symbols: 'brief', product_type: 'basic' }));
-
-            // ------------------------------------------------------------------
-            // 🔥 CRITICAL FIX: SHOW THE DASHBOARD AND HIDE LOGIN UI
-            // ------------------------------------------------------------------
-
-            // 1. Hide the login form/area
-            const loginInterface = document.querySelector('.auth-container');
-            if (loginInterface) {
-                loginInterface.style.display = 'none';
-            }
-
-            // 2. Show the main dashboard section (This is the critical line)
-            showSection('dashboard');
-
-            // 3. Update the connection status to show success
-            updateConnectionStatus('connected');
-
             if (data.authorize) {
                 console.log("✅ Authorization successful:", data.authorize.loginid);
                 showToast(`Welcome! Logged in as ${data.authorize.loginid}`, 'success');
@@ -227,6 +206,22 @@ function handleIncomingMessage(msg) {
                 
                 // 🔥 CRITICAL FIX: Save login ID to localStorage
                 localStorage.setItem('deriv_login_id', data.authorize.loginid);
+
+                // ------------------------------------------------------------------
+                // 🔥 CRITICAL FIX: SHOW THE DASHBOARD AND HIDE LOGIN UI
+                // ------------------------------------------------------------------
+
+                // 1. Hide the login form/area
+                const loginInterface = document.querySelector('.auth-container');
+                if (loginInterface) {
+                    loginInterface.style.display = 'none';
+                }
+
+                // 2. Show the main dashboard section (This is the critical line)
+                showSection('dashboard');
+
+                // 3. Update the connection status to show success
+                updateConnectionStatus('connected');
 
                 // Check if it's OAuth authorization
                 const isOAuth = data.echo_req && data.echo_req.passthrough && data.echo_req.passthrough.purpose === 'oauth_login';
@@ -242,6 +237,15 @@ function handleIncomingMessage(msg) {
                 // For OAuth logins, set loading state
                 if (isOAuth) {
                     statusMessage.textContent = "Loading your account data...";
+                }
+
+                // 🔥 THE FIX: Request balance and active symbols right now
+                console.log('🔄 Requesting balance and symbols after authorization...');
+                if (typeof requestBalance === 'function') {
+                    requestBalance();
+                }
+                if (typeof requestActiveSymbols === 'function') {
+                    requestActiveSymbols();
                 }
             }
             break;
