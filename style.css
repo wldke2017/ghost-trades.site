@@ -253,20 +253,14 @@ body::before {
 
 /* --- Connection Status Indicator --- */
 .connection-status {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 9999;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
+    background: var(--bg-secondary);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     padding: var(--spacing-sm) var(--spacing-md);
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    font-size: 0.8125rem;
-    box-shadow: var(--shadow-md);
+    font-size: 0.75rem;
     transition: all var(--transition-base);
 }
 
@@ -289,6 +283,36 @@ body::before {
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+}
+
+/* Responsive styles for connection status */
+@media (max-width: 768px) {
+    .connection-status {
+        padding: 6px 10px;
+        font-size: 0.7rem;
+        gap: 6px;
+    }
+    
+    .status-dot {
+        width: 6px;
+        height: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .connection-status .status-text {
+        display: none;
+    }
+    
+    .connection-status {
+        padding: 8px;
+        min-width: auto;
+    }
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+    }
 }
 
 /* --- Header Styling --- */

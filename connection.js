@@ -321,6 +321,19 @@ function handleDerivOAuthTokens(token1, token2, acct1, acct2, accountType) {
             throw new Error('No valid token found for the requested account type');
         }
 
+        // 🔥 CRITICAL FIX: Ensure window.oauthState exists before setting properties
+        // This prevents "Cannot set properties of undefined" error
+        if (typeof window.oauthState === 'undefined') {
+            window.oauthState = {
+                access_token: null,
+                refresh_token: null,
+                account_type: 'demo',
+                login_id: null,
+                account_id: null
+            };
+            console.log('✅ Initialized window.oauthState object');
+        }
+
         window.oauthState.access_token = selectedToken;
         window.oauthState.account_type = accountType;
         window.oauthState.account_id = selectedAccount;
