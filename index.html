@@ -41,6 +41,13 @@
                     <div class="status-dot"></div>
                     <span class="status-text">Connecting...</span>
                 </div>
+                <!-- Account Switcher -->
+                <div class="account-switcher" id="accountSwitcher" style="display: none;">
+                    <label for="active-account-select" style="margin-right: 8px; font-size: 14px;">Account:</label>
+                    <select id="active-account-select" class="account-select">
+                        <option value="">--.--</option>
+                    </select>
+                </div>
                 <div class="balance-display" id="headerBalance" style="display: none;">
                     <svg class="balance-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
@@ -118,17 +125,8 @@
                             <p>Authenticate securely with your Deriv account</p>
                         </div>
                         <div class="account-buttons">
-                            <button class="btn btn-demo btn-oauth" onclick="loginToDerivAccount('demo')">
-                                <span class="btn-text">Demo Account</span>
-                                <svg class="btn-loader" viewBox="0 0 24 24" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"
-                                        opacity="0.3" />
-                                    <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" />
-                                </svg>
-                            </button>
-                            <button class="btn btn-real btn-oauth" onclick="loginToDerivAccount('real')">
-                                <span class="btn-text">Real Account</span>
+                            <button class="btn btn-oauth btn-unified" onclick="startOAuthLogin()">
+                                <span class="btn-text">Login with Deriv OAuth</span>
                                 <svg class="btn-loader" viewBox="0 0 24 24" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"
@@ -138,7 +136,7 @@
                             </button>
                         </div>
                         <div class="oauth-info">
-                            <small>🔒 Secure OAuth authentication with Deriv</small>
+                            <small>🔒 Secure OAuth authentication with Deriv - Access all your accounts</small>
                         </div>
                     </div>
 

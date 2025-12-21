@@ -188,34 +188,11 @@ if (window.location.hash.includes('token1=') || window.location.hash.includes('a
 function handleOAuthCallback() {
     console.log('🔄 OAuth callback detected, processing...');
 
-    // For implicit flow, tokens are in the hash fragment, not query string
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    console.log('All hash parameters:', Object.fromEntries(hashParams.entries()));
-
-    const code = hashParams.get('code');
-    const state = hashParams.get('state');
-    const error = hashParams.get('error');
-
-    // Deriv OAuth returns tokens directly in hash fragment
-    const token1 = hashParams.get('token1');
-    const token2 = hashParams.get('token2');
-    const acct1 = hashParams.get('acct1');
-    const acct2 = hashParams.get('acct2');
-
-    console.log('OAuth callback params:', {
-        code: code ? 'present' : 'missing',
-        state: state ? 'present' : 'missing',
-        error,
-        token1: token1 ? 'present' : 'missing',
-        token2: token2 ? 'present' : 'missing',
-        acct1: acct1 ? 'present' : 'missing',
-        acct2: acct2 ? 'present' : 'missing'
-    });
-
-    // Clear the hash fragment
-    window.history.replaceState({}, document.title, window.location.pathname);
-
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    
     // Check for errors
+    const error = params.get('error');
     if (error) {
         console.error('OAuth Error:', error);
         showToast(`OAuth Error: ${error}`, 'error');
@@ -224,140 +201,125 @@ function handleOAuthCallback() {
     }
 
     // Validate state parameter (CSRF protection)
+    const state = params.get('state');
     const storedState = sessionStorage.getItem('oauth_state');
     if (!state || state !== storedState) {
         console.error('State parameter mismatch - possible CSRF attack');
-        console.error('Stored state:', storedState, 'Received state:', state);
         showToast('Authentication failed - security check failed', 'error');
         statusMessage.textContent = "OAuth security validation failed. Please try again.";
         return;
     }
 
-    // Get account type from session storage
-    const accountType = sessionStorage.getItem('oauth_account_type');
-    if (!accountType) {
-        console.error('No account type in session storage');
-        showToast('Session expired. Please try again.', 'error');
-        statusMessage.textContent = "Session expired. Please login again.";
-        return;
-    }
-
     console.log('✅ OAuth state validated successfully');
-    console.log('Account type:', accountType);
 
     // Clear session storage
     sessionStorage.removeItem('oauth_state');
-    sessionStorage.removeItem('oauth_account_type');
 
-    // Handle Deriv OAuth response format (implicit flow returns tokens directly)
-    if (token1 && acct1) {
-        console.log(`✅ Received Deriv OAuth tokens for ${accountType} account`);
-        console.log('Token details:', { 
-            acct1: acct1, 
-            hasToken1: !!token1, 
-            acct2: acct2, 
-            hasToken2: !!token2 
+    // Collect all accounts returned by Deriv
+    const accounts = [];
+    let i = 1;
+    while (params.has(`acct${i}`)) {
+        accounts.push({
+            id: params.get(`acct${i}`),
+            token: params.get(`token${i}`),
+            currency: params.get(`cur${i}`)
         });
-        handleDerivOAuthTokens(token1, token2, acct1, acct2, accountType);
-    } else if (code) {
-        // This shouldn't happen with implicit flow, but handle it anyway
-        console.warn('Received authorization code instead of token - this is unexpected with implicit flow');
-        showToast('Unexpected OAuth response format. Please try again.', 'error');
-        statusMessage.textContent = "OAuth configuration error. Please contact support.";
-    } else {
-        console.error('❌ No OAuth tokens or authorization code received');
-        console.error('URL parameters:', { token1, token2, acct1, acct2, code, state });
-        showToast('Authentication failed - no tokens received from Deriv', 'error');
-        statusMessage.textContent = "No authentication tokens received. Please try again.";
+        i++;
     }
+
+    console.log(`✅ Received ${accounts.length} account(s) from Deriv OAuth`);
+    console.log('Accounts:', accounts.map(a => ({ id: a.id, currency: a.currency })));
+
+    if (accounts.length > 0) {
+        // Populate the account switcher dropdown
+        populateAccountSwitcher(accounts);
+        
+        // Default to the first account (usually the last one used)
+        switchAccount(accounts[0].token, accounts[0].id);
+    } else {
+        console.error('❌ No accounts received from OAuth');
+        showToast('No accounts received from Deriv', 'error');
+        statusMessage.textContent = "No accounts found. Please try again.";
+    }
+
+    // Clear the hash fragment
+    window.history.replaceState({}, document.title, window.location.pathname);
 }
 
 /**
- * Handles Deriv OAuth direct token response format
+ * Populates the account switcher dropdown with available accounts
  */
-function handleDerivOAuthTokens(token1, token2, acct1, acct2, accountType) {
-    console.log('🔄 Handling Deriv OAuth tokens directly');
-    console.log('Requested account type:', accountType);
-    console.log('Available accounts:', { acct1, acct2 });
-
-    try {
-        let selectedToken = null;
-        let selectedAccount = null;
-
-        // Store tokens based on account type
-        if (accountType === 'demo') {
-            // For demo, prefer VRTC account (token2/acct2)
-            if (token2 && acct2 && acct2.startsWith('VRTC')) {
-                selectedToken = token2;
-                selectedAccount = acct2;
-                console.log('✅ Using demo account (VRTC):', acct2);
-            } else if (token1 && acct1 && acct1.startsWith('VRTC')) {
-                selectedToken = token1;
-                selectedAccount = acct1;
-                console.log('✅ Using demo account (VRTC):', acct1);
-            } else {
-                console.warn('⚠️ No VRTC demo account found, using first available token');
-                selectedToken = token2 || token1;
-                selectedAccount = acct2 || acct1;
-            }
-        } else if (accountType === 'real') {
-            // For real, prefer CR account (token1/acct1)
-            if (token1 && acct1 && acct1.startsWith('CR')) {
-                selectedToken = token1;
-                selectedAccount = acct1;
-                console.log('✅ Using real account (CR):', acct1);
-            } else if (token2 && acct2 && acct2.startsWith('CR')) {
-                selectedToken = token2;
-                selectedAccount = acct2;
-                console.log('✅ Using real account (CR):', acct2);
-            } else {
-                console.warn('⚠️ No CR real account found, using first available token');
-                selectedToken = token1 || token2;
-                selectedAccount = acct1 || acct2;
-            }
-        }
-
-        if (!selectedToken) {
-            throw new Error('No valid token found for the requested account type');
-        }
-
-        // 🔥 CRITICAL FIX: Ensure window.oauthState exists before setting properties
-        // This prevents "Cannot set properties of undefined" error
-        if (typeof window.oauthState === 'undefined') {
-            window.oauthState = {
-                access_token: null,
-                refresh_token: null,
-                account_type: 'demo',
-                login_id: null,
-                account_id: null
-            };
-            console.log('✅ Initialized window.oauthState object');
-        }
-
-        window.oauthState.access_token = selectedToken;
-        window.oauthState.account_type = accountType;
-        window.oauthState.account_id = selectedAccount;
-
-        console.log('✅ Stored OAuth state:', {
-            access_token: window.oauthState.access_token ? 'present' : 'missing',
-            account_type: window.oauthState.account_type,
-            account_id: window.oauthState.account_id
-        });
-
-        // 🔥 CRITICAL FIX: Save token to localStorage for session persistence
-        localStorage.setItem('deriv_token', selectedToken);
-        localStorage.setItem('deriv_account_type', accountType);
-        localStorage.setItem('deriv_account_id', selectedAccount);
-        console.log('💾 Token saved to localStorage for session persistence');
-
-        // Connect to Deriv with OAuth token
-        connectToDerivWithOAuth();
-
-    } catch (error) {
-        console.error('❌ Error handling Deriv OAuth tokens:', error);
-        showToast(`Authentication failed: ${error.message}`, 'error');
-        statusMessage.textContent = "OAuth token processing failed. Please try again.";
+function populateAccountSwitcher(accounts) {
+    const select = document.getElementById('active-account-select');
+    const accountSwitcher = document.getElementById('accountSwitcher');
+    
+    if (!select || !accountSwitcher) {
+        console.error('Account switcher elements not found');
+        return;
     }
+
+    // Clear existing options
+    select.innerHTML = '';
+
+    // Add each account as an option
+    accounts.forEach(acc => {
+        const option = document.createElement('option');
+        option.value = acc.token;
+        option.dataset.accountId = acc.id;
+        option.textContent = `${acc.id} (${acc.currency})`;
+        select.appendChild(option);
+    });
+
+    // Show the account switcher
+    accountSwitcher.style.display = 'flex';
+
+    // Add change event listener
+    select.addEventListener('change', (e) => {
+        const selectedToken = e.target.value;
+        const selectedId = e.target.options[e.target.selectedIndex].dataset.accountId;
+        console.log(`🔄 Switching to account: ${selectedId}`);
+        switchAccount(selectedToken, selectedId);
+    });
+
+    console.log('✅ Account switcher populated with', accounts.length, 'account(s)');
+}
+
+/**
+ * Switches to a different account using the provided token
+ */
+function switchAccount(token, accountId) {
+    console.log(`🔄 Switching to account: ${accountId}`);
+    
+    if (!token || !accountId) {
+        console.error('Invalid token or account ID');
+        showToast('Invalid account selection', 'error');
+        return;
+    }
+
+    // Update OAuth state
+    if (typeof window.oauthState === 'undefined') {
+        window.oauthState = {
+            access_token: null,
+            refresh_token: null,
+            account_type: accountId.startsWith('VRTC') ? 'demo' : 'real',
+            login_id: null,
+            account_id: null
+        };
+    }
+
+    window.oauthState.access_token = token;
+    window.oauthState.account_id = accountId;
+    window.oauthState.account_type = accountId.startsWith('VRTC') ? 'demo' : 'real';
+
+    // Save to localStorage
+    localStorage.setItem('deriv_token', token);
+    localStorage.setItem('deriv_account_id', accountId);
+    localStorage.setItem('deriv_account_type', window.oauthState.account_type);
+
+    console.log('✅ Account switched to:', accountId, `(${window.oauthState.account_type})`);
+
+    // Connect with the new token
+    connectAndAuthorize(token);
 }
 
 /**
@@ -461,54 +423,25 @@ function authorizeWithOAuthToken() {
 // ===================================
 
 /**
- * Starts the OAuth login flow for the specified account type
- * @param {string} accountType - 'demo' or 'real'
+ * Starts the unified OAuth login flow (no account type pre-selection)
  */
-function startOAuthLogin(accountType) {
-    console.log(`Starting OAuth login for ${accountType} account`);
-
-    // Validate account type
-    if (!ACCOUNT_TYPES[accountType.toUpperCase()]) {
-        showToast('Invalid account type', 'error');
-        return;
-    }
+function startOAuthLogin() {
+    console.log('🚀 Starting unified OAuth login...');
 
     // Generate a random state parameter for CSRF protection
     const state = crypto.randomUUID();
     sessionStorage.setItem('oauth_state', state);
-    sessionStorage.setItem('oauth_account_type', accountType);
 
-    // Build the authorization URL using implicit flow (token response)
-    const authUrl = new URL(OAUTH_CONFIG.authorization_url);
-    authUrl.searchParams.set('app_id', OAUTH_CONFIG.app_id);
-    authUrl.searchParams.set('l', OAUTH_CONFIG.language);
-    authUrl.searchParams.set('brand', OAUTH_CONFIG.brand);
-    authUrl.searchParams.set('state', state);
-    authUrl.searchParams.set('response_type', OAUTH_CONFIG.response_type); // Use 'token' for implicit flow
+    // Build the authorization URL without forcing a specific account type
+    const authUrl = `${OAUTH_CONFIG.authorization_url}?app_id=${OAUTH_CONFIG.app_id}&l=${OAUTH_CONFIG.language}&brand=${OAUTH_CONFIG.brand}&state=${state}&response_type=token`;
     
-    console.log('Redirecting to OAuth URL:', authUrl.toString());
-    console.log('Redirect URI will be:', OAUTH_CONFIG.redirect_uri);
+    console.log('🚀 Redirecting to Deriv for unified login...');
+    console.log('Auth URL:', authUrl);
 
     // Redirect to Deriv OAuth
-    window.location.href = authUrl.toString();
+    window.location.href = authUrl;
 }
 
-/**
- * Initiates OAuth login to Deriv for the specified account type
- * @param {string} accountType - 'demo' or 'real'
- */
-function loginToDerivAccount(accountType) {
-    console.log(`Starting OAuth login for ${accountType} account`);
-
-    // Validate account type
-    if (!ACCOUNT_TYPES[accountType.toUpperCase()]) {
-        showToast('Invalid account type', 'error');
-        return;
-    }
-
-    // Start the OAuth flow
-    startOAuthLogin(accountType);
-}
 
 // ===================================
 // WEBSOCKET TESTING FUNCTION
