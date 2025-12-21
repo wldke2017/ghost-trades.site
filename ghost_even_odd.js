@@ -1,6 +1,6 @@
 // ===================================
 // GHOST_E/ODD BOT - PATTERN-BASED EVEN/ODD STRATEGY
-// Based on Binary Bot pattern recognition from last 5 digits
+// Based on Binary Bot pattern recognition from last 15 digits
 // ===================================
 
 // --- GHOST_E/ODD Bot State ---
@@ -38,7 +38,7 @@ let mm = {
     recoveryStartLoss: 0 // Track accumulated loss when recovery starts
 };
 
-// Track last digits per symbol for independent pattern analysis (up to 10 digits)
+// Track last digits per symbol for independent pattern analysis (up to 15 digits)
 let symbolDigitHistory = {}; // { symbol: { digit1, digit2, ..., digit10 } }
 
 function addEvenOddBotLog(message, type = 'info') {
@@ -97,7 +97,7 @@ function updateEvenOddProfitLossDisplay() {
 /**
  * Calculate pattern for a specific symbol with a specific length
  * @param {string} symbol - The market symbol
- * @param {number} length - Number of digits to use (1-10)
+ * @param {number} length - Number of digits to use (1-15)
  */
 function calculatePatternForSymbol(symbol, length = 5) {
     if (!symbolDigitHistory[symbol]) return 0;
@@ -246,8 +246,8 @@ function addCustomPatternToConfig() {
     
     const patternStr = patternInput.value.trim().toUpperCase();
     
-    // Validate pattern (O and E, 1-10 digits)
-    if (!/^[OE]{1,10}$/i.test(patternStr)) {
+    // Validate pattern (O and E, 1-15 digits)
+    if (!/^[OE]{1,15}$/i.test(patternStr)) {
         showToast('Invalid pattern! Use only O and E (1-10 digits)', 'error');
         return;
     }
@@ -507,7 +507,7 @@ async function startEvenOddBot() {
 
     const activeCount = Object.values(activePatterns).filter(p => p.active).length;
     addEvenOddBotLog(`🤖 GHOST_E/ODD Pattern Bot Started`);
-    addEvenOddBotLog(`📊 Pattern-based EVEN/ODD analysis using last 5 digits`);
+    addEvenOddBotLog(`📊 Pattern-based EVEN/ODD analysis using last 15 digits`);
     addEvenOddBotLog(`🎯 Active Patterns: ${activeCount} patterns enabled`);
     addEvenOddBotLog(`💰 Initial Stake: $${mm.initStake.toFixed(2)} | Target: $${mm.targetProfit.toFixed(2)}`);
     addEvenOddBotLog(`🛡️ Recovery Strategy: Martingale activates after 1 loss`, 'info');
@@ -565,6 +565,32 @@ const PATTERN_CHECK_COOLDOWN = 100; // Reduced from 1000ms to 100ms for faster r
  * Handle incoming tick data for Even/Odd bot
  * This function is called from app.js when a tick is received
  */
+/**
+ * Analyze Even/Odd patterns for streak detection
+ * @param {string} symbol - The market symbol
+ * @param {Array} lastDigits - Array of last digits
+ */
+function analyzeEvenOddPattern(symbol, lastDigits) {
+    if (lastDigits.length < 15) return;
+
+    const recent15 = lastDigits.slice(-15);
+    const recent10 = lastDigits.slice(-10);
+
+    // Convert to a string pattern for easy matching (e.g., "EOEEO...")
+    const patternString15 = recent15.map(d => d % 2 === 0 ? 'E' : 'O').join('');
+    const patternString10 = recent10.map(d => d % 2 === 0 ? 'E' : 'O').join('');
+
+    // Example: Logic to detect a streak of 10 Evens or 10 Odds
+    if (patternString10 === 'EEEEEEEEEE') {
+        addEvenOddBotLog(`🎯 Alert: 10-digit EVEN streak detected on ${symbol}`, 'success');
+        // Place trade logic here...
+    }
+    if (patternString10 === 'OOOOOOOOOO') {
+        addEvenOddBotLog(`🎯 Alert: 10-digit ODD streak detected on ${symbol}`, 'success');
+        // Place trade logic here...
+    }
+}
+
 function handleEvenOddTick(tick) {
     // Double check if bot is still trading (in case stop was triggered)
     if (!evenOddBotState.isTrading) {
@@ -575,7 +601,7 @@ function handleEvenOddTick(tick) {
     const price = tick.quote.toString();
     const lastDigit = parseInt(price.slice(-1));
 
-    // Initialize symbol history if not exists (up to 10 digits)
+    // Initialize symbol history if not exists (up to 15 digits)
     if (!symbolDigitHistory[symbol]) {
         symbolDigitHistory[symbol] = {
             digit1: null,
@@ -587,12 +613,22 @@ function handleEvenOddTick(tick) {
             digit7: null,
             digit8: null,
             digit9: null,
-            digit10: null
+            digit10: null,
+            digit11: null,
+            digit12: null,
+            digit13: null,
+            digit14: null,
+            digit15: null
         };
     }
 
     // Update the last digits for this specific symbol (shift all digits)
     const digits = symbolDigitHistory[symbol];
+    digits.digit15 = digits.digit14;
+    digits.digit14 = digits.digit13;
+    digits.digit13 = digits.digit12;
+    digits.digit12 = digits.digit11;
+    digits.digit11 = digits.digit10;
     digits.digit10 = digits.digit9;
     digits.digit9 = digits.digit8;
     digits.digit8 = digits.digit7;

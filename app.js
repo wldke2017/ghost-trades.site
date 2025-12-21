@@ -924,27 +924,27 @@ function handleIncomingMessage(msg) {
 
 function handleOAuthRedirectAndInit() {
     console.log('🔄 Checking for OAuth redirect...');
-    const search = window.location.search;
+    const hash = window.location.hash;
 
-    // 1. Check if we're returning from OAuth callback (Deriv uses token1/acct1 format)
-    if (search && (search.includes('token1=') || search.includes('acct1='))) {
+    // 1. Check if we're returning from OAuth callback (Deriv uses token1/acct1 format in hash)
+    if (hash && (hash.includes('token1=') || hash.includes('acct1='))) {
         console.log('✅ OAuth callback detected - connection.js will handle it');
         // Don't do anything here - connection.js handleOAuthCallback() will process this
         return;
     }
 
     // 2. Check for old-style access_token format (fallback)
-    if (search.includes('access_token')) {
-        // Token found in URL fragment (after a successful OAuth redirect)
-        const params = new URLSearchParams(search.substring(1));
+    if (hash.includes('access_token')) {
+        // Token found in URL hash fragment (after a successful OAuth redirect)
+        const params = new URLSearchParams(hash.substring(1));
         const token = params.get('access_token');
 
         if (token) {
-            console.log('✅ OAuth access_token found in URL');
+            console.log('✅ OAuth access_token found in URL hash');
             // Save the token for future sessions
             localStorage.setItem('deriv_token', token);
 
-            // Clean the URL fragment (highly recommended for security)
+            // Clean the URL hash fragment (highly recommended for security)
             window.history.replaceState({}, document.title, window.location.pathname);
 
             // Connect and start the authorized session

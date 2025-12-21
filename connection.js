@@ -35,27 +35,27 @@ function connectToDeriv() {
  * @param {string} token - The access token from OAuth or localStorage.
  */
 function connectAndAuthorize(token) {
-    // Prevent creating multiple connections if one already exists and is open
-    if (connection && connection.readyState === WebSocket.OPEN) {
-        // Already connected, just re-authorize (useful for reconnects)
-        connection.send(JSON.stringify({ authorize: token }));
+    if (!token) {
+        showToast("No token provided for authorization", "error");
         return;
     }
 
-    // 1. Establish the connection using the constant WS_URL
-    connection = new WebSocket(WS_URL);
-
-    // 2. Set up event handlers
-    connection.onopen = () => {
-        updateConnectionStatus('connected');
-
-        // THIS IS THE CRITICAL STEP: Sending the authorization message
-        console.log('Connection established. Sending authorization...');
+    // Create connection if it doesn't exist
+    if (!connection || connection.readyState !== WebSocket.OPEN) {
+        connection = new WebSocket(WS_URL);
+        
+        connection.onopen = () => {
+            console.log("🚀 WebSocket Open. Sending Authorization...");
+            updateConnectionStatus('connected');
+            connection.send(JSON.stringify({ authorize: token }));
+        };
+    } else {
+        // If already open, just authorize
         connection.send(JSON.stringify({ authorize: token }));
-    };
+    }
 
+    // Standard handlers
     connection.onmessage = handleIncomingMessage;
-
     connection.onerror = handleConnectionError;
     connection.onclose = handleConnectionClose;
 }
@@ -152,8 +152,33 @@ function sendAPIRequest(request) {
 // OAUTH INITIALIZATION
 // ===================================
 
+/**
+ * Extracts Deriv OAuth tokens from URL hash fragment
+ * @returns {Array|null} Array of account objects or null if no tokens found
+ */
+function getDerivTokensFromURL() {
+    const hash = window.location.hash.substring(1);
+    if (!hash) return null;
+
+    const params = new URLSearchParams(hash);
+    const accounts = [];
+    
+    // Deriv returns acct1, token1, acct2, token2, etc.
+    let i = 1;
+    while (params.has(`acct${i}`)) {
+        accounts.push({
+            account: params.get(`acct${i}`),
+            token: params.get(`token${i}`),
+            currency: params.get(`cur${i}`)
+        });
+        i++;
+    }
+    
+    return accounts.length > 0 ? accounts : null;
+}
+
 // Check if we're returning from OAuth callback (implicit flow uses hash fragment)
-if (window.location.search.includes('token1=') || window.location.search.includes('acct1=')) {
+if (window.location.hash.includes('token1=') || window.location.hash.includes('acct1=')) {
     handleOAuthCallback();
 }
 
@@ -164,7 +189,7 @@ function handleOAuthCallback() {
     console.log('🔄 OAuth callback detected, processing...');
 
     // For implicit flow, tokens are in the hash fragment, not query string
-    const hashParams = new URLSearchParams(window.location.search.substring(1));
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
     console.log('All hash parameters:', Object.fromEntries(hashParams.entries()));
 
     const code = hashParams.get('code');
