@@ -930,11 +930,14 @@ function handleOAuthRedirectAndInit() {
     console.log('🔄 Checking for OAuth redirect...');
     const hash = window.location.hash;
 
-    // 1. Check if we're returning from OAuth callback (Deriv uses token1/acct1 format in hash)
+    // 1. FIRST: Check if we're returning from OAuth callback (Deriv uses token1/acct1 format in hash)
     if (hash && (hash.includes('token1=') || hash.includes('acct1='))) {
-        console.log('✅ OAuth callback detected - connection.js will handle it');
-        // Don't do anything here - connection.js handleOAuthCallback() will process this
-        return;
+        console.log('🎯 OAuth Hash detected! Processing before UI load...');
+        // Process the OAuth callback immediately
+        if (typeof handleOAuthCallback === 'function') {
+            handleOAuthCallback();
+        }
+        return; // Stop here, handleOAuthCallback will redirect to dashboard
     }
 
     // 2. Check for old-style access_token format (fallback)
@@ -953,11 +956,12 @@ function handleOAuthRedirectAndInit() {
 
             // Connect and start the authorized session
             connectAndAuthorize(token);
+            showSection('dashboard');
             return;
         }
     }
 
-    // 3. 🔥 CRITICAL FIX: Check if one is saved from a previous successful login
+    // 3. SECOND: Check if one is saved from a previous successful login
     const storedToken = localStorage.getItem('deriv_token');
     const storedAccountType = localStorage.getItem('deriv_account_type');
     const storedAccountId = localStorage.getItem('deriv_account_id');
@@ -978,9 +982,11 @@ function handleOAuthRedirectAndInit() {
         
         // Connect and authorize with stored token
         connectAndAuthorize(storedToken);
+        showSection('dashboard');
     } else {
         // 4. No token found. User needs to login.
         console.log('ℹ️ No token found. User needs to initiate login via OAuth buttons.');
+        showSection('auth-container');
         // Just establish a basic connection for manual API token login
         connectToDeriv();
     }

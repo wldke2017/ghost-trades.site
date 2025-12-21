@@ -177,19 +177,17 @@ function getDerivTokensFromURL() {
     return accounts.length > 0 ? accounts : null;
 }
 
-// Check if we're returning from OAuth callback (implicit flow uses hash fragment)
-if (window.location.hash.includes('token1=') || window.location.hash.includes('acct1=')) {
-    handleOAuthCallback();
-}
-
 /**
  * Handles the OAuth callback when returning from Deriv OAuth
  */
 function handleOAuthCallback() {
     console.log('🔄 OAuth callback detected, processing...');
 
+    // 🔥 FIX: Use substring(1) to remove the # character
     const hash = window.location.hash.substring(1);
     const params = new URLSearchParams(hash);
+    
+    console.log('📋 Hash parameters:', hash);
     
     // Check for errors
     const error = params.get('error');

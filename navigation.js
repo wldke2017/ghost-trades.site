@@ -26,25 +26,38 @@ function setupNavigation() {
 }
 
 function showSection(sectionName) {
-    // Hide auth container when showing any authenticated section
-    if (authContainer) {
-        authContainer.style.display = 'none';
+    console.log('🔄 Showing section:', sectionName);
+    
+    // Handle auth-container explicitly
+    if (sectionName === 'auth-container') {
+        if (authContainer) {
+            authContainer.style.display = 'flex';
+        }
+        // Hide all other main sections
+        dashboard.style.display = 'none';
+        tradingInterface.style.display = 'none';
+        ghostaiInterface.style.display = 'none';
+        ghosteoddInterface.style.display = 'none';
+    } else {
+        // Hide auth container when showing any authenticated section
+        if (authContainer) {
+            authContainer.style.display = 'none';
+        }
+
+        dashboard.style.display = (sectionName === 'dashboard') ? 'flex' : 'none';
+        tradingInterface.style.display = (sectionName === 'speedbot') ? 'flex' : 'none';
+        ghostaiInterface.style.display = (sectionName === 'ghostai') ? 'flex' : 'none';
+        ghosteoddInterface.style.display = (sectionName === 'ghost-eodd') ? 'flex' : 'none';
+
+        dashboardNav.classList.toggle('active', sectionName === 'dashboard');
+        speedbotNav.classList.toggle('active', sectionName === 'speedbot');
+        ghostaiNav.classList.toggle('active', sectionName === 'ghostai');
+        ghosteoddNav.classList.toggle('active', sectionName === 'ghost-eodd');
+
+        // Initialize chart only when speedbot is shown
+        if (sectionName === 'speedbot' && !currentChart) {
+            initializeChart();
+            requestMarketData(CHART_MARKET);
+        }
     }
-
-    dashboard.style.display = (sectionName === 'dashboard') ? 'flex' : 'none';
-    tradingInterface.style.display = (sectionName === 'speedbot') ? 'flex' : 'none';
-    ghostaiInterface.style.display = (sectionName === 'ghostai') ? 'flex' : 'none';
-    ghosteoddInterface.style.display = (sectionName === 'ghost-eodd') ? 'flex' : 'none';
-
-    dashboardNav.classList.toggle('active', sectionName === 'dashboard');
-    speedbotNav.classList.toggle('active', sectionName === 'speedbot');
-    ghostaiNav.classList.toggle('active', sectionName === 'ghostai');
-    ghosteoddNav.classList.toggle('active', sectionName === 'ghost-eodd');
-
-    // Initialize chart only when speedbot is shown
-    if (sectionName === 'speedbot' && !currentChart) {
-        initializeChart();
-        requestMarketData(CHART_MARKET);
-    }
-
 }
