@@ -23,6 +23,7 @@ function setupNavigation() {
         showSection('ghost-eodd');
     });
 
+    // Hedging is now part of dashboard, no separate nav needed
 }
 
 function showSection(sectionName) {
