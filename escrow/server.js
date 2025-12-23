@@ -1590,6 +1590,15 @@ app.get('/middleman/earnings', authenticateToken, async (req, res) => {
 
     // 2. Deposits and Withdrawals (Based on Transaction Requests)
     // We use Promise.all for parallel DB queries
+    // 2. Deposits and Withdrawals (Based on Transaction Requests)
+    // We use Promise.all for parallel DB queries
+    console.log(`[Earnings] Fetching stats for user ${userId}`);
+
+    try {
+      const pendingDeps = await TransactionRequest.count({ where: { user_id: userId, type: 'deposit', status: 'pending' } });
+      console.log(`[Earnings] User ${userId} has ${pendingDeps} pending deposits`);
+    } catch (e) { console.error('[Earnings] Count error:', e); }
+
     const [
       totalDepositedSum,
       totalWithdrawnSum,
@@ -1602,11 +1611,13 @@ app.get('/middleman/earnings', authenticateToken, async (req, res) => {
       TransactionRequest.sum('amount', { where: { user_id: userId, type: 'withdrawal', status: 'pending' } })
     ]);
 
-    // Handle null returns from sum()
-    const totalDeposited = totalDepositedSum || 0;
-    const totalWithdrawn = totalWithdrawnSum || 0;
-    const pendingDeposited = pendingDepositedSum || 0;
-    const pendingWithdrawn = pendingWithdrawnSum || 0;
+    console.log('[Earnings] Sum results:', { totalDepositedSum, totalWithdrawnSum, pendingDepositedSum, pendingWithdrawnSum });
+
+    // Handle null returns from sum() and string returns from Postgres
+    const totalDeposited = parseFloat(totalDepositedSum || 0);
+    const totalWithdrawn = parseFloat(totalWithdrawnSum || 0);
+    const pendingDeposited = parseFloat(pendingDepositedSum || 0);
+    const pendingWithdrawn = parseFloat(pendingWithdrawnSum || 0);
 
     res.json({
       totalEarnings: '$' + totalEarnings.toFixed(2),

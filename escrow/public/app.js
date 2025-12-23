@@ -869,6 +869,7 @@ async function loadEarningsDashboard() {
     try {
         const response = await authenticatedFetch('/middleman/earnings');
         const earnings = await response.json();
+        console.log('[Earnings] Loaded data:', earnings);
 
         document.getElementById('earnings-total').textContent = earnings.totalEarnings;
         document.getElementById('earnings-month').textContent = earnings.monthlyEarnings;
