@@ -23,6 +23,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { validate } = require('./middleware/validator');
 const { apiLimiter, authLimiter, transactionLimiter, uploadLimiter } = require('./middleware/rateLimiter');
 const logger = require('./utils/logger');
+const { initiateSTKPush } = require('./utils/mpesa');
 
 const app = express();
 const server = http.createServer(app);
@@ -2038,6 +2039,45 @@ app.post('/orders/:id/cancel', authenticateToken, isAdmin, async (req, res) => {
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
+});
+
+// ==========================================
+// M-PESA INTEGRATION ROUTES
+// ==========================================
+
+app.post('/api/stkpush', async (req, res) => {
+  try {
+    const { phoneNumber, amount } = req.body;
+
+    if (!phoneNumber || !amount) {
+      return res.status(400).json({ error: 'Phone number and amount are required' });
+    }
+
+    // Initiate STK Push
+    const result = await initiateSTKPush(phoneNumber, amount);
+
+    res.json({
+      success: true,
+      message: 'Payment prompt sent to your phone',
+      data: result
+    });
+  } catch (error) {
+    console.error('M-Pesa STK Push Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to initiate payment'
+    });
+  }
+});
+
+app.post('/api/callback', (req, res) => {
+  try {
+    console.log('----------- M-PESA CALLBACK RECEIVED -----------');
+    console.log(JSON.stringify(req.body, null, 2));
+  } catch (error) {
+    console.error('Callback processing error:', error);
+  }
+  res.json({ ResultCode: 0, ResultDesc: "Accepted" });
 });
 
 // 404 handler - must be after all routes
