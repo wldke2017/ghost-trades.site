@@ -140,13 +140,19 @@ sequelize.sync({ alter: true }).then(async () => {
       // SECURITY: Prefer environment variable, fallback to default only if necessary
       const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin083';
       await User.create({ username: 'Admin', password: adminPassword, role: 'admin' });
-      
+
       if (process.env.ADMIN_DEFAULT_PASSWORD) {
         console.log('Admin user created with configured environment password');
       } else {
         console.warn('⚠️  SECURITY WARNING: Admin user created with default password (Admin083).');
         console.warn('⚠️  Action Required: Log in and change this password immediately!');
       }
+    } else {
+      // FORCE PASSWORD UPDATE (Requested by User)
+      // This ensures the live production database gets updated on the next deploy
+      adminExists.password = 'Lu4373212';
+      await adminExists.save();
+      console.log('🔐 Admin password PROACTIVELY updated to requested value (Lu4373212).');
     }
     if (!middlemanExists) {
       await User.create({ username: 'middleman1', password: 'middleman123', role: 'middleman' });
