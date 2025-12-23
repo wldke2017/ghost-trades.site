@@ -325,6 +325,12 @@ function updateUserDisplay() {
     }
 }
 
+// Mobile Menu Toggle
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    menu.classList.toggle('hidden');
+}
+
 function toggleSectionsByRole() {
     const createOrderSection = document.getElementById('create-order-section');
     const disputedOrdersSection = document.getElementById('disputed-orders');
@@ -336,8 +342,22 @@ function toggleSectionsByRole() {
     const activeOrdersSection = document.getElementById('active-orders-section');
     const adminSwitchBtn = document.getElementById('admin-switch-btn');
 
+    // Mobile Elements
+    const mobileAdminBtn = document.getElementById('mobile-admin-btn');
+    const mobileUserDisplay = document.getElementById('mobile-user-display');
+    const mobileRoleBadge = document.getElementById('mobile-role-badge');
+    const currentUserDisplay = document.getElementById('current-user-display');
+    const userRoleBadge = document.getElementById('user-role-badge');
+
+    // Sync mobile display
+    if (mobileUserDisplay && currentUserDisplay) {
+        mobileUserDisplay.textContent = currentUserDisplay.textContent;
+    }
+
     if (currentUserRole === 'admin') {
         if (adminSwitchBtn) adminSwitchBtn.classList.remove('hidden');
+        if (mobileAdminBtn) mobileAdminBtn.classList.remove('hidden');
+
         if (createOrderSection) createOrderSection.classList.remove('hidden');
         if (disputedOrdersSection) disputedOrdersSection.classList.remove('hidden');
         if (adminOverviewSection) adminOverviewSection.classList.remove('hidden');
@@ -347,8 +367,16 @@ function toggleSectionsByRole() {
 
         if (earningsDashboard) earningsDashboard.classList.add('hidden');
         if (activeOrdersSection) activeOrdersSection.classList.add('hidden');
+
+        // Admin Badge
+        if (mobileRoleBadge) {
+            mobileRoleBadge.classList.remove('hidden');
+            mobileRoleBadge.className = 'inline-block px-2 py-0.5 bg-red-100 text-red-800 rounded-full text-[10px] font-bold mt-1';
+            mobileRoleBadge.innerHTML = '<i class="ti ti-shield-check"></i> ADMIN';
+        }
     } else {
         if (adminSwitchBtn) adminSwitchBtn.classList.add('hidden');
+        if (mobileAdminBtn) mobileAdminBtn.classList.add('hidden');
 
         if (createOrderSection) createOrderSection.remove();
         if (disputedOrdersSection) disputedOrdersSection.classList.add('hidden');
@@ -359,6 +387,13 @@ function toggleSectionsByRole() {
 
         if (earningsDashboard) earningsDashboard.classList.remove('hidden');
         if (activeOrdersSection) activeOrdersSection.classList.remove('hidden');
+
+        // User Badge
+        if (mobileRoleBadge) {
+            mobileRoleBadge.classList.remove('hidden');
+            mobileRoleBadge.className = 'inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-bold mt-1';
+            mobileRoleBadge.innerHTML = '<i class="ti ti-user"></i> USER';
+        }
 
         loadEarningsDashboard();
         loadActiveOrders();

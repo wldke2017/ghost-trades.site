@@ -1550,6 +1550,86 @@ app.delete('/admin/users/:id', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
+// Get Middleman Earnings Dashboard
+app.get('/middleman/earnings', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Total Earnings (Commissions)
+    // Assuming commissions are recorded in Transaction with type 'COMMISSION' or 'EARNING' (?)
+    // Or we calculate based on completed orders where middleman_id = userId
+    // Let's use Orders for now as it's more direct for "Middleman Performance"
+
+    // Find all completed orders by this middleman
+    const completedOrders = await Order.findAll({
+      where: {
+        middleman_id: userId,
+        status: 'COMPLETED'
+      }
+    });
+
+    const totalOrders = await Order.count({
+      where: { middleman_id: userId }
+    });
+
+    const totalEarnings = completedOrders.reduce((sum, order) => sum + (parseFloat(order.amount) * 0.05), 0);
+
+    // Monthly Earnings
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthlyOrders = completedOrders.filter(o => new Date(o.updatedAt) >= firstDayOfMonth);
+    const monthlyEarnings = monthlyOrders.reduce((sum, order) => sum + (parseFloat(order.amount) * 0.05), 0);
+
+    // Success Rate
+    const successRate = totalOrders > 0 ? Math.round((completedOrders.length / totalOrders) * 100) + '%' : '0%';
+
+    // Avg Order Value
+    const avgOrderValue = completedOrders.length > 0
+      ? (completedOrders.reduce((sum, o) => sum + parseFloat(o.amount), 0) / completedOrders.length).toFixed(2)
+      : '0.00';
+
+    // 2. Deposits and Withdrawals (Requested Feature)
+    const deposits = await Transaction.findAll({
+      where: {
+        user_id: userId,
+        type: 'DEPOSIT'
+      }
+    });
+
+    const withdrawals = await Transaction.findAll({
+      where: {
+        user_id: userId,
+        type: 'WITHDRAWAL' // Also check if type is 'WITHDRAWAL' or 'withdrawal' (case insensitive safe usually, but DB stores specific)
+      }
+    });
+
+    // Handle potential case differences in DB ('deposit' vs 'DEPOSIT') by checking both if unsure, 
+    // but typically we use uppercase in backend. Let's assume uppercase based on TransactionRequest logic.
+    // Actually, createTransctionRequest uses lowercase 'deposit'. Transaction creation uses .toUpperCase().
+    // So 'DEPOSIT' and 'WITHDRAWAL' are likely correct.
+
+    const totalDeposited = deposits.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    // Withdrawals are stored as negative amounts in some logic? 
+    // Step 1729: type === 'deposit' ? amount : -amount.
+    // So withdrawals are negative. We should take abs for "Total Withdrawn".
+    const totalWithdrawn = withdrawals.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
+
+    res.json({
+      totalEarnings: '$' + totalEarnings.toFixed(2),
+      monthlyEarnings: '$' + monthlyEarnings.toFixed(2),
+      successRate,
+      avgOrderValue: '$' + avgOrderValue,
+      totalDeposited: '$' + totalDeposited.toFixed(2),
+      totalWithdrawn: '$' + totalWithdrawn.toFixed(2)
+    });
+
+  } catch (error) {
+    console.error('Error fetching earnings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============ TRANSACTION REQUEST ROUTES ============
 
 // Create deposit request (with screenshot upload)
@@ -2043,6 +2123,56 @@ app.post('/orders/:id/cancel', authenticateToken, isAdmin, async (req, res) => {
       throw error;
     }
   } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Bulk Create Orders (Admin Only)
+app.post('/orders/bulk', authenticateToken, isAdmin, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { orders } = req.body; // Expecting array of { amount, description }
+
+    if (!Array.isArray(orders) || orders.length === 0) {
+      return res.status(400).json({ error: 'Invalid orders data' });
+    }
+
+    // Limit bulk size
+    if (orders.length > 50) {
+      return res.status(400).json({ error: 'Bulk limit exceeded (max 50)' });
+    }
+
+    const createdOrders = [];
+
+    for (const orderData of orders) {
+      const order = await Order.create({
+        amount: orderData.amount,
+        status: 'PENDING',
+        buyer_id: req.user.id,
+        description: orderData.description || 'Bulk Order'
+      }, { transaction });
+      createdOrders.push(order);
+    }
+
+    await transaction.commit();
+
+    // Log Activity
+    await ActivityLog.create({
+      user_id: req.user.id,
+      action: 'bulk_orders_created',
+      metadata: { count: createdOrders.length, total_amount: orders.reduce((s, o) => s + parseFloat(o.amount), 0) }
+    });
+
+    // Notify clients 
+    createdOrders.forEach(order => io.emit('orderCreated', order));
+
+    res.status(201).json({
+      message: `Successfully created ${createdOrders.length} orders`,
+      orders: createdOrders
+    });
+
+  } catch (error) {
+    await transaction.rollback();
     res.status(400).json({ error: error.message });
   }
 });

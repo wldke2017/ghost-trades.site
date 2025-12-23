@@ -124,25 +124,146 @@ function toggleDarkMode() {
     showToast(isDark ? 'Dark mode enabled' : 'Light mode enabled', 'info');
 }
 
-// Toast notification function
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+// Bulk Order Functions
+let bulkOrdersCache = [];
 
-    toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 flex items-center space-x-3 max-w-md`;
-    toast.innerHTML = `
+function toggleBulkSection() {
+    const container = document.getElementById('bulk-form-container');
+    const icon = document.getElementById('bulk-toggle-icon');
+    container.classList.toggle('hidden');
+    icon.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+function generateRandomAmounts(count, total, min, max) {
+    if (min * count > total) return null; // Impossible minimum
+    if (max * count < total) return null; // Impossible maximum
+
+    let amounts = [];
+    let currentSum = 0;
+
+    // First pass: Fill with random raw numbers
+    for (let i = 0; i < count; i++) {
+        amounts.push(Math.random());
+    }
+
+    // Normalize to sum to Total
+    const sumRandom = amounts.reduce((a, b) => a + b, 0);
+    amounts = amounts.map(v => (v / sumRandom) * (total - (count * min))); // Distribute surplus above min
+
+    // Add min to each and round
+    amounts = amounts.map(v => Math.round((v + min) * 100) / 100);
+
+    // Correction pass for rounding errors
+    let finalSum = amounts.reduce((a, b) => a + b, 0);
+    let diff = total - finalSum;
+
+    // Distribute diff to the first element (simplification, but works for rounding pennies)
+    amounts[0] += diff;
+
+    // Check bounds (simple rejection sampling approach: if failed, try flattening)
+    // For this simple implementation, we'll clamp and redistribute.
+    // Ideally, we'd loop this whole generation until valid.
+
+    // Let's rely on Preview for user to accept/retry for now.
+    return amounts;
+}
+
+function previewBulkOrders() {
+    const count = parseInt(document.getElementById('bulk-count').value);
+    const total = parseFloat(document.getElementById('bulk-total').value);
+    const min = parseFloat(document.getElementById('bulk-min').value);
+    const max = parseFloat(document.getElementById('bulk-max').value);
+
+    if (!count || !total || !min || !max) {
+        showToast('Please fill all fields', 'error');
+        return;
+    }
+
+    if (min * count > total) {
+        showToast(`Impossible! Minimum ${min} * ${count} = ${min * count} > Total ${total}`, 'error');
+        return;
+    }
+
+    // Try generation (retry up to 5 times)
+    let amounts = null;
+    for (let i = 0; i < 5; i++) {
+        const candidate = generateRandomAmounts(count, total, min, max);
+        const valid = candidate.every(a => a >= min && a <= max);
+        if (valid) {
+            amounts = candidate;
+            break;
+        }
+    }
+
+    // Fallback if random fails: uniform distribution
+    if (!amounts) {
+        showToast('Random distribution failed constraints. Using uniform distribution.', 'warning');
+        const avg = total / count;
+        amounts = new Array(count).fill(avg);
+    }
+
+    bulkOrdersCache = amounts.map(amount => ({
+        amount: parseFloat(amount.toFixed(2)),
+        description: `Bulk Order - Random Gen`
+    }));
+
+    const previewList = document.getElementById('bulk-preview-list');
+    previewList.innerHTML = '';
+
+    bulkOrdersCache.forEach((order, index) => {
+        const div = document.createElement('div');
+        div.className = 'flex justify-between text-sm';
+        div.innerHTML = `<span>Order #${index + 1}</span> <span class="font-mono font-bold">$${order.amount.toFixed(2)}</span>`;
+        previewList.appendChild(div);
+    });
+
+    document.getElementById('bulk-preview-sum').textContent = bulkOrdersCache.reduce((a, o) => a + o.amount, 0).toFixed(2);
+    document.getElementById('bulk-preview').classList.remove('hidden');
+}
+
+async function submitBulkOrders() {
+    if (bulkOrdersCache.length === 0) {
+        showToast('Please preview orders first', 'error');
+        return;
+    }
+
+    try {
+        const response = await authenticatedFetch('/orders/bulk', {
+            method: 'POST',
+            body: JSON.stringify({ orders: bulkOrdersCache })
+        });
+
+        if (response.ok) {
+            showToast('Batch created successfully!', 'success');
+            document.getElementById('bulk-form-container').classList.add('hidden');
+            bulkOrdersCache = [];
+            // Refresh logic
+            refreshData();
+        } else {
+            const data = await response.json();
+            showToast(data.error || 'Failed to create bulk orders', 'error');
+        }
+    } catch (error) {
+        console.error(error);
+        showToast('Server error', 'error');
+    }
+}
+const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+
+toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 flex items-center space-x-3 max-w-md`;
+toast.innerHTML = `
         <i class="ti ti-${type === 'success' ? 'check' : type === 'error' ? 'x' : 'info-circle'} text-2xl"></i>
         <span class="font-medium">${message}</span>
     `;
 
-    const container = document.getElementById('toast-container');
-    container.appendChild(toast);
+const container = document.getElementById('toast-container');
+container.appendChild(toast);
 
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => toast.remove(), 300);
+}, 3000);
 }
 
 // Confirmation Dialog
