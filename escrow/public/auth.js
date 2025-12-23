@@ -126,7 +126,7 @@ function showLoginForm() {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', loginHTML);
 }
 
@@ -144,7 +144,7 @@ function switchAuthTab(tab) {
     const registerTab = document.getElementById('register-tab');
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
-    
+
     if (tab === 'login') {
         loginTab.classList.add('bg-white', 'dark:bg-gray-600', 'text-blue-600', 'dark:text-blue-400', 'shadow');
         loginTab.classList.remove('text-gray-600', 'dark:text-gray-400');
@@ -180,7 +180,7 @@ async function handleLogin() {
     }
 
     try {
-        const response = await fetch('/auth/login', {
+        const response = await fetch('/escrow/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
@@ -235,7 +235,7 @@ async function handleRegister() {
     }
 
     try {
-        const response = await fetch('/auth/register', {
+        const response = await fetch('/escrow/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, role }),
@@ -279,14 +279,14 @@ function logout() {
     localStorage.removeItem('userData');
     authToken = null;
     currentUser = null;
-    
+
     // Clear global variables
     if (typeof window !== 'undefined') {
         window.currentUserId = null;
         window.currentUserRole = null;
         window.currentUsername = null;
     }
-    
+
     showToast('Logged out successfully', 'info');
     showLoginForm();
 }
@@ -298,20 +298,26 @@ async function authenticatedFetch(url, options = {}) {
         'Content-Type': 'application/json',
         ...options.headers,
     };
-    
+
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-    
-    const response = await fetch(url, {
+
+    // Prepend /escrow prefix if url starts with / (and not already prefixed)
+    const prefix = '/escrow';
+    const finalUrl = (url.startsWith('/') && !url.startsWith(prefix))
+        ? `${prefix}${url}`
+        : url;
+
+    const response = await fetch(finalUrl, {
         ...options,
         headers,
     });
-    
+
     // If unauthorized, logout and show login form
     if (response.status === 401 || response.status === 403) {
         logout();
     }
-    
+
     return response;
 }
