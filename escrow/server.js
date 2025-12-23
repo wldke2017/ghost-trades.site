@@ -170,7 +170,7 @@ sequelize.sync({ alter: true }).then(async () => {
 // Register new user
 app.post('/auth/register', authLimiter, validate('register'), async (req, res) => {
   try {
-    const { username, password, role } = req.body;
+    const { username, password, role, full_name, email, phone_number, country } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
@@ -191,7 +191,15 @@ app.post('/auth/register', authLimiter, validate('register'), async (req, res) =
       return res.status(400).json({ error: 'Username already exists' });
     }
 
-    const newUser = await User.create({ username, password, role });
+    const newUser = await User.create({
+      username,
+      password,
+      role,
+      full_name,
+      email,
+      phone_number,
+      country
+    });
 
     // Generate JWT token
     const token = jwt.sign(
@@ -265,7 +273,7 @@ app.post('/auth/login', authLimiter, validate('login'), async (req, res) => {
 app.get('/auth/me', authenticateToken, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'username', 'role', 'createdAt', 'avatar_path', 'mpesa_number', 'currency_preference']
+      attributes: ['id', 'username', 'role', 'createdAt', 'avatar_path', 'mpesa_number', 'currency_preference', 'full_name', 'email', 'phone_number', 'country']
     });
 
     if (!user) {
@@ -279,9 +287,10 @@ app.get('/auth/me', authenticateToken, async (req, res) => {
 });
 
 // Update Profile Settings (M-Pesa, Currency)
+// Update Profile Settings (M-Pesa, Currency, Personal Info)
 app.put('/users/profile', authenticateToken, async (req, res) => {
   try {
-    const { mpesa_number, currency_preference } = req.body;
+    const { mpesa_number, currency_preference, full_name, email, phone_number, country } = req.body;
     const user = await User.findByPk(req.user.id);
 
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -289,6 +298,10 @@ app.put('/users/profile', authenticateToken, async (req, res) => {
     // Update allowed fields
     if (mpesa_number !== undefined) user.mpesa_number = mpesa_number;
     if (currency_preference !== undefined) user.currency_preference = currency_preference;
+    if (full_name !== undefined) user.full_name = full_name;
+    if (email !== undefined) user.email = email;
+    if (phone_number !== undefined) user.phone_number = phone_number;
+    if (country !== undefined) user.country = country;
 
     await user.save();
 
@@ -296,7 +309,11 @@ app.put('/users/profile', authenticateToken, async (req, res) => {
       message: 'Profile updated successfully',
       user: {
         mpesa_number: user.mpesa_number,
-        currency_preference: user.currency_preference
+        currency_preference: user.currency_preference,
+        full_name: user.full_name,
+        email: user.email,
+        phone_number: user.phone_number,
+        country: user.country
       }
     });
   } catch (error) {

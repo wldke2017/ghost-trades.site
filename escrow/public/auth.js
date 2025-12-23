@@ -57,69 +57,80 @@ function checkAuthentication() {
 // Show login/register form
 function showLoginForm() {
     const loginHTML = `
-        <div id="auth-container" class="fixed inset-0 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center z-50">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md">
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Escrow System</h1>
-                    <p class="text-gray-600 dark:text-gray-400">Sign in to continue</p>
+        <div id="auth-container" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
+            <div class="bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-700">
+                <!-- Header -->
+                <div class="bg-gray-800 p-8 border-b border-gray-700 text-center">
+                    <h1 class="text-2xl font-bold text-white mb-2">Escrow System</h1>
+                    <div id="auth-toggle-text" class="text-sm text-gray-400">Sign in to your account</div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex border-b border-gray-700">
+                    <button onclick="switchAuthTab('login')" id="login-tab" class="flex-1 py-4 font-bold text-blue-400 border-b-2 border-blue-400 bg-gray-800 hover:bg-gray-750 transition">
+                        LOGIN
+                    </button>
+                    <button onclick="switchAuthTab('register')" id="register-tab" class="flex-1 py-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-white transition">
+                        REGISTER
+                    </button>
                 </div>
                 
-                <div id="auth-tabs" class="flex mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                    <button onclick="switchAuthTab('login')" id="login-tab" class="flex-1 py-2 px-4 rounded-md font-semibold transition bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow">
-                        Login
-                    </button>
-                    <button onclick="switchAuthTab('register')" id="register-tab" class="flex-1 py-2 px-4 rounded-md font-semibold transition text-gray-600 dark:text-gray-400">
-                        Register
-                    </button>
-                </div>
-                
-                <div id="login-form">
-                    <div class="space-y-4">
+                <div class="p-8">
+                    <!-- LOGIN FORM -->
+                    <div id="login-form" class="space-y-5">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
-                            <input type="text" id="login-username" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Enter username">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Username</label>
+                            <input type="text" id="login-username" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition" placeholder="Enter username">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
-                            <input type="password" id="login-password" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Enter password" onkeypress="if(event.key==='Enter') handleLogin()">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Password</label>
+                            <input type="password" id="login-password" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition" placeholder="Enter password" onkeypress="if(event.key==='Enter') handleLogin()">
                         </div>
-                        <button onclick="handleLogin()" class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition">
-                            Sign In
+                        
+                        <button onclick="handleLogin()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition shadow-lg mt-4">
+                            LOGIN
                         </button>
-                        <button onclick="testLogin()" class="w-full mt-2 bg-gray-500 text-white py-2 rounded-lg font-semibold hover:bg-gray-600 transition">
-                            Test Login (middleman1)
+                        
+                         <button onclick="testLogin()" class="w-full bg-gray-700 text-gray-300 text-sm py-2 rounded-lg hover:bg-gray-600 transition">
+                            Test Login (Demo)
                         </button>
                     </div>
-                    <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
-                        <p class="text-xs text-blue-800 dark:text-blue-200">
-                            <strong>Default Login:</strong><br>
-                            Admin: Admin / Admin083<br>
-                            Middleman: middleman1 / middleman123
-                        </p>
-                    </div>
-                </div>
-                
-                <div id="register-form" class="hidden">
-                    <div class="space-y-4">
+
+                    <!-- REGISTER FORM -->
+                    <div id="register-form" class="hidden space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
-                            <input type="text" id="register-username" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Choose username">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Full Name</label>
+                            <input type="text" id="register-fullname" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
-                            <input type="password" id="register-password" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Choose password" onkeypress="if(event.key==='Enter') handleRegister()">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Username</label>
+                            <input type="text" id="register-username" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
                         </div>
+                         <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Email Address</label>
+                            <input type="email" id="register-email" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+                        </div>
+                         <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Phone Number</label>
+                            <input type="tel" id="register-phone" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Country</label>
+                            <input type="text" id="register-country" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Password</label>
+                            <input type="password" id="register-password" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+                        </div>
+                         <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Confirm Password</label>
+                            <input type="password" id="register-confirm-password" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+                        </div>
+                        
                         <input type="hidden" id="register-role" value="middleman">
-                        <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                            <p class="text-sm text-gray-700 dark:text-gray-300">
-                                <strong>Account Type:</strong> Middleman
-                            </p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                New accounts are created as Middleman by default. Only the developer can be Admin.
-                            </p>
-                        </div>
-                        <button onclick="handleRegister()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition">
-                            Create Account
+                        
+                        <button onclick="handleRegister()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition shadow-lg mt-2">
+                            REGISTER
                         </button>
                     </div>
                 </div>
@@ -144,21 +155,20 @@ function switchAuthTab(tab) {
     const registerTab = document.getElementById('register-tab');
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
+    const headerText = document.getElementById('auth-toggle-text');
 
     if (tab === 'login') {
-        loginTab.classList.add('bg-white', 'dark:bg-gray-600', 'text-blue-600', 'dark:text-blue-400', 'shadow');
-        loginTab.classList.remove('text-gray-600', 'dark:text-gray-400');
-        registerTab.classList.remove('bg-white', 'dark:bg-gray-600', 'text-blue-600', 'dark:text-blue-400', 'shadow');
-        registerTab.classList.add('text-gray-600', 'dark:text-gray-400');
+        loginTab.className = 'flex-1 py-4 font-bold text-blue-400 border-b-2 border-blue-400 bg-gray-800 hover:bg-gray-750 transition';
+        registerTab.className = 'flex-1 py-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-white transition';
         loginForm.classList.remove('hidden');
         registerForm.classList.add('hidden');
+        if (headerText) headerText.textContent = 'Sign in to your account';
     } else {
-        registerTab.classList.add('bg-white', 'dark:bg-gray-600', 'text-blue-600', 'dark:text-blue-400', 'shadow');
-        registerTab.classList.remove('text-gray-600', 'dark:text-gray-400');
-        loginTab.classList.remove('bg-white', 'dark:bg-gray-600', 'text-blue-600', 'dark:text-blue-400', 'shadow');
-        loginTab.classList.add('text-gray-600', 'dark:text-gray-400');
+        registerTab.className = 'flex-1 py-4 font-bold text-orange-500 border-b-2 border-orange-500 bg-gray-800 hover:bg-gray-750 transition';
+        loginTab.className = 'flex-1 py-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-white transition';
         registerForm.classList.remove('hidden');
         loginForm.classList.add('hidden');
+        if (headerText) headerText.textContent = 'Create a new account';
     }
 }
 
@@ -227,10 +237,20 @@ async function handleLogin() {
 async function handleRegister() {
     const username = document.getElementById('register-username').value;
     const password = document.getElementById('register-password').value;
+    const confirmPassword = document.getElementById('register-confirm-password').value;
+    const full_name = document.getElementById('register-fullname').value;
+    const email = document.getElementById('register-email').value;
+    const phone_number = document.getElementById('register-phone').value;
+    const country = document.getElementById('register-country').value;
     const role = document.getElementById('register-role').value;
 
-    if (!username || !password) {
-        showToast('Please enter username and password', 'error');
+    if (!username || !password || !email) {
+        showToast('Please fill in all required fields (Username, Email, Password)', 'error');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        showToast('Passwords do not match', 'error');
         return;
     }
 
@@ -238,7 +258,15 @@ async function handleRegister() {
         const response = await fetch('/escrow/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, role }),
+            body: JSON.stringify({
+                username,
+                password,
+                role,
+                full_name,
+                email,
+                phone_number,
+                country
+            }),
         });
 
         const data = await response.json();

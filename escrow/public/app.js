@@ -11,6 +11,31 @@ let currentUserRole = window.currentUserRole || null;
 let currentUsername = window.currentUsername || null;
 let allOrders = [];
 let allHistory = [];
+
+const EXCHANGE_RATE = 129; // 1 USD = 129 KES
+
+function getUserCurrency() {
+    try {
+        const user = JSON.parse(localStorage.getItem('userData'));
+        return user?.currency_preference || 'USD';
+    } catch { return 'USD'; }
+}
+
+function formatCurrency(amount) {
+    const currency = getUserCurrency();
+    const val = parseFloat(amount || 0);
+    if (currency === 'KES') {
+        return 'Ksh ' + (val * EXCHANGE_RATE).toFixed(2);
+    }
+    return '$' + val.toFixed(2);
+}
+
+// Helper to parse currency string back to float (removes $ or Ksh)
+function parseCurrencyString(str) {
+    if (!str) return 0;
+    return parseFloat(str.replace(/[^0-9.-]+/g, ""));
+}
+
 let statusChart = null;
 let volumeChart = null;
 let socket = null;
@@ -418,8 +443,8 @@ async function loadWallet() {
         if (!response.ok) {
             if (response.status === 404) {
                 console.log('[Wallet] Wallet not found (404), setting to 0.00');
-                document.getElementById('avail-bal').textContent = '0.00';
-                document.getElementById('lock-bal').textContent = '0.00';
+                document.getElementById('avail-bal').textContent = formatCurrency(0);
+                document.getElementById('lock-bal').textContent = formatCurrency(0);
                 return;
             }
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -439,15 +464,15 @@ async function loadWallet() {
         const lockEl = document.getElementById('lock-bal');
 
         if (availEl) {
-            availEl.textContent = availBalance.toFixed(2);
-            console.log('[Wallet] Updated avail-bal element to:', availBalance.toFixed(2));
+            availEl.textContent = formatCurrency(availBalance);
+            console.log('[Wallet] Updated avail-bal element to:', formatCurrency(availBalance));
         } else {
             console.error('[Wallet] ERROR: avail-bal element not found!');
         }
 
         if (lockEl) {
-            lockEl.textContent = lockBalance.toFixed(2);
-            console.log('[Wallet] Updated lock-bal element to:', lockBalance.toFixed(2));
+            lockEl.textContent = formatCurrency(lockBalance);
+            console.log('[Wallet] Updated lock-bal element to:', formatCurrency(lockBalance));
         } else {
             console.error('[Wallet] ERROR: lock-bal element not found!');
         }
@@ -895,8 +920,8 @@ async function loadEarningsDashboard() {
             valWithdrawn: earnings.totalWithdrawn
         });
 
-        if (depositEl) depositEl.textContent = earnings.totalDeposited;
-        if (withdrawEl) withdrawEl.textContent = earnings.totalWithdrawn;
+        if (depositEl) depositEl.textContent = formatCurrency(parseCurrencyString(earnings.totalDeposited));
+        if (withdrawEl) withdrawEl.textContent = formatCurrency(parseCurrencyString(earnings.totalWithdrawn));
 
         // Pending stats
         const pendingDepEl = document.getElementById('pending-deposited');
@@ -1498,14 +1523,28 @@ async function loadProfileSettings() {
         const user = await response.json();
 
         if (response.ok) {
+            // Populate Basic Info
             document.getElementById('settings-username').value = user.username;
             document.getElementById('settings-role').value = user.role.toUpperCase();
-            document.getElementById('settings-mpesa').value = user.mpesa_number || '';
+
+            // Populate New Fields
+            document.getElementById('settings-fullname').value = user.full_name || '';
+            document.getElementById('settings-email').value = user.email || '';
+            document.getElementById('settings-phone').value = user.phone_number || '';
+            document.getElementById('settings-country').value = user.country || '';
+
+            // Populate Preferences
             document.getElementById('settings-currency').value = user.currency_preference || 'USD';
 
+            // Update Avatar Preview
             if (user.avatar_path) {
                 document.getElementById('settings-avatar-preview').src = `/uploads/${user.avatar_path}`;
             }
+
+            // Update Profile Header
+            const displayName = user.full_name || user.username;
+            document.getElementById('profile-display-name').textContent = displayName;
+            document.getElementById('profile-display-email').textContent = user.email || 'No email set';
         }
     } catch (error) {
         console.error('Error loading profile:', error);
@@ -1516,15 +1555,12 @@ async function loadProfileSettings() {
 async function updateProfile(event) {
     event.preventDefault();
 
-    const mpesa_number = document.getElementById('settings-mpesa').value;
+    const full_name = document.getElementById('settings-fullname').value;
+    const email = document.getElementById('settings-email').value;
+    const phone_number = document.getElementById('settings-phone').value;
+    const country = document.getElementById('settings-country').value;
     const currency_preference = document.getElementById('settings-currency').value;
     const button = event.target.querySelector('button');
-
-    // Validation
-    if (mpesa_number && !/^254[0-9]{9}$/.test(mpesa_number)) {
-        showToast('Invalid M-Pesa number. Format: 2547XXXXXXXX', 'error');
-        return;
-    }
 
     try {
         button.disabled = true;
@@ -1532,13 +1568,28 @@ async function updateProfile(event) {
 
         const response = await authenticatedFetch('/users/profile', {
             method: 'PUT',
-            body: JSON.stringify({ mpesa_number, currency_preference })
+            body: JSON.stringify({
+                full_name,
+                email,
+                phone_number,
+                country,
+                currency_preference,
+                mpesa_number: phone_number // Sync mpesa number with phone for now
+            })
         });
 
         const result = await response.json();
 
         if (response.ok) {
             showToast('Profile updated successfully!', 'success');
+            // Update local storage user data to reflect new currency preference immediately
+            const userData = JSON.parse(localStorage.getItem('userData'));
+            if (userData) {
+                userData.currency_preference = currency_preference;
+                localStorage.setItem('userData', JSON.stringify(userData));
+            }
+            // Reload dashboard to apply currency changes
+            updateDashboard();
         } else {
             showToast(result.error || 'Failed to update profile', 'error');
         }
@@ -1547,7 +1598,7 @@ async function updateProfile(event) {
         showToast('Error: ' + error.message, 'error');
     } finally {
         button.disabled = false;
-        button.innerHTML = '<i class="ti ti-device-floppy"></i> <span>Save Profile Changes</span>';
+        button.innerHTML = '<i class="ti ti-device-floppy"></i> <span>UPDATE PROFILE</span>';
     }
 }
 

@@ -26,6 +26,23 @@ const User = sequelize.define('User', {
     defaultValue: 'active',
     allowNull: false,
   },
+  // Personal Information
+  full_name: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  phone_number: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  country: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   // Settings & Profile Fields
   avatar_path: {
     type: DataTypes.STRING,

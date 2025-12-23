@@ -1197,126 +1197,146 @@
         <!-- Profile Tab Content -->
         <div id="settings-tab-profile" class="space-y-6">
 
-            <!-- Avatar Upload -->
-            <div class="flex items-center space-x-6">
-                <div class="relative group">
-                    <img id="settings-avatar-preview" src="https://ui-avatars.com/api/?name=User&background=random"
-                        class="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg">
-                    <div class="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
-                        onclick="document.getElementById('avatar-upload').click()">
-                        <i class="ti ti-camera text-white text-2xl"></i>
+            <!-- Profile Tab Content -->
+            <div id="settings-tab-profile" class="space-y-8">
+
+                <!-- Avatar Section (Centered) -->
+                <div class="flex flex-col items-center justify-center">
+                    <div class="relative group">
+                        <img id="settings-avatar-preview" src="https://ui-avatars.com/api/?name=User&background=random"
+                            class="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-700 shadow-xl">
+                        <div class="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                            onclick="document.getElementById('avatar-upload').click()">
+                            <i class="ti ti-camera text-white text-3xl"></i>
+                        </div>
+                        <input type="file" id="avatar-upload" hidden accept="image/*" onchange="uploadAvatar(this)">
                     </div>
-                    <input type="file" id="avatar-upload" hidden accept="image/*" onchange="uploadAvatar(this)">
-                </div>
-                <div>
-                    <h3 class="font-bold text-gray-900 dark:text-white">Profile Photo</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Click image to upload new photo</p>
-                    <p class="text-xs text-gray-400">Recommended: Square JPG/PNG, max 2MB</p>
-                </div>
-            </div>
-
-            <form onsubmit="updateProfile(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
-                    <input type="text" id="settings-username" disabled
-                        class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed">
+                    <h3 id="profile-display-name" class="mt-4 text-xl font-bold text-gray-900 dark:text-white">
+                        Loading...</h3>
+                    <p id="profile-display-email" class="text-sm text-gray-500 dark:text-gray-400">loading@example.com
+                    </p>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role</label>
-                    <input type="text" id="settings-role" disabled
-                        class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed">
+                <div class="border-t border-gray-200 dark:border-gray-700"></div>
+
+                <div class="flex items-center space-x-2 text-purple-600 dark:text-purple-400">
+                    <i class="ti ti-user text-xl"></i>
+                    <h4 class="font-bold">Personal Information</h4>
                 </div>
 
-                <div class="col-span-1 md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">M-Pesa Number</label>
-                    <div class="relative">
-                        <span class="absolute left-4 top-3.5 text-gray-500 dark:text-gray-400"><i
-                                class="ti ti-phone"></i></span>
-                        <input type="text" id="settings-mpesa" placeholder="2547XXXXXXXX" pattern="254[0-9]{9}"
-                            class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 transition">
-                    </div>
-                    <p class="text-xs text-gray-500 mt-1">Used for faster deposits and withdrawals</p>
-                </div>
-
-                <div class="col-span-1 md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Currency
-                        Display</label>
-                    <select id="settings-currency"
-                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="USD">USD ($)</option>
-                        <option value="KES">KES (Ksh)</option>
-                    </select>
-                </div>
-
-                <div class="col-span-1 md:col-span-2 pt-4">
-                    <button type="submit"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md flex items-center justify-center space-x-2">
-                        <i class="ti ti-device-floppy"></i>
-                        <span>Save Profile Changes</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Security Tab Content -->
-        <div id="settings-tab-security" class="hidden space-y-6">
-            <div
-                class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-                <div class="flex items-start space-x-3">
-                    <i class="ti ti-shield-lock text-yellow-600 dark:text-yellow-400 text-xl mt-0.5"></i>
+                <form onsubmit="updateProfile(event)" class="space-y-6">
                     <div>
-                        <h4 class="font-bold text-yellow-800 dark:text-yellow-200">Password Requirements</h4>
-                        <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                            For your security, please use a strong password with at least 8 characters.
-                        </p>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Full
+                            Name</label>
+                        <input type="text" id="settings-fullname"
+                            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
                     </div>
-                </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Email
+                            Address</label>
+                        <input type="email" id="settings-email"
+                            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Phone
+                            Number</label>
+                        <input type="tel" id="settings-phone"
+                            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
+                    </div>
+
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Country</label>
+                        <input type="text" id="settings-country"
+                            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
+                    </div>
+
+                    <!-- Hidden fields -->
+                    <input type="hidden" id="settings-username">
+                    <input type="hidden" id="settings-role">
+                    <input type="hidden" id="settings-mpesa">
+
+                    <div class="pt-4">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Currency
+                            Display</label>
+                        <select id="settings-currency"
+                            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
+                            <option value="USD">USD ($)</option>
+                            <option value="KES">KES (Ksh)</option>
+                        </select>
+                    </div>
+
+                    <div class="pt-6">
+                        <button type="submit"
+                            class="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
+                            <i class="ti ti-device-floppy"></i>
+                            <span>UPDATE PROFILE</span>
+                        </button>
+                    </div>
+                </form>
             </div>
 
-            <form onsubmit="changePassword(event)" class="space-y-4 max-w-md mx-auto">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current
-                        Password</label>
-                    <div class="relative">
-                        <input type="password" id="current-password" required
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
+            <!-- Security Tab Content -->
+            <div id="settings-tab-security" class="hidden space-y-6">
+                <div
+                    class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+                    <div class="flex items-start space-x-3">
+                        <i class="ti ti-shield-lock text-yellow-600 dark:text-yellow-400 text-xl mt-0.5"></i>
+                        <div>
+                            <h4 class="font-bold text-yellow-800 dark:text-yellow-200">Password Requirements</h4>
+                            <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                For your security, please use a strong password with at least 8 characters.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Password</label>
-                    <div class="relative">
-                        <input type="password" id="new-password" required minlength="6"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
+                <form onsubmit="changePassword(event)" class="space-y-4 max-w-md mx-auto">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current
+                            Password</label>
+                        <div class="relative">
+                            <input type="password" id="current-password" required
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm New
-                        Password</label>
-                    <div class="relative">
-                        <input type="password" id="confirm-password" required minlength="6"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New
+                            Password</label>
+                        <div class="relative">
+                            <input type="password" id="new-password" required minlength="6"
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
                     </div>
-                </div>
 
-                <div class="pt-4">
-                    <button type="submit"
-                        class="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md flex items-center justify-center space-x-2">
-                        <i class="ti ti-lock"></i>
-                        <span>Update Password</span>
-                    </button>
-                </div>
-            </form>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm New
+                            Password</label>
+                        <div class="relative">
+                            <input type="password" id="confirm-password" required minlength="6"
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit"
+                            class="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md flex items-center justify-center space-x-2">
+                            <i class="ti ti-lock"></i>
+                            <span>Update Password</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+        <!-- Toast Notification Container -->
+        <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
 
-    <script src="auth.js"></script>
-    <script src="app.js"></script>
+        <script src="auth.js"></script>
+        <script src="app.js"></script>
 </body>
 
 </html>
