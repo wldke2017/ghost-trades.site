@@ -1137,6 +1137,15 @@ function switchToMpesaDeposit() {
 function showWithdrawalRequestModal() {
     const availBal = document.getElementById('avail-bal').textContent;
     document.getElementById('withdrawal-available-balance').textContent = availBal;
+
+    // Pre-fill phone number if available in userData
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (userData && userData.mpesa_number) {
+        document.getElementById('withdrawal-phone').value = userData.mpesa_number;
+    } else if (userData && userData.phone_number) {
+        document.getElementById('withdrawal-phone').value = userData.phone_number;
+    }
+
     document.getElementById('withdrawal-request-modal').classList.remove('hidden');
 }
 
@@ -1235,12 +1244,24 @@ async function submitWithdrawalRequest(event) {
     event.preventDefault();
 
     const amount = document.getElementById('withdrawal-amount').value;
+    const phone = document.getElementById('withdrawal-phone').value;
     const notes = document.getElementById('withdrawal-notes').value;
+    const confirmed = document.getElementById('withdrawal-confirm').checked;
+
+    if (!confirmed) {
+        showToast('Please confirm your M-Pesa number is correct', 'error');
+        return;
+    }
+
+    if (!phone || !/^254[0-9]{9}$/.test(phone)) {
+        showToast('Please enter a valid M-Pesa phone number (254XXXXXXXXX)', 'error');
+        return;
+    }
 
     try {
         const response = await authenticatedFetch('/transaction-requests/withdrawal', {
             method: 'POST',
-            body: JSON.stringify({ amount, notes })
+            body: JSON.stringify({ amount, phone, notes })
         });
 
         if (!response.ok) {
@@ -1468,33 +1489,20 @@ async function submitMpesaDeposit(event) {
 // ============ SETTINGS & PROFILE FUNCTIONS ============
 
 function showSettings() {
-    // Hide other sections
-    const sections = [
-        'earnings-dashboard', 'active-orders-section', 'admin-overview',
-        'create-order-section', 'disputed-orders', 'transaction-requests-section',
-        'audit-trail-section', 'system-health-section'
-    ];
-
-    sections.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-    });
-
-    // Show Settings
-    const settingsDashboard = document.getElementById('settings-dashboard');
-    if (settingsDashboard) {
-        settingsDashboard.classList.remove('hidden');
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsModal) {
+        settingsModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Prevent scrolling
         loadProfileSettings(); // Fetch fresh data
-
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
 function closeSettings() {
-    document.getElementById('settings-dashboard').classList.add('hidden');
-    // Restore main dashboard view
-    updateDashboard();
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsModal) {
+        settingsModal.classList.add('hidden');
+        document.body.style.overflow = ''; // Restore scrolling
+    }
 }
 
 function switchSettingsTab(tabName) {

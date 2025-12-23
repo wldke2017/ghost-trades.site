@@ -1404,7 +1404,7 @@ app.post('/orders/:id/resolve', authenticateToken, isAdmin, validate('resolveDis
 // Get master overview (Admin only, protected)
 app.get('/admin/overview', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { ordersLimit = 10, ordersOffset = 0 } = req.query;
+    const { ordersLimit = 10, ordersOffset = 0, status, search } = req.query;
 
     // Get all users with their wallets
     const users = await User.findAll({
@@ -1414,19 +1414,47 @@ app.get('/admin/overview', authenticateToken, isAdmin, async (req, res) => {
       }]
     });
 
-    // Get orders with pagination
+    // Build Search/Filter criteria for orders
+    const ordersWhere = {};
+    if (status && status !== 'ALL') {
+      ordersWhere.status = status;
+    }
+
+    if (search && search.trim() !== '') {
+      const searchTerm = `%${search.trim().toLowerCase()}%`;
+      ordersWhere[Op.or] = [
+        { id: { [Op.cast]: 'char', [Op.iLike]: searchTerm } },
+        { description: { [Op.iLike]: searchTerm } },
+        { '$buyer.username$': { [Op.iLike]: searchTerm } },
+        { '$middleman.username$': { [Op.iLike]: searchTerm } }
+      ];
+    }
+
+    // Get orders with pagination and filtering
     const orders = await Order.findAll({
+      where: ordersWhere,
       include: [
         { model: User, as: 'buyer', attributes: ['id', 'username', 'role'] },
         { model: User, as: 'middleman', attributes: ['id', 'username', 'role'] }
       ],
-      order: [['createdAt', 'DESC']],
+      order: [
+        // Prioritize orders that need attention (READY_FOR_RELEASE)
+        [sequelize.literal("CASE WHEN status = 'READY_FOR_RELEASE' THEN 0 ELSE 1 END"), 'ASC'],
+        ['createdAt', 'DESC']
+      ],
       limit: parseInt(ordersLimit),
-      offset: parseInt(ordersOffset)
+      offset: parseInt(ordersOffset),
+      subQuery: false // Important for ordering by included models if needed
     });
 
-    // Get total orders count for pagination
-    const totalOrders = await Order.count();
+    // Get total orders count for pagination (affected by filter)
+    const totalOrders = await Order.count({
+      where: ordersWhere,
+      include: [
+        { model: User, as: 'buyer' },
+        { model: User, as: 'middleman' }
+      ]
+    });
 
     // Get pending transaction requests count
     const pendingRequests = await TransactionRequest.count({
@@ -1904,10 +1932,14 @@ app.post('/transaction-requests/deposit', authenticateToken, uploadLimiter, tran
 // Create withdrawal request
 app.post('/transaction-requests/withdrawal', authenticateToken, transactionLimiter, validate('transactionRequest'), async (req, res) => {
   try {
-    const { amount, notes } = req.body;
+    const { amount, phone, notes } = req.body;
 
     if (!amount || parseFloat(amount) <= 0) {
       return res.status(400).json({ error: 'Amount must be greater than 0' });
+    }
+
+    if (!phone || !/^254[0-9]{9}$/.test(phone)) {
+      return res.status(400).json({ error: 'Valid M-Pesa phone number (254XXXXXXXXX) is required' });
     }
 
     // Check if user has sufficient balance
@@ -1922,6 +1954,7 @@ app.post('/transaction-requests/withdrawal', authenticateToken, transactionLimit
       type: 'withdrawal',
       amount: parseFloat(amount),
       notes: notes || null,
+      metadata: { phone },
       status: 'pending'
     });
 
@@ -1931,7 +1964,8 @@ app.post('/transaction-requests/withdrawal', authenticateToken, transactionLimit
       type: 'withdrawal',
       user_id: req.user.id,
       username: req.user.username,
-      amount: transactionRequest.amount
+      amount: transactionRequest.amount,
+      phone: phone
     });
 
     res.status(201).json({
@@ -2161,6 +2195,22 @@ app.post('/api/stkpush', authenticateToken, transactionLimiter, async (req, res)
     }
 
     console.log('Parsed STK result:', stkResult);
+
+    // [CRITICAL] Record the STK push request in ActivityLog for callback tracking
+    if (stkResult.CheckoutRequestID) {
+      await ActivityLog.create({
+        user_id: req.user.id,
+        action: 'mpesa_stk_initiated',
+        metadata: {
+          CheckoutRequestID: stkResult.CheckoutRequestID,
+          amount: parseFloat(amount),
+          phoneNumber: testPhoneNumber,
+          merchantRequestId: stkResult.MerchantRequestID
+        }
+      });
+      console.log(`[M-Pesa] Logged STK push for user ${req.user.id}, CheckoutRequestID: ${stkResult.CheckoutRequestID}`);
+    }
+
     res.json(stkResult);
 
   } catch (error) {
@@ -2189,8 +2239,112 @@ app.post('/api/callback', async (req, res) => {
     const callbackData = req.body;
     console.log('M-Pesa Callback received:', JSON.stringify(callbackData, null, 2));
 
-    // Always respond with success to acknowledge receipt
-    res.json({ ResultCode: 0, ResultDesc: 'Callback received successfully' });
+    const { Body } = callbackData;
+    if (!Body || !Body.stkCallback) {
+      return res.status(400).json({ error: 'Invalid callback data' });
+    }
+
+    const { ResultCode, ResultDesc, CheckoutRequestID, CallbackMetadata } = Body.stkCallback;
+
+    // Find the corresponding activity log
+    const initialLog = await ActivityLog.findOne({
+      where: {
+        action: 'mpesa_stk_initiated',
+        metadata: {
+          CheckoutRequestID: CheckoutRequestID
+        }
+      }
+    });
+
+    if (!initialLog) {
+      console.error(`[M-Pesa Callback] No matching request found for CheckoutRequestID: ${CheckoutRequestID}`);
+      return res.json({ ResultCode: 0, ResultDesc: 'Acknowledgement' });
+    }
+
+    const userId = initialLog.user_id;
+
+    if (ResultCode === 0) {
+      // Payment Successful
+      console.log(`[M-Pesa Callback] Payment SUCCESS for user ${userId}, CheckoutRequestID: ${CheckoutRequestID}`);
+
+      // Extract amount and receipt number from metadata
+      const amountItem = CallbackMetadata.Item.find(item => item.Name === 'Amount');
+      const receiptItem = CallbackMetadata.Item.find(item => item.Name === 'MpesaReceiptNumber');
+
+      const kesAmount = amountItem ? amountItem.Value : 0;
+      const mpesaReceipt = receiptItem ? receiptItem.Value : 'N/A';
+
+      // Convert KES to USD (using the fixed exchange rate 129)
+      const usdAmount = parseFloat((kesAmount / 129).toFixed(2));
+
+      const transaction = await sequelize.transaction();
+      try {
+        // Find or create wallet
+        let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
+        if (!wallet) {
+          wallet = await Wallet.create({ user_id: userId, available_balance: 0, locked_balance: 0 }, { transaction });
+        }
+
+        const balanceBefore = parseFloat(wallet.available_balance);
+        wallet.available_balance = balanceBefore + usdAmount;
+        await wallet.save({ transaction });
+
+        // Record successful transaction
+        await Transaction.create({
+          user_id: userId,
+          type: 'DEPOSIT',
+          amount: usdAmount,
+          balance_before: balanceBefore,
+          balance_after: wallet.available_balance,
+          description: `M-Pesa Deposit (${mpesaReceipt}) - KES ${kesAmount} (approx. $${usdAmount})`
+        }, { transaction });
+
+        // Create transaction request record for history
+        await TransactionRequest.create({
+          user_id: userId,
+          type: 'deposit',
+          amount: usdAmount,
+          status: 'approved',
+          notes: `M-Pesa Payment: ${mpesaReceipt}`,
+          admin_notes: 'Auto-approved via M-Pesa Callback',
+          reviewed_at: new Date(),
+          metadata: { mpesa_receipt: mpesaReceipt, kes_amount: kesAmount, checkout_id: CheckoutRequestID }
+        }, { transaction });
+
+        // Update activity log to 'completed'
+        initialLog.action = 'mpesa_payment_success';
+        initialLog.metadata = { ...initialLog.metadata, mpesaReceipt, kesAmount, usdAmount };
+        await initialLog.save({ transaction });
+
+        await transaction.commit();
+
+        // Notify user via WebSocket
+        io.to(`user_${userId}`).emit('walletUpdated', {
+          available_balance: wallet.available_balance,
+          locked_balance: wallet.locked_balance,
+          message: `Your deposit of $${usdAmount} (KES ${kesAmount}) via M-Pesa was successful!`
+        });
+
+      } catch (err) {
+        await transaction.rollback();
+        console.error('[M-Pesa Callback] Database transaction failed:', err);
+      }
+    } else {
+      // Payment failed or cancelled
+      console.log(`[M-Pesa Callback] Payment FAILED/CANCELLED for user ${userId}: ${ResultDesc}`);
+
+      initialLog.action = 'mpesa_payment_failed';
+      initialLog.metadata = { ...initialLog.metadata, resultDesc: ResultDesc, resultCode: ResultCode };
+      await initialLog.save();
+
+      // Notify user via WebSocket
+      io.to(`user_${userId}`).emit('paymentFailed', {
+        message: `M-Pesa payment failed: ${ResultDesc}`,
+        details: ResultDesc
+      });
+    }
+
+    res.json({ ResultCode: 0, ResultDesc: 'Callback processed' });
 
   } catch (error) {
     console.error('M-Pesa callback processing error:', error);

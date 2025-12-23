@@ -305,11 +305,25 @@ function updateUserDisplay() {
 async function updateAdminDashboard() {
     if (!currentUserId) return;
 
+    // Default load: All orders, no search
     await loadMasterOverview();
     await loadTransactionRequests();
     await loadDisputes();
     updateSystemHealthCards();
     updateUserDisplay();
+}
+
+let filterTimeout = null;
+function filterAdminOrders() {
+    // Clear existing timeout for debouncing search
+    if (filterTimeout) clearTimeout(filterTimeout);
+
+    // Debounce to avoid too many API calls while typing
+    filterTimeout = setTimeout(async () => {
+        ordersOffset = 0; // Reset pagination
+        ordersHasMore = true;
+        await loadMasterOverview(false); // Force fresh load
+    }, 400);
 }
 
 async function loadMasterOverview(loadMore = false) {
@@ -319,7 +333,14 @@ async function loadMasterOverview(loadMore = false) {
     try {
         const limit = 10;
         const offset = loadMore ? ordersOffset : 0;
-        const url = `/admin/overview?ordersLimit=${limit}&ordersOffset=${offset}`;
+
+        // Get filter values from UI
+        const status = document.getElementById('admin-order-filter')?.value || 'ALL';
+        const search = document.getElementById('admin-order-search')?.value || '';
+
+        let url = `/admin/overview?ordersLimit=${limit}&ordersOffset=${offset}`;
+        if (status !== 'ALL') url += `&status=${status}`;
+        if (search.trim() !== '') url += `&search=${encodeURIComponent(search.trim())}`;
 
         const response = await authenticatedFetch(url);
 
@@ -338,6 +359,7 @@ async function loadMasterOverview(loadMore = false) {
             };
             ordersOffset += limit;
         } else {
+            // Fresh load
             masterOverview = data;
             ordersOffset = limit;
         }
@@ -623,9 +645,22 @@ async function loadTransactionRequests() {
                         </div>
                     </div>
                     
+                    ${req.type === 'withdrawal' && req.metadata && req.metadata.phone ? `
+                        <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/40 rounded-lg border border-blue-100 dark:border-blue-800 flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-blue-600 dark:text-blue-400 uppercase font-black tracking-wider mb-1">Payout M-Pesa Number</p>
+                                <p class="text-lg font-bold text-blue-900 dark:text-blue-100">${req.metadata.phone}</p>
+                            </div>
+                            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                                <i class="ti ti-phone text-blue-600 dark:text-blue-400"></i>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
                     ${req.notes ? `
-                        <div class="mb-3 p-3 bg-white dark:bg-gray-700 rounded-lg">
-                            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>User Notes:</strong> ${req.notes}</p>
+                        <div class="mb-3 p-3 bg-white dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">User Notes</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 italic">"${req.notes}"</p>
                         </div>
                     ` : ''}
                     
@@ -1185,4 +1220,62 @@ async function authenticatedFetch(url, options = {}) {
     }
 
     return response;
+}
+
+// User Management Functions
+async function updateUserStatus(userId, status) {
+    const statusMessages = {
+        'active': 'Activate this user? They will regain full access to their account.',
+        'disabled': 'Disable this user? They will be unable to login or perform any actions.',
+        'blocked': 'BLOCK this user? This is a serious action for violating terms.'
+    };
+
+    showConfirmDialog(
+        `${status.toUpperCase()} User`,
+        statusMessages[status] || `Change user status to ${status}?`,
+        async () => {
+            try {
+                const response = await authenticatedFetch(`/admin/users/${userId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status })
+                });
+
+                if (response.ok) {
+                    showToast(`User status updated to ${status}`, 'success');
+                    await loadMasterOverview(); // Refresh the list
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'Failed to update user status', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating user status:', error);
+                showToast('Server error during status update', 'error');
+            }
+        }
+    );
+}
+
+async function deleteUser(userId, username) {
+    showConfirmDialog(
+        'PERMANENTLY DELETE USER',
+        `Are you absolutely sure you want to delete ${username}? This action CANNOT be undone and all their data will be lost.`,
+        async () => {
+            try {
+                const response = await authenticatedFetch(`/admin/users/${userId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showToast('User deleted successfully', 'success');
+                    await loadMasterOverview(); // Refresh the list
+                } else {
+                    const data = await response.json();
+                    showToast(data.error || 'Failed to delete user', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showToast('Server error during user deletion', 'error');
+            }
+        }
+    );
 }

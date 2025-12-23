@@ -324,6 +324,38 @@
                 </div>
             </div>
 
+            <!-- Order Filter & Search Controls -->
+            <div
+                class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6 pt-6 border-t border-gray-700/50">
+                <div class="flex-grow w-full">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                            <i class="ti ti-search text-lg"></i>
+                        </div>
+                        <input type="text" id="admin-order-search" onkeyup="filterAdminOrders()"
+                            class="block w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-700 text-white text-sm rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all shadow-inner placeholder-gray-500"
+                            placeholder="Search by ID, Buyer, or Middleman...">
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3 w-full sm:w-auto">
+                    <div
+                        class="flex items-center space-x-2 bg-gray-900 border border-gray-700 rounded-2xl px-4 py-2 shadow-inner">
+                        <i class="ti ti-filter text-purple-400"></i>
+                        <span class="text-[10px] text-gray-500 font-black uppercase tracking-widest">Status:</span>
+                        <select id="admin-order-filter" onchange="filterAdminOrders()"
+                            class="bg-transparent border-none text-white text-sm focus:ring-0 cursor-pointer font-bold pr-8">
+                            <option value="ALL">All Orders</option>
+                            <option value="PENDING">Pending (Open)</option>
+                            <option value="CLAIMED">Claimed (Active)</option>
+                            <option value="READY_FOR_RELEASE">Ready for Release</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="CANCELLED">Cancelled</option>
+                            <option value="DISPUTED">Disputed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
@@ -530,25 +562,27 @@
     </div>
 
     <!-- Confirmation Dialog -->
-    <div id="confirm-dialog" class="hidden fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4">
-            <div class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop"></div>
-            <div class="relative bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
-                <div class="text-center mb-6">
-                    <div
-                        class="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="ti ti-alert-triangle text-4xl text-yellow-600 dark:text-yellow-400"></i>
+    <div id="confirm-dialog" class="hidden fixed inset-0 z-[100] overflow-hidden">
+        <div class="fixed inset-0 bg-black/70 backdrop-blur-sm modal-backdrop"></div>
+        <div class="flex items-center justify-center min-h-screen p-4 relative">
+            <div
+                class="bg-gray-800 rounded-[2rem] shadow-2xl max-w-md w-full p-8 animate-fade-in border border-gray-700">
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="ti ti-alert-triangle text-5xl text-red-500 animate-pulse"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white mb-2" id="confirm-title">Confirm Action</h3>
-                    <p class="text-gray-300" id="confirm-message">Are you sure you want to proceed?</p>
+                    <h3 class="text-2xl font-black text-white mb-3 tracking-tight" id="confirm-title">Confirm Action
+                    </h3>
+                    <p class="text-gray-400 font-medium leading-relaxed" id="confirm-message">Are you sure you want to
+                        proceed?</p>
                 </div>
-                <div class="flex space-x-4">
+                <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
                     <button onclick="closeConfirmDialog()"
-                        class="flex-1 px-4 py-3 border border-gray-600 text-gray-300 rounded-lg font-semibold hover:bg-gray-700 transition">
+                        class="flex-1 px-6 py-4 bg-gray-700 text-gray-300 rounded-2xl font-bold hover:bg-gray-600 transition-all border border-gray-600">
                         Cancel
                     </button>
                     <button id="confirm-action-btn"
-                        class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">
+                        class="flex-1 px-6 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-red-900/30">
                         Confirm
                     </button>
                 </div>

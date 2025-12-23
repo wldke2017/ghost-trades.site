@@ -52,6 +52,10 @@ const TransactionRequest = sequelize.define('TransactionRequest', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  metadata: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+  },
 }, {
   tableName: 'transaction_requests',
   timestamps: true,

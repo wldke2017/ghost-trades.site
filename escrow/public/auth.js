@@ -57,81 +57,171 @@ function checkAuthentication() {
 // Show login/register form
 function showLoginForm() {
     const loginHTML = `
-        <div id="auth-container" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
-            <div class="bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-700">
-                <!-- Header -->
-                <div class="bg-gray-800 p-8 border-b border-gray-700 text-center">
-                    <h1 class="text-2xl font-bold text-white mb-2">Escrow System</h1>
-                    <div id="auth-toggle-text" class="text-sm text-gray-400">Sign in to your account</div>
-                </div>
-
-                <!-- Tabs -->
-                <div class="flex border-b border-gray-700">
-                    <button onclick="switchAuthTab('login')" id="login-tab" class="flex-1 py-4 font-bold text-blue-400 border-b-2 border-blue-400 bg-gray-800 hover:bg-gray-750 transition">
-                        LOGIN
-                    </button>
-                    <button onclick="switchAuthTab('register')" id="register-tab" class="flex-1 py-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-white transition">
-                        REGISTER
-                    </button>
-                </div>
+        <div id="auth-container" class="fixed inset-0 bg-gray-950 bg-opacity-95 flex items-center justify-center z-50 p-4">
+            <div class="bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden border border-gray-700/50 flex flex-col md:flex-row min-h-[650px]">
                 
-                <div class="p-8">
-                    <!-- LOGIN FORM -->
-                    <div id="login-form" class="space-y-5">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Username</label>
-                            <input type="text" id="login-username" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition" placeholder="Enter username">
+                <!-- Left Side: Hero Image & Value Proposition -->
+                <div class="hidden md:flex w-1/2 relative overflow-hidden bg-gray-900 p-12 flex-col justify-between">
+                    <!-- Background Image with Overlay -->
+                    <div class="absolute inset-0 z-0">
+                        <img src="/images/hero-image.png" alt="Secure Escrow" class="w-full h-full object-cover scale-110">
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/60 to-transparent"></div>
+                    </div>
+                    
+                    <div class="relative z-10">
+                        <div class="inline-flex items-center space-x-2 px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-orange-500/30 mb-6">
+                            <span class="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
+                            <span>Secure Liquidity Banking</span>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Password</label>
-                            <input type="password" id="login-password" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition" placeholder="Enter password" onkeypress="if(event.key==='Enter') handleLogin()">
-                        </div>
-                        
-                        <button onclick="handleLogin()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition shadow-lg mt-4">
-                            LOGIN
-                        </button>
-                        
-                         <button onclick="testLogin()" class="w-full bg-gray-700 text-gray-300 text-sm py-2 rounded-lg hover:bg-gray-600 transition">
-                            Test Login (Demo)
-                        </button>
+                        <h1 class="text-4xl lg:text-5xl font-black text-white leading-[1.1] tracking-tight">
+                            Earn More, <br>
+                            <span class="text-orange-500 underline decoration-orange-500/30 underline-offset-8">Risk Less.</span>
+                        </h1>
+                        <p class="text-gray-400 text-lg mt-6 max-w-sm leading-relaxed">
+                            Join thousands of middlemen earning consistent commissions on Africa's most trusted escrow platform.
+                        </p>
                     </div>
 
-                    <!-- REGISTER FORM -->
-                    <div id="register-form" class="hidden space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Full Name</label>
-                            <input type="text" id="register-fullname" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+                    <div class="relative z-10 grid grid-cols-1 gap-4">
+                        <div class="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                            <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400">
+                                <i class="ti ti-chart-arrows text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-white font-bold text-sm">High Commissions</p>
+                                <p class="text-gray-400 text-xs">Up to 5% earned per transaction</p>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Username</label>
-                            <input type="text" id="register-username" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+                        <div class="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+                                <i class="ti ti-shield-check text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-white font-bold text-sm">Full Protection</p>
+                                <p class="text-gray-400 text-xs">Funds held in audited secure escrow</p>
+                            </div>
                         </div>
-                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Email Address</label>
-                            <input type="email" id="register-email" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+                        <div class="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400">
+                                <i class="ti ti-device-mobile text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-white font-bold text-sm">Instant Payouts</p>
+                                <p class="text-gray-400 text-xs">M-Pesa integration for zero-wait cashouts</p>
+                            </div>
                         </div>
-                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Phone Number</label>
-                            <input type="tel" id="register-phone" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+                    </div>
+                </div>
+
+                <!-- Right Side: Auth Forms -->
+                <div class="w-full md:w-1/2 bg-gray-800 flex flex-col relative">
+                    <!-- Mobile Hero (Visible only on mobile) -->
+                    <div class="md:hidden h-40 relative overflow-hidden">
+                         <img src="/images/hero-image.png" alt="Secure Escrow" class="w-full h-full object-cover">
+                         <div class="absolute inset-0 bg-gradient-to-t from-gray-800 to-transparent"></div>
+                    </div>
+
+                    <div class="p-8 pt-10 flex flex-col h-full">
+                        <div class="flex justify-between items-start mb-8">
+                            <div>
+                                <h2 class="text-3xl font-black text-white tracking-tight">Welcome</h2>
+                                <p id="auth-toggle-text" class="text-gray-400 text-sm mt-1 font-medium">Please sign in to your dashboard</p>
+                            </div>
+                            <div class="w-14 h-14 bg-gray-900 rounded-2xl border border-gray-700 flex items-center justify-center shadow-xl">
+                                <i class="ti ti-shield-lock text-orange-500 text-3xl"></i>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Country</label>
-                            <input type="text" id="register-country" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Password</label>
-                            <input type="password" id="register-password" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
-                        </div>
-                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Confirm Password</label>
-                            <input type="password" id="register-confirm-password" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition">
+
+                        <!-- Auth Switcher -->
+                        <div class="flex bg-gray-950 p-1 rounded-2xl border border-gray-700/50 mb-8 shadow-inner">
+                            <button onclick="switchAuthTab('login')" id="login-tab" class="flex-1 py-3 px-4 rounded-xl font-bold text-orange-500 bg-gray-800 shadow-xl transition-all duration-300">
+                                LOGIN
+                            </button>
+                            <button onclick="switchAuthTab('register')" id="register-tab" class="flex-1 py-3 px-4 rounded-xl font-bold text-gray-500 hover:text-gray-300 transition-all duration-300">
+                                REGISTER
+                            </button>
                         </div>
                         
-                        <input type="hidden" id="register-role" value="middleman">
+                        <div class="flex-grow">
+                            <!-- LOGIN FORM -->
+                            <div id="login-form" class="space-y-6">
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Account Username</label>
+                                    <div class="relative group">
+                                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-orange-500 transition-colors">
+                                            <i class="ti ti-user-circle text-xl"></i>
+                                        </div>
+                                        <input type="text" id="login-username" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-gray-900 transition-all" placeholder="Enter your username">
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Secure Password</label>
+                                    <div class="relative group">
+                                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-orange-500 transition-colors">
+                                            <i class="ti ti-lock-square text-xl"></i>
+                                        </div>
+                                        <input type="password" id="login-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-gray-900 transition-all" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" onkeypress="if(event.key==='Enter') handleLogin()">
+                                    </div>
+                                </div>
+                                
+                                <button onclick="handleLogin()" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white font-black py-5 rounded-2xl transition-all duration-300 shadow-[0_10px_30px_rgba(249,115,22,0.15)] hover:shadow-[0_10px_40px_rgba(249,115,22,0.25)] flex items-center justify-center space-x-3 transform active:scale-[0.98] mt-4">
+                                    <span>ACCESS DASHBOARD</span>
+                                    <i class="ti ti-chevron-right text-lg"></i>
+                                </button>
+                                
+                                <button onclick="testLogin()" class="w-full py-4 text-gray-500 hover:text-white font-bold text-sm transition-colors mt-2">
+                                    Try with Demo Account
+                                </button>
+                            </div>
+
+                            <!-- REGISTER FORM -->
+                            <div id="register-form" class="hidden space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Full Name</label>
+                                        <input type="text" id="register-fullname" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Username</label>
+                                        <input type="text" id="register-username" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Email Address</label>
+                                    <input type="email" id="register-email" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Phone Number</label>
+                                        <input type="tel" id="register-phone" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all" placeholder="254...">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Country</label>
+                                        <input type="text" id="register-country" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Password</label>
+                                        <input type="password" id="register-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Confirm</label>
+                                        <input type="password" id="register-confirm-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                    </div>
+                                </div>
+                                
+                                <input type="hidden" id="register-role" value="middleman">
+                                
+                                <button onclick="handleRegister()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-xl transition-all duration-300 shadow-lg shadow-orange-500/10 mt-2">
+                                    CREATE ACCOUNT
+                                </button>
+                            </div>
+                        </div>
                         
-                        <button onclick="handleRegister()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition shadow-lg mt-2">
-                            REGISTER
-                        </button>
+                        <div class="mt-4 pt-4 border-t border-gray-700/50 text-center">
+                            <p class="text-gray-500 text-[10px] uppercase tracking-tighter">&copy; 2025 SecureEscrow. All Rights Reserved.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -158,17 +248,17 @@ function switchAuthTab(tab) {
     const headerText = document.getElementById('auth-toggle-text');
 
     if (tab === 'login') {
-        loginTab.className = 'flex-1 py-4 font-bold text-blue-400 border-b-2 border-blue-400 bg-gray-800 hover:bg-gray-750 transition';
-        registerTab.className = 'flex-1 py-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-white transition';
+        loginTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-orange-500 bg-gray-800 shadow-xl transition-all duration-300';
+        registerTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-gray-500 hover:text-gray-300 transition-all duration-300';
         loginForm.classList.remove('hidden');
         registerForm.classList.add('hidden');
-        if (headerText) headerText.textContent = 'Sign in to your account';
+        if (headerText) headerText.textContent = 'Please sign in to your dashboard';
     } else {
-        registerTab.className = 'flex-1 py-4 font-bold text-orange-500 border-b-2 border-orange-500 bg-gray-800 hover:bg-gray-750 transition';
-        loginTab.className = 'flex-1 py-4 font-bold text-gray-400 border-b-2 border-transparent hover:text-white transition';
+        registerTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-orange-500 bg-gray-800 shadow-xl transition-all duration-300';
+        loginTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-gray-500 hover:text-gray-300 transition-all duration-300';
         registerForm.classList.remove('hidden');
         loginForm.classList.add('hidden');
-        if (headerText) headerText.textContent = 'Create a new account';
+        if (headerText) headerText.textContent = 'Join the network and start earning';
     }
 }
 
