@@ -130,8 +130,8 @@ let bulkOrdersCache = [];
 function toggleBulkSection() {
     const container = document.getElementById('bulk-form-container');
     const icon = document.getElementById('bulk-toggle-icon');
-    container.classList.toggle('hidden');
-    icon.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    if (container) container.classList.toggle('hidden');
+    if (icon) icon.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 
 function generateRandomAmounts(count, total, min, max) {

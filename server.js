@@ -10,6 +10,9 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Health Check Endpoint for Render
+app.get('/health', (req, res) => res.status(200).send('OK'));
+
 // Serve landing page at root
 app.use('/', express.static(path.join(__dirname, 'landing')));
 
@@ -27,6 +30,14 @@ app.get('/ghost-trades', (req, res) => {
 
 // Create HTTP server
 const server = http.createServer(app);
+const io = require('socket.io')(server);
+
+// Initialize Socket.IO for SecureEscrow
+if (escrowApp.setupSocket) {
+    escrowApp.setupSocket(io);
+} else {
+    console.error('Warning: escrowApp.setupSocket is not defined');
+}
 
 // Start server
 server.listen(PORT, () => {
