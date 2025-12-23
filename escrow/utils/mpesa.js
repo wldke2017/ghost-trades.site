@@ -18,10 +18,12 @@ async function getAccessToken() {
                 Authorization: `Basic ${auth}`
             }
         });
+        console.log('M-Pesa Token Generated Successfully');
         return response.data.access_token;
     } catch (error) {
-        console.error('M-Pesa Access Token Error:', error.response?.data || error.message);
-        throw new Error('Failed to get M-Pesa access token');
+        console.error('M-Pesa Token Error Data:', JSON.stringify(error.response?.data));
+        console.error('M-Pesa Token Error Status:', error.response?.status);
+        throw new Error('Failed to get M-Pesa access token: ' + (error.response?.data?.errorMessage || error.message));
     }
 }
 

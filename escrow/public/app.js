@@ -325,41 +325,43 @@ function updateUserDisplay() {
     }
 }
 
-function toggleSectionsByRole() {
-    const createOrderSection = document.getElementById('create-order-section');
-    const disputedOrdersSection = document.getElementById('disputed-orders');
-    const adminOverviewSection = document.getElementById('admin-overview');
-    const transactionRequestsSection = document.getElementById('transaction-requests-section');
-    const auditTrailSection = document.getElementById('audit-trail-section');
-    const systemHealthSection = document.getElementById('system-health-section');
-    const earningsDashboard = document.getElementById('earnings-dashboard');
-    const activeOrdersSection = document.getElementById('active-orders-section');
+const createOrderSection = document.getElementById('create-order-section');
+const disputedOrdersSection = document.getElementById('disputed-orders');
+const adminOverviewSection = document.getElementById('admin-overview');
+const transactionRequestsSection = document.getElementById('transaction-requests-section');
+const auditTrailSection = document.getElementById('audit-trail-section');
+const systemHealthSection = document.getElementById('system-health-section');
+const earningsDashboard = document.getElementById('earnings-dashboard');
+const activeOrdersSection = document.getElementById('active-orders-section');
+const adminSwitchBtn = document.getElementById('admin-switch-btn');
 
-    if (currentUserRole === 'admin') {
-        createOrderSection?.classList.remove('hidden');
-        disputedOrdersSection?.classList.remove('hidden');
-        adminOverviewSection?.classList.remove('hidden');
-        transactionRequestsSection?.classList.remove('hidden');
-        auditTrailSection?.classList.remove('hidden');
-        systemHealthSection?.classList.remove('hidden');
-        earningsDashboard?.classList.add('hidden');
-        activeOrdersSection?.classList.add('hidden');
-        // Admin functions are loaded in admin-app.js, not here
-    } else {
-        // Completely remove the create order section from DOM for non-admins
-        if (createOrderSection) {
-            createOrderSection.remove();
-        }
-        disputedOrdersSection?.classList.add('hidden');
-        adminOverviewSection?.classList.add('hidden');
-        transactionRequestsSection?.classList.add('hidden');
-        auditTrailSection?.classList.add('hidden');
-        systemHealthSection?.classList.add('hidden');
-        earningsDashboard?.classList.remove('hidden');
-        activeOrdersSection?.classList.remove('hidden');
-        loadEarningsDashboard();
-        loadActiveOrders();
+if (currentUserRole === 'admin') {
+    adminSwitchBtn?.classList.remove('hidden');
+    createOrderSection?.classList.remove('hidden');
+    disputedOrdersSection?.classList.remove('hidden');
+    adminOverviewSection?.classList.remove('hidden');
+    transactionRequestsSection?.classList.remove('hidden');
+    auditTrailSection?.classList.remove('hidden');
+    systemHealthSection?.classList.remove('hidden');
+    earningsDashboard?.classList.add('hidden');
+    activeOrdersSection?.classList.add('hidden');
+    // Admin functions are loaded in admin-app.js, not here
+} else {
+    adminSwitchBtn?.classList.add('hidden');
+    // Completely remove the create order section from DOM for non-admins
+    if (createOrderSection) {
+        createOrderSection.remove();
     }
+    disputedOrdersSection?.classList.add('hidden');
+    adminOverviewSection?.classList.add('hidden');
+    transactionRequestsSection?.classList.add('hidden');
+    auditTrailSection?.classList.add('hidden');
+    systemHealthSection?.classList.add('hidden');
+    earningsDashboard?.classList.remove('hidden');
+    activeOrdersSection?.classList.remove('hidden');
+    loadEarningsDashboard();
+    loadActiveOrders();
+}
 }
 
 async function loadWallet() {

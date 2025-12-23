@@ -126,6 +126,13 @@
                         <div id="user-role-badge" class="hidden px-3 py-1 rounded-full text-xs font-bold"></div>
                     </div>
 
+                    <!-- Admin Switcher (Hidden for non-admins) -->
+                    <button id="admin-switch-btn" onclick="window.location.href='/escrow/admin.html'"
+                        class="hidden flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-lg hover:shadow-xl transform hover:scale-105">
+                        <i class="ti ti-shield-lock"></i>
+                        <span>Admin Panel</span>
+                    </button>
+
                     <!-- Logout Button -->
                     <button onclick="logout()"
                         class="flex items-center space-x-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition shadow-lg hover:shadow-xl transform hover:scale-105">
