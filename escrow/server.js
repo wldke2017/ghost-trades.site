@@ -27,7 +27,13 @@ const { initiateSTKPush } = require('./utils/mpesa');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+// Socket.IO setup (handled via setupSocket for monorepo)
+let io = { emit: () => { } }; // Mock object until initialized
+
+const setupSocket = (socketIoInstance) => {
+  io = socketIoInstance;
+  console.log('Socket.IO instance initialized for Escrow App');
+};
 const PORT = process.env.PORT || 3000;
 const COMMISSION_RATE = parseFloat(process.env.COMMISSION_RATE) || 0.05;
 
@@ -2041,44 +2047,7 @@ app.post('/orders/:id/cancel', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// ==========================================
-// M-PESA INTEGRATION ROUTES
-// ==========================================
-
-app.post('/api/stkpush', async (req, res) => {
-  try {
-    const { phoneNumber, amount } = req.body;
-
-    if (!phoneNumber || !amount) {
-      return res.status(400).json({ error: 'Phone number and amount are required' });
-    }
-
-    // Initiate STK Push
-    const result = await initiateSTKPush(phoneNumber, amount);
-
-    res.json({
-      success: true,
-      message: 'Payment prompt sent to your phone',
-      data: result
-    });
-  } catch (error) {
-    console.error('M-Pesa STK Push Error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to initiate payment'
-    });
-  }
-});
-
-app.post('/api/callback', (req, res) => {
-  try {
-    console.log('----------- M-PESA CALLBACK RECEIVED -----------');
-    console.log(JSON.stringify(req.body, null, 2));
-  } catch (error) {
-    console.error('Callback processing error:', error);
-  }
-  res.json({ ResultCode: 0, ResultDesc: "Accepted" });
-});
+// Duplicate M-Pesa routes removed (using the detailed implementation above)
 
 // 404 handler - must be after all routes
 app.use(notFoundHandler);
@@ -2110,3 +2079,4 @@ if (require.main === module) {
 module.exports = app;
 module.exports.io = io;
 module.exports.server = server;
+module.exports.setupSocket = setupSocket;
