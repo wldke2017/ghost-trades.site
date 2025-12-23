@@ -753,31 +753,89 @@ app.post('/api/callback', async (req, res) => {
       if (resultCode === 0) {
         // Payment successful
         console.log('✅ Payment Successful!');
-        console.log('MerchantRequestID:', merchantRequestId);
-        console.log('CheckoutRequestID:', checkoutRequestId);
-        console.log('Description:', resultDesc);
 
-        // Extract callback metadata (amount, phone, etc.)
-        if (stkCallback.CallbackMetadata && stkCallback.CallbackMetadata.Item) {
-          const metadata = {};
-          stkCallback.CallbackMetadata.Item.forEach(item => {
-            metadata[item.Name] = item.Value;
+        // Find the user who initiated this request
+        // We stored the CheckoutRequestID in ActivityLog metadata
+        // Note: In Sequelize, querying JSONB fields depends on dialect. 
+        // For simplicity/compatibility, we might need a raw query or clearer association.
+        // But let's try a direct ActivityLog search.
+
+        try {
+          // Find the log entry that contains this checkoutRequestId
+          // This is inefficient for large scale but works for MVP
+          const logs = await ActivityLog.findAll({
+            where: { action: 'mpesa_stkpush_initiated' },
+            order: [['createdAt', 'DESC']],
+            limit: 50 // Look at recent logs
           });
 
-          console.log('Payment Details:', {
-            Amount: metadata.Amount,
-            MpesaReceiptNumber: metadata.MpesaReceiptNumber,
-            TransactionDate: metadata.TransactionDate,
-            PhoneNumber: metadata.PhoneNumber
-          });
+          const matchingLog = logs.find(log => log.metadata && log.metadata.checkoutRequestId === checkoutRequestId);
 
-          // TODO: Update user wallet balance here
-          // For now, we're just logging. In production, you would:
-          // 1. Find the user based on phone number or CheckoutRequestID
-          // 2. Add the amount to their wallet
-          // 3. Create a transaction record
-          // 4. Emit WebSocket event to update frontend
+          if (matchingLog) {
+            const userId = matchingLog.user_id;
+            const amount = parseFloat(callbackData.Body.stkCallback.CallbackMetadata.Item.find(i => i.Name === 'Amount').Value);
+            const mpesaReceipt = callbackData.Body.stkCallback.CallbackMetadata.Item.find(i => i.Name === 'MpesaReceiptNumber').Value;
+            const phone = callbackData.Body.stkCallback.CallbackMetadata.Item.find(i => i.Name === 'PhoneNumber').Value;
+
+            console.log(`Found matching user ${userId} for amount ${amount}`);
+
+            // Start transaction to update wallet
+            const t = await sequelize.transaction();
+
+            try {
+              // Find or Create Wallet
+              let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction: t });
+              if (!wallet) {
+                wallet = await Wallet.create({ user_id: userId, available_balance: 0, locked_balance: 0 }, { transaction: t });
+              }
+
+              // Check if transaction already processed (idempotency)
+              const existingTx = await Transaction.findOne({ where: { description: { [sequelize.Op.like]: `%${mpesaReceipt}%` } }, transaction: t });
+
+              if (!existingTx) {
+                // Credit Wallet
+                wallet.available_balance = parseFloat(wallet.available_balance) + amount;
+                await wallet.save({ transaction: t });
+
+                // Create Transaction Record
+                await Transaction.create({
+                  user_id: userId,
+                  type: 'DEPOSIT',
+                  amount: amount,
+                  balance_before: parseFloat(wallet.available_balance) - amount,
+                  balance_after: parseFloat(wallet.available_balance),
+                  description: `M-Pesa Deposit: ${mpesaReceipt}`,
+                  metadata: { mpesaReceipt, phone, checkoutRequestId }
+                }, { transaction: t });
+
+                await t.commit();
+
+                console.log('Wallet funded successfully');
+
+                // Notify User via Socket
+                io.emit('walletUpdated', {
+                  user_id: userId,
+                  available_balance: wallet.available_balance,
+                  locked_balance: wallet.locked_balance,
+                  message: `Received ${amount} KES from M-Pesa`
+                });
+              } else {
+                console.log('Transaction already processed');
+                await t.rollback();
+              }
+
+            } catch (err) {
+              await t.rollback();
+              console.error('Database transaction error:', err);
+            }
+
+          } else {
+            console.error('Could not find user for CheckoutRequestID:', checkoutRequestId);
+          }
+        } catch (err) {
+          console.error('Error finding user log:', err);
         }
+
       } else {
         // Payment failed
         console.log('❌ Payment Failed!');
