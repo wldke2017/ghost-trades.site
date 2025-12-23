@@ -641,7 +641,7 @@ async function loadTransactionRequests() {
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">$${parseFloat(req.amount).toFixed(2)}</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">${parseFloat(req.amount).toFixed(2)}</p>
                         </div>
                     </div>
                     

@@ -1870,15 +1870,15 @@ app.get('/middleman/earnings', authenticateToken, async (req, res) => {
     }
 
     res.json({
-      totalEarnings: '$' + (totalEarnings || 0).toFixed(2),
-      monthlyEarnings: '$' + (monthlyEarnings || 0).toFixed(2),
+      totalEarnings: totalEarnings || 0,
+      monthlyEarnings: monthlyEarnings || 0,
       successRate: successRate || '0%',
-      avgOrderValue: '$' + (avgOrderValue || '0.00'),
-      // Ensure these fields are ALWAYS strings present in the JSON
-      totalDeposited: '$' + totalDepositedRaw.toFixed(2),
-      totalWithdrawn: '$' + totalWithdrawnRaw.toFixed(2),
-      pendingDeposited: '$' + pendingDepositedRaw.toFixed(2),
-      pendingWithdrawn: '$' + pendingWithdrawnRaw.toFixed(2)
+      avgOrderValue: avgOrderValue || 0,
+      // Ensure these fields are ALWAYS numbers present in the JSON
+      totalDeposited: totalDepositedRaw,
+      totalWithdrawn: totalWithdrawnRaw,
+      pendingDeposited: pendingDepositedRaw,
+      pendingWithdrawn: pendingWithdrawnRaw
     });
 
   } catch (error) {
