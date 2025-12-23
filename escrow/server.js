@@ -126,6 +126,9 @@ app.use((req, res, next) => {
 
 
 // Sync database (alter: true will update schema without dropping data)
+// Sync database (alter: true will update schema without dropping data)
+// NOTE: In a strict production environment, you should use Migrations instead of sync({alter:true})
+// We keep alter: true here to ensure your new columns are added, but be aware of the risks.
 sequelize.sync({ alter: true }).then(async () => {
   console.log('Database synced');
   // Seed default users if they don't exist
@@ -134,12 +137,20 @@ sequelize.sync({ alter: true }).then(async () => {
     const middlemanExists = await User.findOne({ where: { username: 'middleman1' } });
 
     if (!adminExists) {
-      await User.create({ username: 'Admin', password: 'Admin083', role: 'admin' });
-      console.log('Admin user created (username: Admin, password: Admin083)');
+      // SECURITY: Prefer environment variable, fallback to default only if necessary
+      const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin083';
+      await User.create({ username: 'Admin', password: adminPassword, role: 'admin' });
+      
+      if (process.env.ADMIN_DEFAULT_PASSWORD) {
+        console.log('Admin user created with configured environment password');
+      } else {
+        console.warn('⚠️  SECURITY WARNING: Admin user created with default password (Admin083).');
+        console.warn('⚠️  Action Required: Log in and change this password immediately!');
+      }
     }
     if (!middlemanExists) {
       await User.create({ username: 'middleman1', password: 'middleman123', role: 'middleman' });
-      console.log('Middleman user created (username: middleman1, password: middleman123)');
+      console.log('Middleman user created (username: middleman1)');
     }
   } catch (error) {
     console.log('Error seeding users:', error.message);
