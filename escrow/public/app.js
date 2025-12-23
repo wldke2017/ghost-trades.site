@@ -743,7 +743,7 @@ function displayHistory(transactions) {
                     </div>
                 </td>
                 <td class="py-4 px-4">
-                    <span class="font-bold ${amountClass}">${amountPrefix}${Math.abs(amount).toFixed(2)}</span>
+                    <span class="font-bold ${amountClass}">${amountPrefix}${formatCurrency(Math.abs(amount))}</span>
                 </td>
                 <td class="py-4 px-4">
                     <span class="text-gray-600 dark:text-gray-400 text-sm">${orderId}</span>
@@ -1355,7 +1355,7 @@ async function showMyTransactionRequests() {
                                 </div>
                             </div>
                             <div class="text-right">
-                                <p class="text-2xl font-bold text-gray-900 dark:text-white">$${parseFloat(req.amount).toFixed(2)}</p>
+                                <p class="text-2xl font-bold text-gray-900 dark:text-white">${formatCurrency(req.amount)}</p>
                                 <span class="inline-block px-2 py-1 rounded text-xs font-semibold ${statusColors[req.status]}">${req.status.toUpperCase()}</span>
                             </div>
                         </div>
