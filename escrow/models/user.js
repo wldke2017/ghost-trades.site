@@ -26,6 +26,20 @@ const User = sequelize.define('User', {
     defaultValue: 'active',
     allowNull: false,
   },
+  // Settings & Profile Fields
+  avatar_path: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  mpesa_number: {
+    type: DataTypes.STRING, // Store as 254... string
+    allowNull: true,
+  },
+  currency_preference: {
+    type: DataTypes.ENUM('USD', 'KES'),
+    defaultValue: 'USD',
+    allowNull: false,
+  },
 }, {
   tableName: 'users',
   timestamps: true,
@@ -54,7 +68,7 @@ const User = sequelize.define('User', {
 });
 
 // Instance method to validate password
-User.prototype.validatePassword = async function(password) {
+User.prototype.validatePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 

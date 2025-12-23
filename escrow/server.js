@@ -265,7 +265,7 @@ app.post('/auth/login', authLimiter, validate('login'), async (req, res) => {
 app.get('/auth/me', authenticateToken, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'username', 'role', 'createdAt']
+      attributes: ['id', 'username', 'role', 'createdAt', 'avatar_path', 'mpesa_number', 'currency_preference']
     });
 
     if (!user) {
@@ -273,6 +273,83 @@ app.get('/auth/me', authenticateToken, async (req, res) => {
     }
 
     res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update Profile Settings (M-Pesa, Currency)
+app.put('/users/profile', authenticateToken, async (req, res) => {
+  try {
+    const { mpesa_number, currency_preference } = req.body;
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Update allowed fields
+    if (mpesa_number !== undefined) user.mpesa_number = mpesa_number;
+    if (currency_preference !== undefined) user.currency_preference = currency_preference;
+
+    await user.save();
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        mpesa_number: user.mpesa_number,
+        currency_preference: user.currency_preference
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Change Password
+app.post('/users/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new passwords are required' });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Validate current password
+    const isValid = await user.validatePassword(currentPassword);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Incorrect current password' });
+    }
+
+    // Update password (hooks will hash it)
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Upload Avatar
+app.post('/users/avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Optional: Delete old avatar file if it exists
+    user.avatar_path = req.file.filename;
+    await user.save();
+
+    res.json({
+      message: 'Avatar uploaded successfully',
+      avatar_path: user.avatar_path
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

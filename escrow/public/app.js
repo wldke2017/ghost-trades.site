@@ -1433,6 +1433,207 @@ async function submitMpesaDeposit(event) {
 
 // Logout function is now in auth.js - removed duplicate
 
+// ============ SETTINGS & PROFILE FUNCTIONS ============
+
+function showSettings() {
+    // Hide other sections
+    const sections = [
+        'earnings-dashboard', 'active-orders-section', 'admin-overview',
+        'create-order-section', 'disputed-orders', 'transaction-requests-section',
+        'audit-trail-section', 'system-health-section'
+    ];
+
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+
+    // Show Settings
+    const settingsDashboard = document.getElementById('settings-dashboard');
+    if (settingsDashboard) {
+        settingsDashboard.classList.remove('hidden');
+        loadProfileSettings(); // Fetch fresh data
+
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function closeSettings() {
+    document.getElementById('settings-dashboard').classList.add('hidden');
+    // Restore main dashboard view
+    updateDashboard();
+}
+
+function switchSettingsTab(tabName) {
+    const profileTab = document.getElementById('settings-tab-profile');
+    const securityTab = document.getElementById('settings-tab-security');
+    const btnProfile = document.getElementById('tab-btn-profile');
+    const btnSecurity = document.getElementById('tab-btn-security');
+
+    if (tabName === 'profile') {
+        profileTab.classList.remove('hidden');
+        securityTab.classList.add('hidden');
+
+        btnProfile.classList.add('border-blue-500', 'text-blue-600', 'dark:text-blue-400', 'font-semibold');
+        btnProfile.classList.remove('border-transparent', 'text-gray-500');
+
+        btnSecurity.classList.remove('border-blue-500', 'text-blue-600', 'dark:text-blue-400', 'font-semibold');
+        btnSecurity.classList.add('border-transparent', 'text-gray-500');
+    } else {
+        profileTab.classList.add('hidden');
+        securityTab.classList.remove('hidden');
+
+        btnSecurity.classList.add('border-blue-500', 'text-blue-600', 'dark:text-blue-400', 'font-semibold');
+        btnSecurity.classList.remove('border-transparent', 'text-gray-500');
+
+        btnProfile.classList.remove('border-blue-500', 'text-blue-600', 'dark:text-blue-400', 'font-semibold');
+        btnProfile.classList.add('border-transparent', 'text-gray-500');
+    }
+}
+
+async function loadProfileSettings() {
+    try {
+        const response = await authenticatedFetch('/auth/me');
+        const user = await response.json();
+
+        if (response.ok) {
+            document.getElementById('settings-username').value = user.username;
+            document.getElementById('settings-role').value = user.role.toUpperCase();
+            document.getElementById('settings-mpesa').value = user.mpesa_number || '';
+            document.getElementById('settings-currency').value = user.currency_preference || 'USD';
+
+            if (user.avatar_path) {
+                document.getElementById('settings-avatar-preview').src = `/uploads/${user.avatar_path}`;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        showToast('Failed to load profile data', 'error');
+    }
+}
+
+async function updateProfile(event) {
+    event.preventDefault();
+
+    const mpesa_number = document.getElementById('settings-mpesa').value;
+    const currency_preference = document.getElementById('settings-currency').value;
+    const button = event.target.querySelector('button');
+
+    // Validation
+    if (mpesa_number && !/^254[0-9]{9}$/.test(mpesa_number)) {
+        showToast('Invalid M-Pesa number. Format: 2547XXXXXXXX', 'error');
+        return;
+    }
+
+    try {
+        button.disabled = true;
+        button.innerHTML = '<i class="ti ti-loader animate-spin"></i> Saving...';
+
+        const response = await authenticatedFetch('/users/profile', {
+            method: 'PUT',
+            body: JSON.stringify({ mpesa_number, currency_preference })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast('Profile updated successfully!', 'success');
+        } else {
+            showToast(result.error || 'Failed to update profile', 'error');
+        }
+    } catch (error) {
+        console.error('Update profile error:', error);
+        showToast('Error: ' + error.message, 'error');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="ti ti-device-floppy"></i> <span>Save Profile Changes</span>';
+    }
+}
+
+async function changePassword(event) {
+    event.preventDefault();
+
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    const button = event.target.querySelector('button');
+
+    if (newPassword !== confirmPassword) {
+        showToast('New passwords do not match!', 'error');
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+
+    try {
+        button.disabled = true;
+        button.innerHTML = '<i class="ti ti-loader animate-spin"></i> Updating...';
+
+        const response = await authenticatedFetch('/users/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast('Password changed successfully!', 'success');
+            event.target.reset();
+        } else {
+            showToast(result.error || 'Failed to change password', 'error');
+        }
+    } catch (error) {
+        console.error('Change password error:', error);
+        showToast('Error: ' + error.message, 'error');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="ti ti-lock"></i> <span>Update Password</span>';
+    }
+}
+
+async function uploadAvatar(input) {
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    if (file.size > 2 * 1024 * 1024) {
+        showToast('Image too large (Max 2MB)', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+        showToast('Uploading avatar...', 'info');
+
+        const token = localStorage.getItem('authToken');
+        const response = await fetch('/users/avatar', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast('Avatar updated!', 'success');
+            // Update preview
+            document.getElementById('settings-avatar-preview').src = `/uploads/${result.avatar_path}`;
+        } else {
+            showToast(result.error || 'Failed to upload avatar', 'error');
+        }
+    } catch (error) {
+        console.error('Avatar upload error:', error);
+        showToast('Error uploading avatar', 'error');
+    }
+}
+
 async function initializeApp() {
     // Authentication is already checked in auth.js on DOMContentLoaded
     // Just update the dashboard
