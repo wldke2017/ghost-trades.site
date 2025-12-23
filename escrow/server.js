@@ -33,6 +33,15 @@ let io = { emit: () => { } }; // Mock object until initialized
 const setupSocket = (socketIoInstance) => {
   io = socketIoInstance;
   console.log('Socket.IO instance initialized for Escrow App');
+
+  // Socket.io connection for real-time updates
+  io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    socket.on('disconnect', () => {
+      console.log('Client disconnected:', socket.id);
+    });
+  });
 };
 const PORT = process.env.PORT || 3000;
 const COMMISSION_RATE = parseFloat(process.env.COMMISSION_RATE) || 0.05;
@@ -113,16 +122,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Socket.io connection for real-time updates
-// All balance updates, order changes, and transaction reviews emit WebSocket events
-// to ensure admin changes reflect immediately on user dashboards
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
 
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
 
 
 // Sync database (alter: true will update schema without dropping data)
