@@ -123,8 +123,15 @@ function initializeSocket() {
             const availBalance = parseFloat(data.available_balance || 0);
             const lockBalance = parseFloat(data.locked_balance || 0);
 
-            document.getElementById('avail-bal').textContent = availBalance.toFixed(2);
-            document.getElementById('lock-bal').textContent = lockBalance.toFixed(2);
+            document.getElementById('avail-bal').textContent = formatCurrency(availBalance);
+            document.getElementById('lock-bal').textContent = formatCurrency(lockBalance);
+
+            // Sync withdrawal modal balance if open
+            const withdrawalBal = document.getElementById('withdrawal-available-balance');
+            if (withdrawalBal) {
+                withdrawalBal.textContent = formatCurrency(availBalance);
+            }
+
             showToast('Balance updated!', 'info');
 
             // Also refresh transaction history to show new transactions
@@ -325,6 +332,20 @@ async function updateDashboard() {
         await loadActiveOrders();
     }
     // Admin data is loaded separately in admin-app.js, not here
+    updateUserDisplay();
+    updateCurrencyLabels();
+}
+
+/**
+ * Syncs all UI elements with the 'currency-label' class to the current preference.
+ */
+function updateCurrencyLabels() {
+    const currency = getUserCurrency();
+    const labels = document.querySelectorAll('.currency-label');
+    labels.forEach(el => {
+        el.textContent = currency;
+    });
+    console.log(`[Currency] Labels updated to ${currency}`);
 }
 
 function updateUserDisplay() {
@@ -581,7 +602,7 @@ function displayOrders(orders) {
                                 <h3 class="font-bold text-gray-900 dark:text-white">Order #${order.id}</h3>
                                 <span class="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs font-semibold px-2 py-1 rounded">PENDING</span>
                             </div>
-                            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">$${parseFloat(order.amount).toFixed(2)}</p>
+                            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">${formatCurrency(order.amount)}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${order.description || 'No description'}</p>
                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Created ${new Date(order.createdAt).toLocaleDateString()}</p>
                         </div>
@@ -767,7 +788,7 @@ function updateAnalytics() {
     document.getElementById('stat-total-orders').textContent = totalOrders;
     document.getElementById('stat-completed').textContent = completedOrders;
     document.getElementById('stat-pending').textContent = pendingOrders;
-    document.getElementById('stat-commission').textContent = totalCommission.toFixed(2);
+    document.getElementById('stat-commission').textContent = formatCurrency(totalCommission);
 
     updateCharts();
 }
@@ -981,7 +1002,7 @@ async function loadActiveOrders() {
                                     </span>
                                 </div>
                                 <p class="text-2xl font-bold ${isReadyForRelease ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'} mb-2">
-                                    $${parseFloat(order.amount).toFixed(2)}
+                                    ${formatCurrency(order.amount)}
                                 </p>
                                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">${order.description || 'No description'}</p>
                                 <div class="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
@@ -991,7 +1012,7 @@ async function loadActiveOrders() {
                                     </div>
                                     <div class="flex items-center space-x-1">
                                         <i class="ti ti-wallet"></i>
-                                        <span>Commission: $${(order.amount * 0.05).toFixed(2)}</span>
+                                        <span>Commission: ${formatCurrency(order.amount * 0.05)}</span>
                                     </div>
                                 </div>
                             </div>
