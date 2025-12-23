@@ -904,16 +904,16 @@ async function loadEarningsDashboard() {
         console.log('[Earnings] Loaded data payload:', earnings);
 
         if (document.getElementById('earnings-total')) {
-            document.getElementById('earnings-total').textContent = earnings.totalEarnings;
+            document.getElementById('earnings-total').textContent = formatCurrency(parseCurrencyString(earnings.totalEarnings));
         }
         if (document.getElementById('earnings-month')) {
-            document.getElementById('earnings-month').textContent = earnings.monthlyEarnings;
+            document.getElementById('earnings-month').textContent = formatCurrency(parseCurrencyString(earnings.monthlyEarnings));
         }
         if (document.getElementById('earnings-success-rate')) {
             document.getElementById('earnings-success-rate').textContent = earnings.successRate;
         }
         if (document.getElementById('earnings-avg-order')) {
-            document.getElementById('earnings-avg-order').textContent = earnings.avgOrderValue;
+            document.getElementById('earnings-avg-order').textContent = formatCurrency(parseCurrencyString(earnings.avgOrderValue));
         }
 
         // Update new stats with explicit logging
@@ -933,8 +933,8 @@ async function loadEarningsDashboard() {
         // Pending stats
         const pendingDepEl = document.getElementById('pending-deposited');
         const pendingWithEl = document.getElementById('pending-withdrawn');
-        if (pendingDepEl) pendingDepEl.textContent = earnings.pendingDeposited || '$0.00';
-        if (pendingWithEl) pendingWithEl.textContent = earnings.pendingWithdrawn || '$0.00';
+        if (pendingDepEl) pendingDepEl.textContent = formatCurrency(parseCurrencyString(earnings.pendingDeposited || '$0.00'));
+        if (pendingWithEl) pendingWithEl.textContent = formatCurrency(parseCurrencyString(earnings.pendingWithdrawn || '$0.00'));
     } catch (error) {
         console.error('Error loading earnings:', error);
     }
