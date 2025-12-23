@@ -337,29 +337,29 @@ function toggleSectionsByRole() {
     const adminSwitchBtn = document.getElementById('admin-switch-btn');
 
     if (currentUserRole === 'admin') {
-        adminSwitchBtn?.classList.remove('hidden');
-        createOrderSection?.classList.remove('hidden');
-        disputedOrdersSection?.classList.remove('hidden');
-        adminOverviewSection?.classList.remove('hidden');
-        transactionRequestsSection?.classList.remove('hidden');
-        auditTrailSection?.classList.remove('hidden');
-        systemHealthSection?.classList.remove('hidden');
-        earningsDashboard?.classList.add('hidden');
-        activeOrdersSection?.classList.add('hidden');
-        // Admin functions are loaded in admin-app.js, not here
+        if (adminSwitchBtn) adminSwitchBtn.classList.remove('hidden');
+        if (createOrderSection) createOrderSection.classList.remove('hidden');
+        if (disputedOrdersSection) disputedOrdersSection.classList.remove('hidden');
+        if (adminOverviewSection) adminOverviewSection.classList.remove('hidden');
+        if (transactionRequestsSection) transactionRequestsSection.classList.remove('hidden');
+        if (auditTrailSection) auditTrailSection.classList.remove('hidden');
+        if (systemHealthSection) systemHealthSection.classList.remove('hidden');
+
+        if (earningsDashboard) earningsDashboard.classList.add('hidden');
+        if (activeOrdersSection) activeOrdersSection.classList.add('hidden');
     } else {
-        adminSwitchBtn?.classList.add('hidden');
-        // Completely remove the create order section from DOM for non-admins
-        if (createOrderSection) {
-            createOrderSection.remove();
-        }
-        disputedOrdersSection?.classList.add('hidden');
-        adminOverviewSection?.classList.add('hidden');
-        transactionRequestsSection?.classList.add('hidden');
-        auditTrailSection?.classList.add('hidden');
-        systemHealthSection?.classList.add('hidden');
-        earningsDashboard?.classList.remove('hidden');
-        activeOrdersSection?.classList.remove('hidden');
+        if (adminSwitchBtn) adminSwitchBtn.classList.add('hidden');
+
+        if (createOrderSection) createOrderSection.remove();
+        if (disputedOrdersSection) disputedOrdersSection.classList.add('hidden');
+        if (adminOverviewSection) adminOverviewSection.classList.add('hidden');
+        if (transactionRequestsSection) transactionRequestsSection.classList.add('hidden');
+        if (auditTrailSection) auditTrailSection.classList.add('hidden');
+        if (systemHealthSection) systemHealthSection.classList.add('hidden');
+
+        if (earningsDashboard) earningsDashboard.classList.remove('hidden');
+        if (activeOrdersSection) activeOrdersSection.classList.remove('hidden');
+
         loadEarningsDashboard();
         loadActiveOrders();
     }
@@ -839,6 +839,12 @@ async function loadEarningsDashboard() {
         document.getElementById('earnings-month').textContent = earnings.monthlyEarnings;
         document.getElementById('earnings-success-rate').textContent = earnings.successRate;
         document.getElementById('earnings-avg-order').textContent = earnings.avgOrderValue;
+
+        // Update new stats
+        const depositEl = document.getElementById('total-deposited');
+        const withdrawEl = document.getElementById('total-withdrawn');
+        if (depositEl) depositEl.textContent = earnings.totalDeposited;
+        if (withdrawEl) withdrawEl.textContent = earnings.totalWithdrawn;
     } catch (error) {
         console.error('Error loading earnings:', error);
     }
