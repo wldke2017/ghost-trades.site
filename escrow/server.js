@@ -90,8 +90,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static Files
-app.use(express.static('public'));
-app.use('/uploads', express.static('uploads'));
+// Static Files - Use absolute path for monorepo compatibility
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Apply general rate limiter to all routes
 app.use('/api/', apiLimiter);
