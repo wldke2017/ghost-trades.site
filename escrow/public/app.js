@@ -1065,7 +1065,7 @@ async function submitDepositRequest(event) {
 
     try {
         const token = localStorage.getItem('authToken');
-        const response = await fetch('/transaction-requests/deposit', {
+        const response = await fetch('/escrow/transaction-requests/deposit', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
