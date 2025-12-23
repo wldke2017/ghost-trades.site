@@ -727,7 +727,7 @@ function logout() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
     showToast('Logged out successfully', 'info');
-    window.location.href = '/index.html';
+    window.location.href = '/escrow/index.html';
 }
 
 // User Management Actions

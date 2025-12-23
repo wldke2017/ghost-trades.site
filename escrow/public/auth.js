@@ -208,7 +208,7 @@ async function handleLogin() {
 
             // Redirect based on role
             if (data.user.role === 'admin') {
-                window.location.href = '/admin.html';
+                window.location.href = '/escrow/admin.html';
             } else {
                 if (typeof updateDashboard === 'function') {
                     updateDashboard();
@@ -258,7 +258,7 @@ async function handleRegister() {
 
             // Redirect based on role
             if (data.user.role === 'admin') {
-                window.location.href = '/admin.html';
+                window.location.href = '/escrow/admin.html';
             } else {
                 if (typeof updateDashboard === 'function') {
                     updateDashboard();
