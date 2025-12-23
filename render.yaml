@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: ghost-trades-monorepo
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COMMISSION_RATE
+        value: 0.05
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_BUSINESS_SHORTCODE
+        value: 174379
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_CALLBACK_URL
+        value: https://ghost-trades-monorepo.onrender.com/escrow/api/callback
+      - key: DATABASE_URL
+        fromDatabase:
+          name: escrow-db
+          property: connectionString
+
+databases:
+  - name: escrow-db
+    databaseName: escrow_production
+    plan: free

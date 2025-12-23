@@ -1,0 +1,15 @@
+node_modules/
+.env
+uploads/
+*.log
+logs/
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.npm
+.eslintcache
+coverage/
+.nyc_output/

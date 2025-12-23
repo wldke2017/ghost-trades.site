@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghost Trades & SecureEscrow - Choose Your Platform</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header class="hero">
+            <h1 class="title">Welcome to Our Platform</h1>
+            <p class="subtitle">Choose your trading experience</p>
+        </header>
+
+        <div class="apps-grid">
+            <!-- Ghost Trades Card -->
+            <div class="app-card ghost-trades" onclick="navigateTo('/ghost-trades')">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                    </svg>
+                </div>
+                <h2 class="card-title">Ghost Trades</h2>
+                <p class="card-description">Advanced binary options trading with AI-powered bots, hedging strategies,
+                    and real-time market analysis</p>
+                <div class="card-features">
+                    <span class="feature-tag">AI Trading</span>
+                    <span class="feature-tag">Hedging</span>
+                    <span class="feature-tag">Analytics</span>
+                </div>
+                <button class="card-button">
+                    Launch Ghost Trades
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- SecureEscrow Card -->
+            <div class="app-card secure-escrow" onclick="navigateTo('/escrow')">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                </div>
+                <h2 class="card-title">SecureEscrow</h2>
+                <p class="card-description">Liquidity banking platform with secure escrow services, M-Pesa integration,
+                    and real-time transaction management</p>
+                <div class="card-features">
+                    <span class="feature-tag">Escrow</span>
+                    <span class="feature-tag">M-Pesa</span>
+                    <span class="feature-tag">Secure</span>
+                </div>
+                <button class="card-button">
+                    Launch SecureEscrow
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>&copy; 2025 Ghost Trades & SecureEscrow. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
