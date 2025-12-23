@@ -869,16 +869,32 @@ async function loadEarningsDashboard() {
     try {
         const response = await authenticatedFetch('/middleman/earnings');
         const earnings = await response.json();
-        console.log('[Earnings] Loaded data:', earnings);
+        console.log('[Earnings] Loaded data payload:', earnings);
 
-        document.getElementById('earnings-total').textContent = earnings.totalEarnings;
-        document.getElementById('earnings-month').textContent = earnings.monthlyEarnings;
-        document.getElementById('earnings-success-rate').textContent = earnings.successRate;
-        document.getElementById('earnings-avg-order').textContent = earnings.avgOrderValue;
+        if (document.getElementById('earnings-total')) {
+            document.getElementById('earnings-total').textContent = earnings.totalEarnings;
+        }
+        if (document.getElementById('earnings-month')) {
+            document.getElementById('earnings-month').textContent = earnings.monthlyEarnings;
+        }
+        if (document.getElementById('earnings-success-rate')) {
+            document.getElementById('earnings-success-rate').textContent = earnings.successRate;
+        }
+        if (document.getElementById('earnings-avg-order')) {
+            document.getElementById('earnings-avg-order').textContent = earnings.avgOrderValue;
+        }
 
-        // Update new stats
+        // Update new stats with explicit logging
         const depositEl = document.getElementById('total-deposited');
         const withdrawEl = document.getElementById('total-withdrawn');
+
+        console.log('[Earnings] Updating elements:', {
+            depositEl: !!depositEl,
+            withdrawEl: !!withdrawEl,
+            valDeposited: earnings.totalDeposited,
+            valWithdrawn: earnings.totalWithdrawn
+        });
+
         if (depositEl) depositEl.textContent = earnings.totalDeposited;
         if (withdrawEl) withdrawEl.textContent = earnings.totalWithdrawn;
 

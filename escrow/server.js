@@ -1605,46 +1605,51 @@ app.get('/middleman/earnings', authenticateToken, async (req, res) => {
       ? (completedOrders.reduce((sum, o) => sum + parseFloat(o.amount), 0) / completedOrders.length).toFixed(2)
       : '0.00';
 
-    // 2. Deposits and Withdrawals (Based on Transaction Requests)
-    // We use Promise.all for parallel DB queries
-    // 2. Deposits and Withdrawals (Based on Transaction Requests)
-    // We use Promise.all for parallel DB queries
-    console.log(`[Earnings] Fetching stats for user ${userId}`);
+    // 2. Deposits and Withdrawals
+    // Robust data fetching with safe fallbacks
+    let totalDepositedRaw = 0;
+    let totalWithdrawnRaw = 0;
+    let pendingDepositedRaw = 0;
+    let pendingWithdrawnRaw = 0;
 
     try {
-      const pendingDeps = await TransactionRequest.count({ where: { user_id: userId, type: 'deposit', status: 'pending' } });
-      console.log(`[Earnings] User ${userId} has ${pendingDeps} pending deposits`);
-    } catch (e) { console.error('[Earnings] Count error:', e); }
+      // Helper function to safely get sum
+      const safeSum = async (where) => {
+        try {
+          const result = await TransactionRequest.sum('amount', { where });
+          return parseFloat(result || 0); // Handle null/string returns
+        } catch (err) {
+          console.error(`[Earnings] Error summing for query ${JSON.stringify(where)}:`, err.message);
+          return 0;
+        }
+      };
 
-    const [
-      totalDepositedSum,
-      totalWithdrawnSum,
-      pendingDepositedSum,
-      pendingWithdrawnSum
-    ] = await Promise.all([
-      TransactionRequest.sum('amount', { where: { user_id: userId, type: 'deposit', status: 'approved' } }),
-      TransactionRequest.sum('amount', { where: { user_id: userId, type: 'withdrawal', status: 'approved' } }),
-      TransactionRequest.sum('amount', { where: { user_id: userId, type: 'deposit', status: 'pending' } }),
-      TransactionRequest.sum('amount', { where: { user_id: userId, type: 'withdrawal', status: 'pending' } })
-    ]);
+      // Run in parallel for speed
+      [totalDepositedRaw, totalWithdrawnRaw, pendingDepositedRaw, pendingWithdrawnRaw] = await Promise.all([
+        safeSum({ user_id: userId, type: 'deposit', status: 'approved' }),
+        safeSum({ user_id: userId, type: 'withdrawal', status: 'approved' }),
+        safeSum({ user_id: userId, type: 'deposit', status: 'pending' }),
+        safeSum({ user_id: userId, type: 'withdrawal', status: 'pending' })
+      ]);
 
-    console.log('[Earnings] Sum results:', { totalDepositedSum, totalWithdrawnSum, pendingDepositedSum, pendingWithdrawnSum });
+      console.log('[Earnings] Fetched stats:', {
+        totalDepositedRaw, totalWithdrawnRaw, pendingDepositedRaw, pendingWithdrawnRaw
+      });
 
-    // Handle null returns from sum() and string returns from Postgres
-    const totalDeposited = parseFloat(totalDepositedSum || 0);
-    const totalWithdrawn = parseFloat(totalWithdrawnSum || 0);
-    const pendingDeposited = parseFloat(pendingDepositedSum || 0);
-    const pendingWithdrawn = parseFloat(pendingWithdrawnSum || 0);
+    } catch (e) {
+      console.error('[Earnings] Critical error fetching transaction stats:', e);
+    }
 
     res.json({
-      totalEarnings: '$' + totalEarnings.toFixed(2),
-      monthlyEarnings: '$' + monthlyEarnings.toFixed(2),
-      successRate,
-      avgOrderValue: '$' + avgOrderValue,
-      totalDeposited: '$' + totalDeposited.toFixed(2),
-      totalWithdrawn: '$' + totalWithdrawn.toFixed(2),
-      pendingDeposited: '$' + pendingDeposited.toFixed(2),
-      pendingWithdrawn: '$' + pendingWithdrawn.toFixed(2)
+      totalEarnings: '$' + (totalEarnings || 0).toFixed(2),
+      monthlyEarnings: '$' + (monthlyEarnings || 0).toFixed(2),
+      successRate: successRate || '0%',
+      avgOrderValue: '$' + (avgOrderValue || '0.00'),
+      // Ensure these fields are ALWAYS strings present in the JSON
+      totalDeposited: '$' + totalDepositedRaw.toFixed(2),
+      totalWithdrawn: '$' + totalWithdrawnRaw.toFixed(2),
+      pendingDeposited: '$' + pendingDepositedRaw.toFixed(2),
+      pendingWithdrawn: '$' + pendingWithdrawnRaw.toFixed(2)
     });
 
   } catch (error) {
