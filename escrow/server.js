@@ -837,10 +837,59 @@ app.post('/api/callback', async (req, res) => {
         }
 
       } else {
-        // Payment failed
+        // Payment failed or cancelled
         console.log('❌ Payment Failed!');
         console.log('Result Code:', resultCode);
         console.log('Description:', resultDesc);
+
+        // Try to find the user and notify them
+        try {
+          const logs = await ActivityLog.findAll({
+            where: { action: 'mpesa_stkpush_initiated' },
+            order: [['createdAt', 'DESC']],
+            limit: 50
+          });
+
+          const matchingLog = logs.find(log => log.metadata && log.metadata.checkoutRequestId === checkoutRequestId);
+
+          if (matchingLog) {
+            const userId = matchingLog.user_id;
+
+            // Map result codes to user-friendly messages
+            const errorMessages = {
+              '1032': 'You cancelled the M-Pesa payment',
+              '1': 'Insufficient balance in M-Pesa account',
+              '2001': 'Wrong PIN entered. Please try again',
+              '1037': 'Payment request timed out',
+              '1025': 'Unable to process payment. Please try again'
+            };
+
+            const userMessage = errorMessages[resultCode] || `Payment failed: ${resultDesc}`;
+
+            // Log the failed attempt
+            await ActivityLog.create({
+              user_id: userId,
+              action: 'mpesa_payment_failed',
+              metadata: {
+                resultCode,
+                resultDesc,
+                checkoutRequestId,
+                merchantRequestId
+              }
+            });
+
+            // Notify user via WebSocket
+            io.emit('paymentFailed', {
+              user_id: userId,
+              message: userMessage,
+              resultCode: resultCode
+            });
+
+            console.log(`Notified user ${userId} about payment failure: ${userMessage}`);
+          }
+        } catch (err) {
+          console.error('Error notifying user of payment failure:', err);
+        }
       }
     }
 

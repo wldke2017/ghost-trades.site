@@ -136,6 +136,13 @@ function initializeSocket() {
         // Admin dashboard updates are handled in admin-app.js
     });
 
+    socket.on('paymentFailed', (data) => {
+        console.log('Payment failed:', data);
+        if (data.user_id === currentUserId) {
+            showToast(data.message || 'Payment failed', 'error');
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Disconnected from WebSocket');
     });
