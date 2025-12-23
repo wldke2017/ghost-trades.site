@@ -1592,14 +1592,14 @@ app.get('/middleman/earnings', authenticateToken, async (req, res) => {
     const deposits = await Transaction.findAll({
       where: {
         user_id: userId,
-        type: 'DEPOSIT'
+        type: ['DEPOSIT', 'deposit', 'Deposit']
       }
     });
 
     const withdrawals = await Transaction.findAll({
       where: {
         user_id: userId,
-        type: 'WITHDRAWAL' // Also check if type is 'WITHDRAWAL' or 'withdrawal' (case insensitive safe usually, but DB stores specific)
+        type: ['WITHDRAWAL', 'withdrawal', 'Withdrawal']
       }
     });
 
