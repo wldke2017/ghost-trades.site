@@ -880,6 +880,12 @@ async function loadEarningsDashboard() {
         const withdrawEl = document.getElementById('total-withdrawn');
         if (depositEl) depositEl.textContent = earnings.totalDeposited;
         if (withdrawEl) withdrawEl.textContent = earnings.totalWithdrawn;
+
+        // Pending stats
+        const pendingDepEl = document.getElementById('pending-deposited');
+        const pendingWithEl = document.getElementById('pending-withdrawn');
+        if (pendingDepEl) pendingDepEl.textContent = earnings.pendingDeposited || '$0.00';
+        if (pendingWithEl) pendingWithEl.textContent = earnings.pendingWithdrawn || '$0.00';
     } catch (error) {
         console.error('Error loading earnings:', error);
     }

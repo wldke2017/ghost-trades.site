@@ -1588,32 +1588,25 @@ app.get('/middleman/earnings', authenticateToken, async (req, res) => {
       ? (completedOrders.reduce((sum, o) => sum + parseFloat(o.amount), 0) / completedOrders.length).toFixed(2)
       : '0.00';
 
-    // 2. Deposits and Withdrawals (Requested Feature)
-    const deposits = await Transaction.findAll({
-      where: {
-        user_id: userId,
-        type: ['DEPOSIT', 'deposit', 'Deposit']
-      }
-    });
+    // 2. Deposits and Withdrawals (Based on Transaction Requests)
+    // We use Promise.all for parallel DB queries
+    const [
+      totalDepositedSum,
+      totalWithdrawnSum,
+      pendingDepositedSum,
+      pendingWithdrawnSum
+    ] = await Promise.all([
+      TransactionRequest.sum('amount', { where: { user_id: userId, type: 'deposit', status: 'approved' } }),
+      TransactionRequest.sum('amount', { where: { user_id: userId, type: 'withdrawal', status: 'approved' } }),
+      TransactionRequest.sum('amount', { where: { user_id: userId, type: 'deposit', status: 'pending' } }),
+      TransactionRequest.sum('amount', { where: { user_id: userId, type: 'withdrawal', status: 'pending' } })
+    ]);
 
-    const withdrawals = await Transaction.findAll({
-      where: {
-        user_id: userId,
-        type: ['WITHDRAWAL', 'withdrawal', 'Withdrawal']
-      }
-    });
-
-    // Handle potential case differences in DB ('deposit' vs 'DEPOSIT') by checking both if unsure, 
-    // but typically we use uppercase in backend. Let's assume uppercase based on TransactionRequest logic.
-    // Actually, createTransctionRequest uses lowercase 'deposit'. Transaction creation uses .toUpperCase().
-    // So 'DEPOSIT' and 'WITHDRAWAL' are likely correct.
-
-    const totalDeposited = deposits.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    // Withdrawals are stored as negative amounts in some logic? 
-    // Step 1729: type === 'deposit' ? amount : -amount.
-    // So withdrawals are negative. We should take abs for "Total Withdrawn".
-    const totalWithdrawn = withdrawals.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
+    // Handle null returns from sum()
+    const totalDeposited = totalDepositedSum || 0;
+    const totalWithdrawn = totalWithdrawnSum || 0;
+    const pendingDeposited = pendingDepositedSum || 0;
+    const pendingWithdrawn = pendingWithdrawnSum || 0;
 
     res.json({
       totalEarnings: '$' + totalEarnings.toFixed(2),
@@ -1621,7 +1614,9 @@ app.get('/middleman/earnings', authenticateToken, async (req, res) => {
       successRate,
       avgOrderValue: '$' + avgOrderValue,
       totalDeposited: '$' + totalDeposited.toFixed(2),
-      totalWithdrawn: '$' + totalWithdrawn.toFixed(2)
+      totalWithdrawn: '$' + totalWithdrawn.toFixed(2),
+      pendingDeposited: '$' + pendingDeposited.toFixed(2),
+      pendingWithdrawn: '$' + pendingWithdrawn.toFixed(2)
     });
 
   } catch (error) {
