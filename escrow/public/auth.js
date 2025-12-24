@@ -475,5 +475,3 @@ function updateCurrencyLabels() {
     });
     console.log(`[Currency] Labels updated to ${currency}`);
 }
-
-module.exports = { authenticateToken, isAdmin, isMiddleman, JWT_SECRET, formatCurrency, getUserCurrency, updateCurrencyLabels };
