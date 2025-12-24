@@ -578,6 +578,9 @@ function updateSystemHealthCards() {
     }
 
     if (totalBalanceEl && masterOverview.users) {
+        const totalBalance = masterOverview.users.reduce((sum, u) => {
+            return sum + parseFloat(u.available_balance || 0) + parseFloat(u.locked_balance || 0);
+        }, 0);
         totalBalanceEl.textContent = formatCurrency(totalBalance);
     }
 
