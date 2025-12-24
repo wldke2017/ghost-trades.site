@@ -1383,6 +1383,55 @@
             </div>
         </div>
 
+        <!-- M-Pesa Waiting Overlay -->
+        <div id="mpesa-waiting-overlay"
+            class="fixed inset-0 z-[100] hidden items-center justify-center bg-gray-900/80 backdrop-blur-sm animate-fade-in">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center transform transition-all scale-100">
+                <!-- Status Icon -->
+                <div id="mpesa-status-icon-container" class="relative w-24 h-24 mx-auto mb-6">
+                    <!-- Progress Ring -->
+                    <svg class="w-full h-full -rotate-90">
+                        <circle cx="48" cy="48" r="44" stroke="currentColor" stroke-width="4" fill="transparent"
+                            class="text-gray-200 dark:text-gray-700" />
+                        <circle id="mpesa-progress-ring" cx="48" cy="48" r="44" stroke="currentColor" stroke-width="4"
+                            fill="transparent" stroke-dasharray="276" stroke-dashoffset="0"
+                            class="text-blue-500 transition-all duration-300" />
+                    </svg>
+                    <!-- Center Icon/Text -->
+                    <div id="mpesa-center-icon" class="absolute inset-0 flex items-center justify-center">
+                        <div class="animate-pulse">
+                            <i class="ti ti-phone-calling text-3xl text-blue-500"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 id="mpesa-waiting-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2">Waiting for
+                    Payment</h3>
+                <p id="mpesa-waiting-text" class="text-gray-500 dark:text-gray-400 mb-6">Please check your phone and
+                    enter your M-Pesa PIN.</p>
+
+                <div id="mpesa-waiting-details" class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-6">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-gray-400">Amount:</span>
+                        <span id="mpesa-waiting-amount" class="font-bold text-gray-900 dark:text-white">...</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Phone:</span>
+                        <span id="mpesa-waiting-phone" class="font-bold text-gray-900 dark:text-white">...</span>
+                    </div>
+                </div>
+
+                <!-- Footer Action (Failure only) -->
+                <div id="mpesa-waiting-footer" class="hidden pt-2">
+                    <button onclick="closeMpesaOverlay()"
+                        class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold py-2 px-4 rounded-lg transition">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast Notification Container -->
         <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
 

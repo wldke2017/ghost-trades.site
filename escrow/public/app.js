@@ -126,6 +126,13 @@ function initializeSocket() {
         }
     });
 
+    socket.on('mpesaStatus', (data) => {
+        console.log('[Socket] M-Pesa Status:', data);
+        if (data.userId === currentUserId && typeof handleMpesaStatus === 'function') {
+            handleMpesaStatus(data);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Disconnected from WebSocket');
     });
@@ -1211,17 +1218,84 @@ async function submitMpesaDeposit(event) {
         }
 
         const result = await response.json();
+
+        // Show the waiting overlay!
+        showMpesaOverlay(amount, phoneNumber);
+
         showToast(result.message || 'M-Pesa payment initiated successfully!', 'success');
         closeDepositRequestModal();
-
-        // Show additional info about the payment
-        setTimeout(() => {
-            showToast(`Check your phone (${phoneNumber}) and enter your M-Pesa PIN to complete the payment.`, 'info');
-        }, 2000);
 
     } catch (error) {
         console.error('M-Pesa deposit error:', error);
         showToast('Failed to initiate M-Pesa payment: ' + error.message, 'error');
+    }
+}
+
+// M-Pesa Overlay Helpers
+function showMpesaOverlay(amount, phone) {
+    const overlay = document.getElementById('mpesa-waiting-overlay');
+    const amountEl = document.getElementById('mpesa-waiting-amount');
+    const phoneEl = document.getElementById('mpesa-waiting-phone');
+    const titleEl = document.getElementById('mpesa-waiting-title');
+    const textEl = document.getElementById('mpesa-waiting-text');
+    const iconContainer = document.getElementById('mpesa-center-icon');
+    const ring = document.getElementById('mpesa-progress-ring');
+    const footer = document.getElementById('mpesa-waiting-footer');
+
+    if (!overlay) return;
+
+    // Reset UI
+    amountEl.textContent = formatCurrency(amount);
+    phoneEl.textContent = phone;
+    titleEl.textContent = 'Waiting for Payment';
+    textEl.textContent = 'Please check your phone and enter your M-Pesa PIN.';
+    iconContainer.innerHTML = '<div class="animate-pulse"><i class="ti ti-phone-calling text-3xl text-blue-500"></i></div>';
+    ring.classList.remove('text-green-500', 'text-red-500');
+    ring.classList.add('text-blue-500');
+    ring.style.strokeDashoffset = '0';
+    footer.classList.add('hidden');
+
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+    document.body.style.overflow = 'hidden'; // Prevent scroll
+}
+
+function handleMpesaStatus(data) {
+    const titleEl = document.getElementById('mpesa-waiting-title');
+    const textEl = document.getElementById('mpesa-waiting-text');
+    const iconContainer = document.getElementById('mpesa-center-icon');
+    const ring = document.getElementById('mpesa-progress-ring');
+    const footer = document.getElementById('mpesa-waiting-footer');
+
+    if (data.status === 'SUCCESS') {
+        titleEl.textContent = 'Payment Received!';
+        textEl.textContent = `Successfully deposited ${formatCurrency(data.amount)} to your wallet.`;
+        iconContainer.innerHTML = '<i class="ti ti-circle-check text-5xl text-green-500 scale-110 transition-transform"></i>';
+        ring.classList.replace('text-blue-500', 'text-green-500');
+
+        // Refresh balance automatically
+        loadWallet();
+
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+            closeMpesaOverlay();
+        }, 4000);
+
+    } else if (data.status === 'FAILED') {
+        titleEl.textContent = 'Payment Failed';
+        textEl.textContent = data.message || 'The transaction could not be completed.';
+        iconContainer.innerHTML = '<i class="ti ti-circle-x text-5xl text-red-500"></i>';
+        ring.classList.replace('text-blue-500', 'text-red-500');
+        footer.classList.remove('hidden');
+    }
+}
+
+function closeMpesaOverlay() {
+    const overlay = document.getElementById('mpesa-waiting-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
+        document.body.style.overflow = ''; // Restore scroll
     }
 }
 

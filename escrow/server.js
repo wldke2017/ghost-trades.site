@@ -711,6 +711,21 @@ app.post('/api/stkpush', authenticateToken, async (req, res) => {
 
     console.log('STK Push successful:', responseData);
 
+    // Create a NEW TransactionRequest record for tracking
+    const transactionRequest = await TransactionRequest.create({
+      user_id: req.user.id,
+      type: 'deposit',
+      amount: parseFloat(amount),
+      status: 'pending',
+      notes: `M-Pesa STK Push to ${phoneNumber}`,
+      metadata: {
+        checkoutRequestId: responseData.CheckoutRequestID,
+        merchantRequestId: responseData.MerchantRequestID,
+        phoneNumber: phoneNumber,
+        method: 'mpesa'
+      }
+    });
+
     // Log activity
     await ActivityLog.create({
       user_id: req.user.id,
@@ -718,7 +733,8 @@ app.post('/api/stkpush', authenticateToken, async (req, res) => {
       metadata: {
         amount: stkPushData.Amount,
         phone: phoneNumber,
-        checkoutRequestId: responseData.CheckoutRequestID
+        checkoutRequestId: responseData.CheckoutRequestID,
+        transactionRequestId: transactionRequest.id
       }
     });
 
@@ -726,7 +742,7 @@ app.post('/api/stkpush', authenticateToken, async (req, res) => {
       success: true,
       message: 'M-Pesa prompt sent to your phone. Please enter your PIN.',
       checkoutRequestId: responseData.CheckoutRequestID,
-      merchantRequestId: responseData.MerchantRequestID
+      transactionRequestId: transactionRequest.id
     });
 
   } catch (error) {
@@ -780,22 +796,30 @@ app.post('/api/callback', async (req, res) => {
 
             console.log(`Found matching user ${userId} for amount ${amount}`);
 
+            // Find the TransactionRequest record
+            const txReq = await TransactionRequest.findOne({
+              where: {
+                user_id: userId,
+                status: 'pending'
+              },
+              order: [['createdAt', 'DESC']] // Target the most recent matching one
+            });
+
             // Start transaction to update wallet
             const t = await sequelize.transaction();
-
             try {
               // Find or Create Wallet
               let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction: t });
-              if (!wallet) {
-                wallet = await Wallet.create({ user_id: userId, available_balance: 0, locked_balance: 0 }, { transaction: t });
-              }
+
+              const mpesaReceipt = callbackData.Body.stkCallback.CallbackMetadata.Item.find(i => i.Name === 'MpesaReceiptNumber')?.Value || 'N/A';
 
               // Check if transaction already processed (idempotency)
               const existingTx = await Transaction.findOne({ where: { description: { [sequelize.Op.like]: `%${mpesaReceipt}%` } }, transaction: t });
 
               if (!existingTx) {
                 // Credit Wallet
-                wallet.available_balance = parseFloat(wallet.available_balance) + amount;
+                const oldBalance = parseFloat(wallet.available_balance);
+                wallet.available_balance = oldBalance + amount;
                 await wallet.save({ transaction: t });
 
                 // Create Transaction Record
@@ -803,33 +827,45 @@ app.post('/api/callback', async (req, res) => {
                   user_id: userId,
                   type: 'DEPOSIT',
                   amount: amount,
-                  balance_before: parseFloat(wallet.available_balance) - amount,
-                  balance_after: parseFloat(wallet.available_balance),
-                  description: `M-Pesa Deposit: ${mpesaReceipt}`,
-                  metadata: { mpesaReceipt, phone, checkoutRequestId }
+                  balance_before: oldBalance,
+                  balance_after: oldBalance + amount,
+                  description: `M-Pesa Deposit (Ref: ${mpesaReceipt})`
                 }, { transaction: t });
 
+                // Update TransactionRequest status
+                if (txReq && txReq.metadata && txReq.metadata.checkoutRequestId === checkoutRequestId) {
+                  txReq.status = 'approved';
+                  txReq.admin_notes = `Automatically approved via M-Pesa Callback (Ref: ${mpesaReceipt})`;
+                  await txReq.save({ transaction: t });
+                }
+
                 await t.commit();
+                console.log('✅ Wallet credited successfully');
 
-                console.log('Wallet funded successfully');
-
-                // Notify User via Socket
+                // Emit WebSocket events
                 io.emit('walletUpdated', {
                   user_id: userId,
                   available_balance: wallet.available_balance,
-                  locked_balance: wallet.locked_balance,
                   message: `Received ${amount} KES from M-Pesa`
                 });
+
+                // Emit specific M-Pesa status event
+                io.emit('mpesaStatus', {
+                  userId: userId,
+                  checkoutRequestId: checkoutRequestId,
+                  status: 'SUCCESS',
+                  amount: amount,
+                  receipt: mpesaReceipt
+                });
+
               } else {
                 console.log('Transaction already processed');
                 await t.rollback();
               }
-
             } catch (err) {
               await t.rollback();
               console.error('Database transaction error:', err);
             }
-
           } else {
             console.error('Could not find user for CheckoutRequestID:', checkoutRequestId);
           }
@@ -879,9 +915,23 @@ app.post('/api/callback', async (req, res) => {
               }
             });
 
-            // Notify user via WebSocket
-            io.emit('paymentFailed', {
-              user_id: userId,
+            // Update TransactionRequest status if found
+            const txReq = await TransactionRequest.findOne({
+              where: { user_id: userId, status: 'pending' },
+              order: [['createdAt', 'DESC']]
+            });
+
+            if (txReq && txReq.metadata && txReq.metadata.checkoutRequestId === checkoutRequestId) {
+              txReq.status = 'rejected';
+              txReq.admin_notes = `Automatically rejected: ${userMessage} (ResultCode: ${resultCode})`;
+              await txReq.save();
+            }
+
+            // Emit failure event
+            io.emit('mpesaStatus', {
+              userId: userId,
+              checkoutRequestId: checkoutRequestId,
+              status: 'FAILED',
               message: userMessage,
               resultCode: resultCode
             });
