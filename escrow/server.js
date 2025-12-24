@@ -1421,6 +1421,11 @@ app.get('/admin/overview', authenticateToken, isAdmin, async (req, res) => {
       ordersWhere.status = status;
     }
 
+    const searchInclude = [
+      { model: User, as: 'buyer', attributes: ['id', 'username', 'role'] },
+      { model: User, as: 'middleman', attributes: ['id', 'username', 'role'] }
+    ];
+
     if (search && search.trim() !== '') {
       const searchTerm = `%${search.trim().toLowerCase()}%`;
       ordersWhere[Op.or] = [
@@ -1434,27 +1439,20 @@ app.get('/admin/overview', authenticateToken, isAdmin, async (req, res) => {
     // Get orders with pagination and filtering
     const orders = await Order.findAll({
       where: ordersWhere,
-      include: [
-        { model: User, as: 'buyer', attributes: ['id', 'username', 'role'] },
-        { model: User, as: 'middleman', attributes: ['id', 'username', 'role'] }
-      ],
+      include: searchInclude,
       order: [
-        // Prioritize orders that need attention (READY_FOR_RELEASE)
-        [sequelize.literal("CASE WHEN status = 'READY_FOR_RELEASE' THEN 0 ELSE 1 END"), 'ASC'],
         ['createdAt', 'DESC']
       ],
-      limit: parseInt(ordersLimit),
-      offset: parseInt(ordersOffset),
-      subQuery: false // Important for ordering by included models if needed
+      limit: parseInt(ordersLimit) || 10,
+      offset: parseInt(ordersOffset) || 0,
+      subQuery: false
     });
 
-    // Get total orders count for pagination (affected by filter)
+    // Get total orders count for pagination
     const totalOrders = await Order.count({
       where: ordersWhere,
-      include: [
-        { model: User, as: 'buyer' },
-        { model: User, as: 'middleman' }
-      ]
+      include: (search && search.trim() !== '') ? searchInclude : [],
+      distinct: true
     });
 
     // Get pending transaction requests count
@@ -1463,24 +1461,31 @@ app.get('/admin/overview', authenticateToken, isAdmin, async (req, res) => {
     });
 
     res.json({
-      users: users.map(u => ({
-        id: u.id,
-        username: u.username,
-        role: u.role,
-        status: u.status,
-        available_balance: u.Wallet ? parseFloat(u.Wallet.available_balance || 0).toFixed(2) : '0.00',
-        locked_balance: u.Wallet ? parseFloat(u.Wallet.locked_balance || 0).toFixed(2) : '0.00',
-        total_balance: u.Wallet ?
-          (parseFloat(u.Wallet.available_balance || 0) + parseFloat(u.Wallet.locked_balance || 0)).toFixed(2) :
-          '0.00'
-      })),
+      users: users.map(u => {
+        const available = u.Wallet ? parseFloat(u.Wallet.available_balance || 0) : 0;
+        const locked = u.Wallet ? parseFloat(u.Wallet.locked_balance || 0) : 0;
+        return {
+          id: u.id,
+          username: u.username,
+          role: u.role,
+          status: u.status,
+          available_balance: available.toFixed(2),
+          locked_balance: locked.toFixed(2),
+          total_balance: (available + locked).toFixed(2)
+        };
+      }),
       orders: orders,
       totalOrders: totalOrders,
-      ordersHasMore: parseInt(ordersOffset) + orders.length < totalOrders,
+      ordersHasMore: (parseInt(ordersOffset) || 0) + orders.length < totalOrders,
       pendingRequests: pendingRequests
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('ADMIN OVERVIEW ERROR:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
