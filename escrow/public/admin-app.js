@@ -311,6 +311,7 @@ async function updateAdminDashboard() {
     await loadDisputes();
     updateSystemHealthCards();
     updateUserDisplay();
+    updateCurrencyLabels();
 }
 
 let filterTimeout = null;
@@ -435,7 +436,7 @@ function displayGodModeOrders() {
 
         row.innerHTML = `
             <td class="py-3 px-4 font-semibold text-gray-900 dark:text-white">#${order.id}</td>
-            <td class="py-3 px-4 font-bold text-gray-900 dark:text-white">${parseFloat(order.amount).toFixed(2)}</td>
+            <td class="py-3 px-4 font-bold text-gray-900 dark:text-white">${formatCurrency(order.amount)}</td>
             <td class="py-3 px-4">
                 <span class="inline-block px-2 py-1 rounded text-xs font-semibold ${statusColors[order.status]}">${order.status}</span>
             </td>
@@ -513,9 +514,9 @@ function displayUserManagement() {
             <td class="py-3 px-4">
                 <span class="inline-block px-2 py-1 rounded text-xs font-semibold ${statusColors[user.status]}">${user.status.toUpperCase()}</span>
             </td>
-            <td class="py-3 px-4 font-bold text-green-600 dark:text-green-400">${parseFloat(user.available_balance).toFixed(2)}</td>
-            <td class="py-3 px-4 font-bold text-purple-600 dark:text-purple-400">${parseFloat(user.locked_balance).toFixed(2)}</td>
-            <td class="py-3 px-4 font-bold text-blue-600 dark:text-blue-400">${parseFloat(user.total_balance).toFixed(2)}</td>
+            <td class="py-3 px-4 font-bold text-green-600 dark:text-green-400">${formatCurrency(user.available_balance)}</td>
+            <td class="py-3 px-4 font-bold text-purple-600 dark:text-purple-400">${formatCurrency(user.locked_balance)}</td>
+            <td class="py-3 px-4 font-bold text-blue-600 dark:text-blue-400">${formatCurrency(user.total_balance)}</td>
             <td class="py-3 px-4">
                 <div class="flex space-x-1 flex-wrap">
                     <button onclick="showDepositModal(${user.id}, '${user.username}')"
@@ -577,10 +578,7 @@ function updateSystemHealthCards() {
     }
 
     if (totalBalanceEl && masterOverview.users) {
-        const totalBalance = masterOverview.users.reduce((sum, u) => {
-            return sum + parseFloat(u.available_balance || 0) + parseFloat(u.locked_balance || 0);
-        }, 0);
-        totalBalanceEl.textContent = totalBalance.toFixed(2);
+        totalBalanceEl.textContent = formatCurrency(totalBalance);
     }
 
     // Legacy support for index.html elements (if they exist)
@@ -592,7 +590,7 @@ function updateSystemHealthCards() {
         const totalEscrow = masterOverview.orders
             .filter(o => o.status === 'CLAIMED')
             .reduce((sum, o) => sum + parseFloat(o.amount), 0);
-        totalEscrowEl.textContent = totalEscrow.toFixed(2);
+        totalEscrowEl.textContent = formatCurrency(totalEscrow);
     }
 
     if (activeDisputesEl && masterOverview.orders) {
@@ -603,7 +601,7 @@ function updateSystemHealthCards() {
     if (systemLiquidityEl && masterOverview.users) {
         const liquidity = masterOverview.users
             .reduce((sum, u) => sum + parseFloat(u.available_balance), 0);
-        systemLiquidityEl.textContent = liquidity.toFixed(2);
+        systemLiquidityEl.textContent = formatCurrency(liquidity);
     }
 }
 

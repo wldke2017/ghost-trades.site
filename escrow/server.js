@@ -10,6 +10,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const compression = require('compression');
 const fetch = require('node-fetch');
+const { Op } = require('sequelize');
 const sequelize = require('./db');
 const User = require('./models/user');
 const Wallet = require('./models/wallet');

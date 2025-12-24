@@ -12,30 +12,6 @@ let currentUsername = window.currentUsername || null;
 let allOrders = [];
 let allHistory = [];
 
-const EXCHANGE_RATE = 129; // 1 USD = 129 KES
-
-function getUserCurrency() {
-    try {
-        const user = JSON.parse(localStorage.getItem('userData'));
-        return user?.currency_preference || 'USD';
-    } catch { return 'USD'; }
-}
-
-function formatCurrency(amount) {
-    const currency = getUserCurrency();
-    const val = parseFloat(amount || 0);
-    if (currency === 'KES') {
-        return 'Ksh ' + (val * EXCHANGE_RATE).toFixed(2);
-    }
-    return '$' + val.toFixed(2);
-}
-
-// Helper to parse currency string back to float (removes $ or Ksh)
-function parseCurrencyString(str) {
-    if (!str) return 0;
-    return parseFloat(str.replace(/[^0-9.-]+/g, ""));
-}
-
 let statusChart = null;
 let volumeChart = null;
 let socket = null;
@@ -334,18 +310,6 @@ async function updateDashboard() {
     // Admin data is loaded separately in admin-app.js, not here
     updateUserDisplay();
     updateCurrencyLabels();
-}
-
-/**
- * Syncs all UI elements with the 'currency-label' class to the current preference.
- */
-function updateCurrencyLabels() {
-    const currency = getUserCurrency();
-    const labels = document.querySelectorAll('.currency-label');
-    labels.forEach(el => {
-        el.textContent = currency;
-    });
-    console.log(`[Currency] Labels updated to ${currency}`);
 }
 
 function updateUserDisplay() {
