@@ -2,7 +2,17 @@
 // TRADING INTERFACE FUNCTIONS
 // ===================================
 
+// Track balance subscription ID to cancel when switching accounts
+let currentBalanceSubscriptionId = null;
+
 function requestBalance() {
+    // Cancel previous balance subscription if it exists
+    if (currentBalanceSubscriptionId) {
+        console.log('🔄 Cancelling previous balance subscription:', currentBalanceSubscriptionId);
+        sendAPIRequest({ "forget": currentBalanceSubscriptionId });
+        currentBalanceSubscriptionId = null;
+    }
+
     const balanceRequest = { "balance": 1, "subscribe": 1 };
     sendAPIRequest(balanceRequest);
 }

@@ -290,6 +290,13 @@ function handleIncomingMessage(msg) {
 
         case 'balance':
             if (data.balance) {
+                // Store subscription ID for cancellation when switching accounts
+                if (data.subscription && data.subscription.id) {
+                    if (typeof currentBalanceSubscriptionId !== 'undefined') {
+                        currentBalanceSubscriptionId = data.subscription.id;
+                        console.log('✅ Balance subscription ID stored:', currentBalanceSubscriptionId);
+                    }
+                }
                 updateBalanceUI(data.balance.balance, data.balance.currency);
             }
             break;
