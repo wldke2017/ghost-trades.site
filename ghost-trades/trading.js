@@ -47,15 +47,15 @@ function subscribeToAllVolatilities() {
         .filter(symbol => {
             // Check if it's a synthetic index
             if (symbol.market !== 'synthetic_index') return false;
-            
+
             // Include all R_ (Volatility) and 1HZ (1s) indices
-            const isVolatility = symbol.symbol.startsWith('R_') || 
-                                 symbol.symbol.startsWith('1HZ') ||
-                                 symbol.symbol.includes('1s');
-            
+            const isVolatility = symbol.symbol.startsWith('R_') ||
+                symbol.symbol.startsWith('1HZ') ||
+                symbol.symbol.includes('1s');
+
             // Also include Jump indices
             const isJump = symbol.symbol.startsWith('JD');
-            
+
             return isVolatility || isJump;
         })
         .map(symbol => symbol.symbol);
@@ -75,7 +75,7 @@ function subscribeToAllVolatilities() {
 
     console.log(`✅ Subscribing to ${volatilitySymbols.length} synthetic indices:`, volatilitySymbols);
     console.log('📋 Expected volatilities:', expectedVolatilities);
-    
+
     // Check which expected symbols are missing
     const missingSymbols = expectedVolatilities.filter(exp => !volatilitySymbols.includes(exp));
     if (missingSymbols.length > 0) {
@@ -97,7 +97,7 @@ function subscribeToAllVolatilities() {
     sendAPIRequest({ "forget_all": "ticks" });
 
     volatilitySymbols.forEach((symbol, index) => {
-        sendAPIRequest({ "ticks_history": symbol, "adjust_start_time": 1, "count": 1, "end": "latest", "start": 1, "style": "ticks", "subscribe": 1 });
+        sendAPIRequest({ "ticks_history": symbol, "count": 1, "end": "latest", "style": "ticks", "subscribe": 1 });
 
         // Initialize market tick history
         marketTickHistory[symbol] = [];
@@ -121,12 +121,12 @@ function subscribeToAllVolatilities() {
                 .replace('1HZ', 'V')
                 .replace('V', 'Vol ')
                 .replace('JD', 'Jump ');
-            
+
             // Add (1s) suffix for 1-second indices
             if (symbol.startsWith('1HZ') || symbol.includes('1s')) {
                 displayName += ' (1s)';
             }
-            
+
             symbolCell.textContent = displayName;
 
             row.insertCell(1).textContent = '--';
@@ -201,9 +201,9 @@ function handleDistributionMarketChange() {
 function refreshDistributionData() {
     const distributionMarketSelector = document.getElementById('distributionMarketSelector');
     if (!distributionMarketSelector) return;
-    
+
     const selectedSymbol = distributionMarketSelector.value;
-    
+
     // Show loading state
     const skeleton = document.getElementById('digitAnalysisSkeleton');
     const content = document.getElementById('digitAnalysisContent');
@@ -211,11 +211,11 @@ function refreshDistributionData() {
         skeleton.style.display = 'block';
         content.style.display = 'none';
     }
-    
+
     // Fetch fresh 1000 ticks
     console.log(`🔄 Refreshing distribution data for ${selectedSymbol}...`);
     fetchTickHistory(selectedSymbol);
-    
+
     // Show toast notification
     if (typeof showToast === 'function') {
         showToast(`Refreshing ${selectedSymbol} distribution data...`, 'info');
@@ -231,7 +231,7 @@ function updateLastDigitIndicator(symbol, lastDigit) {
     // Check which market is selected for distribution display
     const distributionMarketSelector = document.getElementById('distributionMarketSelector');
     const selectedDistributionMarket = distributionMarketSelector ? distributionMarketSelector.value : null;
-    
+
     // Only update if this is the currently selected distribution market
     if (selectedDistributionMarket && selectedDistributionMarket !== symbol) {
         return;
