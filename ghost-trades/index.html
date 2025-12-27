@@ -123,46 +123,59 @@
                     <p class="auth-subtitle">Connect your Deriv account to start trading</p>
                 </div>
                 <div class="auth-body">
-                    <p id="statusMessage" class="status-message">Initializing connection...</p>
+                    <p id="statusMessage" class="status-message">Initializing secure connection...</p>
 
-                    <!-- OAuth Authentication Options -->
+                    <!-- OAuth Authentication Options (Primary) -->
                     <div class="auth-options">
-                        <div class="auth-description">
-                            <h3>Connect with Deriv</h3>
-                            <p>Authenticate securely with your Deriv account</p>
-                        </div>
                         <div class="account-buttons">
                             <button class="btn btn-oauth btn-unified" onclick="startOAuthLogin()">
-                                <span class="btn-text">Login with Deriv OAuth</span>
-                                <svg class="btn-loader" viewBox="0 0 24 24" fill="none"
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"
-                                        opacity="0.3" />
-                                    <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" />
+                                    <path
+                                        d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM11 7H13V15H11V7ZM11 17H13V19H11V17Z"
+                                        fill="white" fill-opacity="0.2" />
+                                    <path d="M12 2L2 22H22L12 2Z" fill="white" transform="scale(0.6) translate(8,8)" />
                                 </svg>
+                                <span class="btn-text">Log in with Deriv</span>
                             </button>
                         </div>
                         <div class="oauth-info">
-                            <small>🔒 Secure OAuth authentication with Deriv - Access all your accounts</small>
+                            <small>🔒 Secure & Fast Login • Supports Real & Demo</small>
                         </div>
                     </div>
 
-                    <!-- Alternative API Token Method -->
+                    <!-- Toggle for Manual Token -->
                     <div class="auth-divider">
                         <span>or</span>
                     </div>
 
-                    <div class="input-group">
-                        <label for="apiTokenInput">API Token (Alternative)</label>
-                        <input type="password" id="apiTokenInput" name="apiToken"
-                            placeholder="Enter your Deriv API Token" autocomplete="off">
-                        <small class="input-hint">Get your token from <a href="https://app.deriv.com/account/api-token"
-                                target="_blank">deriv.com/account/api-token</a></small>
+                    <div class="alt-login-toggle">
+                        <button class="btn-text-link"
+                            onclick="document.getElementById('apiLoginSection').classList.toggle('show')">
+                            Use API Token instead
+                        </button>
                     </div>
-                    <button id="loginButton" onclick="handleLogin()" class="btn-primary">
-                        <span class="btn-text">Connect with API Token</span>
-                        <div class="btn-loader" style="display: none;"></div>
-                    </button>
+
+                    <!-- Hidden API Token Input -->
+                    <div id="apiLoginSection" class="api-login-section">
+                        <div class="input-group">
+                            <label for="apiTokenInput">Personal API Token</label>
+                            <input type="password" id="apiTokenInput" name="apiToken"
+                                placeholder="Paste your API token here" autocomplete="off">
+                            <small class="input-hint">Create a token at <a
+                                    href="https://app.deriv.com/account/api-token"
+                                    target="_blank">deriv.com/account/api-token</a> (Read & Trade scopes)</small>
+                        </div>
+                        <button id="loginButton" onclick="handleLogin()" class="btn-primary">
+                            <span class="btn-text">Connect Manual</span>
+                            <div class="btn-loader" style="display: none;"></div>
+                        </button>
+                        <div style="margin-top: 10px; text-align: center;">
+                            <label style="font-size: 12px; color: var(--text-muted); cursor: pointer;">
+                                <input type="checkbox" id="rememberToken" checked> Keep me logged in
+                            </label>
+                        </div>
+                    </div>
 
                     <!-- WebSocket Test Button -->
                     <button onclick="testWebSocketConnection()" class="btn-secondary"
