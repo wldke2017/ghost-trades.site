@@ -72,11 +72,13 @@ const dashboardNav = document.getElementById('dashboard-nav');
 const speedbotNav = document.getElementById('speedbot-nav');
 const ghostaiNav = document.getElementById('ghostai-nav');
 const ghosteoddNav = document.getElementById('ghost-eodd-nav');
+const hedgingNav = document.getElementById('hedging-nav');
 
 // Trading Interface
 const tradingInterface = document.getElementById('trading-interface');
 const ghostaiInterface = document.getElementById('ghostai-interface');
 const ghosteoddInterface = document.getElementById('ghost-eodd-interface');
+const hedgingInterface = document.getElementById('hedging-interface');
 const chartContainer = document.getElementById('chart-container');
 const tradeMessageContainer = document.getElementById('tradeMessageContainer');
 const tickerTableBody = document.querySelector('#tickerTable tbody');
@@ -203,7 +205,7 @@ function handleIncomingMessage(msg) {
 
                 // Store login ID in oauthState
                 window.oauthState.login_id = data.authorize.loginid;
-                
+
                 // 🔥 CRITICAL FIX: Save login ID to localStorage
                 localStorage.setItem('deriv_login_id', data.authorize.loginid);
 
@@ -306,18 +308,18 @@ function handleIncomingMessage(msg) {
                 const quotes = data.history.quotes || [];
                 const digits = quotes.map(quote => parseInt(quote.toString().slice(-1)));
                 marketFullTickDigits[symbol] = digits.slice(-1000); // Keep last 1000
-                
+
                 // Log detailed information
                 console.log(`✅ Loaded ${digits.length} historical ticks for ${symbol} distribution analysis`);
                 console.log(`   Actual ticks stored: ${marketFullTickDigits[symbol].length}`);
-                
+
                 // Count digit distribution for verification
                 const counts = {};
                 marketFullTickDigits[symbol].forEach(d => {
                     counts[d] = (counts[d] || 0) + 1;
                 });
                 console.log(`   Digit counts:`, counts);
-                
+
                 // Update the distribution display if this is the selected market
                 const distributionMarketSelector = document.getElementById('distributionMarketSelector');
                 if (distributionMarketSelector && distributionMarketSelector.value === symbol) {
@@ -357,12 +359,12 @@ function handleIncomingMessage(msg) {
                     if (marketFullTickDigits[symbol].length > 1000) {
                         marketFullTickDigits[symbol].shift();
                     }
-                    
+
                     // Update the last digit indicator (red dot)
                     if (typeof updateLastDigitIndicator === 'function') {
                         updateLastDigitIndicator(symbol, digit);
                     }
-                    
+
                     // Update distribution display if this is the selected market (every 10 ticks to avoid too many updates)
                     const distributionMarketSelector = document.getElementById('distributionMarketSelector');
                     if (distributionMarketSelector && distributionMarketSelector.value === symbol) {
@@ -434,7 +436,7 @@ function handleIncomingMessage(msg) {
                 if (contractInfo) {
                     const strategy = passthrough.strategy || 'S1';
                     const strategyLabel = strategy === 'S1' ? 'S1 Entry' : 'S2 Recovery';
-                    
+
                     // CRITICAL FIX: Track contract with actual contract_id from API
                     // This is the ONLY place we add to activeContracts for Ghost AI
                     activeContracts[contractInfo.contract_id] = {
@@ -443,20 +445,20 @@ function handleIncomingMessage(msg) {
                         stake: passthrough.stake,
                         startTime: Date.now()
                     };
-                    
+
                     console.log(`✅ Ghost AI: Tracking contract ${contractInfo.contract_id} for ${passthrough.symbol} (${strategy})`);
                     console.log(`📊 Active contracts now:`, Object.keys(activeContracts));
-                    
+
                     addBotLog(`✅ ${strategyLabel} contract opened: ${contractInfo.contract_id} | ${passthrough.symbol} | Stake: $${passthrough.stake.toFixed(2)}`);
 
                     sendAPIRequest({
                         "proposal_open_contract": 1,
                         "contract_id": contractInfo.contract_id,
                         "subscribe": 1,
-                        "passthrough": { 
-                            "purpose": "ghost_ai_trade", 
-                            "run_id": botState.runId, 
-                            "symbol": passthrough.symbol, 
+                        "passthrough": {
+                            "purpose": "ghost_ai_trade",
+                            "run_id": botState.runId,
+                            "symbol": passthrough.symbol,
                             "barrier": passthrough.barrier,
                             "strategy": strategy,
                             "stake": passthrough.stake
@@ -481,10 +483,10 @@ function handleIncomingMessage(msg) {
                         "proposal_open_contract": 1,
                         "contract_id": contractInfo.contract_id,
                         "subscribe": 1,
-                        "passthrough": { 
-                            "purpose": "ghost_even_odd_trade", 
-                            "run_id": evenOddBotState.runId, 
-                            "symbol": passthrough.symbol, 
+                        "passthrough": {
+                            "purpose": "ghost_even_odd_trade",
+                            "run_id": evenOddBotState.runId,
+                            "symbol": passthrough.symbol,
                             "prediction_type": passthrough.prediction_type,
                             "pattern": passthrough.pattern,
                             "stake": passthrough.stake
@@ -558,12 +560,12 @@ function handleIncomingMessage(msg) {
                     // Remove from active contracts tracking and release trade lock
                     // Use contract.contract_id as primary, fallback to contract.id
                     const contractIdToRemove = contract.contract_id || contract.id;
-                    
+
                     if (activeContracts[contractIdToRemove]) {
                         const contractInfo = activeContracts[contractIdToRemove];
-                        
+
                         console.log(`✅ Found and removing contract ${contractIdToRemove} from activeContracts`);
-                        
+
                         // CRITICAL: Remove expected stake and trade signature for this symbol
                         if (expectedStakes[contractInfo.symbol] !== undefined) {
                             const stake = expectedStakes[contractInfo.symbol];
@@ -573,36 +575,36 @@ function handleIncomingMessage(msg) {
                             // Also clear the trade signature
                             clearTradeSignature(contractInfo.symbol, passthrough.barrier, stake, 'ghost_ai');
                         }
-                        
+
                         // Remove from S1 symbols tracking if it was an S1 trade
                         if (contractInfo.strategy === 'S1') {
                             console.log(`🔓 Removing ${contractInfo.symbol} from activeS1Symbols`);
                             activeS1Symbols.delete(contractInfo.symbol);
                         }
-                        
+
                         // Decrement S2 counter if it was an S2 trade
                         if (contractInfo.strategy === 'S2' && botState.activeS2Count > 0) {
                             botState.activeS2Count--;
                             console.log(`📉 S2 count decremented to ${botState.activeS2Count}`);
                         }
-                        
+
                         delete activeContracts[contractIdToRemove];
-                        
+
                         // Release trade lock for this symbol
                         releaseTradeLock(contract.symbol, 'ghost_ai');
                     } else {
                         // Contract not found - use fallback cleanup
                         console.error(`❌ Contract ${contractIdToRemove} NOT found in activeContracts!`);
                         console.error(`Available contracts:`, Object.keys(activeContracts));
-                        
+
                         // Fallback: Clean up by symbol AND strategy to prevent stuck state
                         let foundAndRemoved = false;
                         const targetStrategy = passthrough.strategy || 'S1';
-                        
+
                         for (const [id, info] of Object.entries(activeContracts)) {
                             if (info.symbol === contract.symbol && info.strategy === targetStrategy) {
                                 console.log(`🔧 Fallback cleanup: Removing contract ${id} for symbol ${contract.symbol} (${targetStrategy})`);
-                                
+
                                 // CRITICAL: Remove expected stake and signature (fallback)
                                 if (expectedStakes[info.symbol] !== undefined) {
                                     const stake = expectedStakes[info.symbol];
@@ -612,29 +614,29 @@ function handleIncomingMessage(msg) {
                                     // Also clear the trade signature (fallback)
                                     clearTradeSignature(info.symbol, passthrough.barrier, stake, 'ghost_ai');
                                 }
-                                
+
                                 if (info.strategy === 'S1') {
                                     console.log(`🔓 Removing ${info.symbol} from activeS1Symbols (fallback)`);
                                     activeS1Symbols.delete(info.symbol);
                                 }
-                                
+
                                 if (info.strategy === 'S2' && botState.activeS2Count > 0) {
                                     botState.activeS2Count--;
                                     console.log(`📉 S2 count decremented to ${botState.activeS2Count} (fallback)`);
                                 }
-                                
+
                                 delete activeContracts[id];
                                 releaseTradeLock(contract.symbol, 'ghost_ai');
                                 foundAndRemoved = true;
                                 break;
                             }
                         }
-                        
+
                         if (!foundAndRemoved) {
                             console.error(`❌ Could not find any contract for symbol ${contract.symbol} with strategy ${targetStrategy}`);
                             // Force cleanup to prevent permanent lock
                             console.log(`🔧 Force cleanup: Removing ${contract.symbol} from activeS1Symbols and releasing lock`);
-                            
+
                             // CRITICAL: Remove expected stake and signature (force cleanup)
                             if (expectedStakes[contract.symbol] !== undefined) {
                                 const stake = expectedStakes[contract.symbol];
@@ -644,12 +646,12 @@ function handleIncomingMessage(msg) {
                                 // Also clear the trade signature (force cleanup)
                                 clearTradeSignature(contract.symbol, passthrough.barrier, stake, 'ghost_ai');
                             }
-                            
+
                             activeS1Symbols.delete(contract.symbol);
                             releaseTradeLock(contract.symbol, 'ghost_ai');
                         }
                     }
-                    
+
                     console.log(`🔍 Active contracts after cleanup:`, Object.keys(activeContracts));
                     console.log(`🔍 Active S1 symbols after cleanup:`, Array.from(activeS1Symbols));
 
@@ -667,7 +669,7 @@ function handleIncomingMessage(msg) {
                     const profit = parseFloat(contract.profit);
                     const isWin = profit > 0;
                     const stake = parseFloat(passthrough.stake || 0);
-                    
+
                     // Calculate payout correctly: for wins, payout = stake + profit; for losses, payout = 0
                     const payout = isWin ? stake + profit : 0;
 
@@ -680,7 +682,7 @@ function handleIncomingMessage(msg) {
                     // Update total stake and payout
                     botState.totalStake += stake;
                     botState.totalPayout += payout;
-                    
+
                     // Verify the math
                     console.log(`📊 Running Totals: Total Stake: $${botState.totalStake.toFixed(2)} | Total Payout: $${botState.totalPayout.toFixed(2)} | Total P/L: $${botState.totalPL.toFixed(2)} | Calculated P/L: $${(botState.totalPayout - botState.totalStake).toFixed(2)}`);
 
@@ -723,7 +725,7 @@ function handleIncomingMessage(msg) {
                     } else {
                         // S2 Recovery trades handle martingale
                         // Note: S2 counter is already decremented in cleanup logic above
-                        
+
                         if (!isWin) {
                             botState.martingaleStepCount++;
 
@@ -795,15 +797,15 @@ function handleIncomingMessage(msg) {
 
                     // Remove from active contracts and release trade lock
                     const contractIdToRemove = contract.contract_id || contract.id;
-                    
+
                     if (evenOddBotState.activeContracts[contractIdToRemove]) {
                         delete evenOddBotState.activeContracts[contractIdToRemove];
-                        
+
                         // Release trade lock for this symbol
                         releaseTradeLock(contract.symbol, 'ghost_eodd');
                     } else {
                         console.error(`❌ E/ODD Contract ${contractIdToRemove} NOT found in activeContracts!`);
-                        
+
                         // Fallback cleanup by symbol
                         for (const [id, info] of Object.entries(evenOddBotState.activeContracts)) {
                             if (info.symbol === contract.symbol) {
@@ -819,62 +821,62 @@ function handleIncomingMessage(msg) {
                     if (contract.profit > 0) {
                         showToast(`🎉 E/ODD Bot Win: +$${contract.profit.toFixed(2)} on ${contract.symbol}`, 'success', 10000);
                     }
-                // Check if it's a Market Summary bot trade
-                else if (passthrough && passthrough.purpose === 'market_summary_trade' && passthrough.run_id === window.marketSummaryBotState.runId) {
-                    contract.symbol = passthrough.symbol;
-                    contract.barrier = passthrough.barrier;
-                    contract.type = passthrough.type;
+                    // Check if it's a Market Summary bot trade
+                    else if (passthrough && passthrough.purpose === 'market_summary_trade' && passthrough.run_id === window.marketSummaryBotState.runId) {
+                        contract.symbol = passthrough.symbol;
+                        contract.barrier = passthrough.barrier;
+                        contract.type = passthrough.type;
 
-                    sendAPIRequest({ "forget": contract.id });
+                        sendAPIRequest({ "forget": contract.id });
 
-                    // Remove from active contracts
-                    if (window.marketSummaryBotState.activeContracts[contract.contract_id]) {
-                        delete window.marketSummaryBotState.activeContracts[contract.contract_id];
+                        // Remove from active contracts
+                        if (window.marketSummaryBotState.activeContracts[contract.contract_id]) {
+                            delete window.marketSummaryBotState.activeContracts[contract.contract_id];
+                        }
+
+                        // Update profit/loss
+                        window.marketSummaryBotState.totalPL += contract.profit;
+
+                        if (contract.profit > 0) {
+                            window.marketSummaryBotState.winCount++;
+                            showToast(`🎉 Market Summary Win: +$${contract.profit.toFixed(2)} on ${contract.symbol}`, 'success', 10000);
+                            addMarketSummaryLog(`✅ Win: +$${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${window.marketSummaryBotState.totalPL.toFixed(2)}`, 'win');
+
+                            // Reset martingale on win
+                            window.marketSummaryBotState.currentStake = window.marketSummaryBotState.initialStake;
+                            window.marketSummaryBotState.martingaleStep = 0;
+                            window.marketSummaryBotState.accumulatedLoss = 0;
+                        } else {
+                            window.marketSummaryBotState.lossCount++;
+                            addMarketSummaryLog(`❌ Loss: $${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${window.marketSummaryBotState.totalPL.toFixed(2)}`, 'loss');
+
+                            // Apply martingale
+                            window.marketSummaryBotState.martingaleStep++;
+                            window.marketSummaryBotState.accumulatedLoss += Math.abs(contract.profit);
+                            window.marketSummaryBotState.currentStake = parseFloat((window.marketSummaryBotState.currentStake * window.marketSummaryBotState.martingaleMultiplier).toFixed(2));
+
+                            addMarketSummaryLog(`🔄 Martingale Step ${window.marketSummaryBotState.martingaleStep} | Next Stake: $${window.marketSummaryBotState.currentStake.toFixed(2)}`, 'warning');
+                        }
+
+                        // Check stop conditions
+                        if (window.marketSummaryBotState.totalPL >= window.marketSummaryBotState.targetProfit) {
+                            addMarketSummaryLog(`🎉 Target Profit Reached: $${window.marketSummaryBotState.totalPL.toFixed(2)}`, 'win');
+                            stopMarketSummaryBot();
+                        } else if (Math.abs(window.marketSummaryBotState.totalPL) >= window.marketSummaryBotState.stopLoss && window.marketSummaryBotState.totalPL < 0) {
+                            addMarketSummaryLog(`🛑 Stop Loss Hit: -$${Math.abs(window.marketSummaryBotState.totalPL).toFixed(2)}`, 'error');
+                            stopMarketSummaryBot();
+                        }
+
+                        updateMarketSummaryProfitDisplay();
                     }
-
-                    // Update profit/loss
-                    window.marketSummaryBotState.totalPL += contract.profit;
-
-                    if (contract.profit > 0) {
-                        window.marketSummaryBotState.winCount++;
-                        showToast(`🎉 Market Summary Win: +$${contract.profit.toFixed(2)} on ${contract.symbol}`, 'success', 10000);
-                        addMarketSummaryLog(`✅ Win: +$${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${window.marketSummaryBotState.totalPL.toFixed(2)}`, 'win');
-
-                        // Reset martingale on win
-                        window.marketSummaryBotState.currentStake = window.marketSummaryBotState.initialStake;
-                        window.marketSummaryBotState.martingaleStep = 0;
-                        window.marketSummaryBotState.accumulatedLoss = 0;
-                    } else {
-                        window.marketSummaryBotState.lossCount++;
-                        addMarketSummaryLog(`❌ Loss: $${contract.profit.toFixed(2)} on ${contract.symbol} | Total P/L: $${window.marketSummaryBotState.totalPL.toFixed(2)}`, 'loss');
-
-                        // Apply martingale
-                        window.marketSummaryBotState.martingaleStep++;
-                        window.marketSummaryBotState.accumulatedLoss += Math.abs(contract.profit);
-                        window.marketSummaryBotState.currentStake = parseFloat((window.marketSummaryBotState.currentStake * window.marketSummaryBotState.martingaleMultiplier).toFixed(2));
-
-                        addMarketSummaryLog(`🔄 Martingale Step ${window.marketSummaryBotState.martingaleStep} | Next Stake: $${window.marketSummaryBotState.currentStake.toFixed(2)}`, 'warning');
-                    }
-
-                    // Check stop conditions
-                    if (window.marketSummaryBotState.totalPL >= window.marketSummaryBotState.targetProfit) {
-                        addMarketSummaryLog(`🎉 Target Profit Reached: $${window.marketSummaryBotState.totalPL.toFixed(2)}`, 'win');
-                        stopMarketSummaryBot();
-                    } else if (Math.abs(window.marketSummaryBotState.totalPL) >= window.marketSummaryBotState.stopLoss && window.marketSummaryBotState.totalPL < 0) {
-                        addMarketSummaryLog(`🛑 Stop Loss Hit: -$${Math.abs(window.marketSummaryBotState.totalPL).toFixed(2)}`, 'error');
-                        stopMarketSummaryBot();
-                    }
-
-                    updateMarketSummaryProfitDisplay();
-                }
 
                     // Update GLOBAL martingale (not symbol-specific)
                     const isWin = contract.profit > 0;
                     updateGlobalMartingale(contract.symbol, isWin, contract.profit);
-                    
+
                     // Update global money management
                     updateMoneyManagement(isWin, contract.profit);
-                    
+
                     evenOddBotState.totalPL = mm.totalProfit;
                     evenOddBotState.winCount = mm.winCount;
                     evenOddBotState.lossCount = mm.lossCount;
@@ -969,17 +971,17 @@ function handleOAuthRedirectAndInit() {
     if (storedToken) {
         console.log('✅ Using stored token from previous session');
         console.log('Account type:', storedAccountType, 'Account ID:', storedAccountId);
-        
+
         // Restore OAuth state
         window.oauthState.access_token = storedToken;
         window.oauthState.account_type = storedAccountType || 'demo';
         window.oauthState.account_id = storedAccountId;
-        
+
         // Show loading message
         if (statusMessage) {
             statusMessage.textContent = "Restoring your session...";
         }
-        
+
         // Connect and authorize with stored token
         connectAndAuthorize(storedToken);
         showSection('dashboard');
@@ -1001,7 +1003,7 @@ function updateGhostAIButtonStates(isRunning) {
         document.getElementById('ghost-ai-toggle-button-bottom'),
         document.getElementById('ghost-ai-toggle-button-history')
     ];
-    
+
     buttons.forEach(button => {
         if (button) {
             if (isRunning) {
@@ -1031,7 +1033,7 @@ function updateGhostAIButtonStates(isRunning) {
 document.addEventListener('DOMContentLoaded', () => {
     // Ghost AI toggle buttons (all three)
     const ghostAIButtonIds = ['ghost-ai-toggle-button', 'ghost-ai-toggle-button-bottom', 'ghost-ai-toggle-button-history'];
-    
+
     ghostAIButtonIds.forEach(buttonId => {
         const button = document.getElementById(buttonId);
         if (button) {

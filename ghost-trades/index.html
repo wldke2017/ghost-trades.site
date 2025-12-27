@@ -106,8 +106,8 @@
             </a>
             <a href="#" id="hedging-nav" class="nav-item">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" 
-                        stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
                 <span class="nav-text">Hedging</span>
             </a>
@@ -175,218 +175,7 @@
 
         <!-- Dashboard Section -->
         <section class="dashboard" id="dashboard" style="display: none;">
-            <!-- Hedge Master Section -->
-            <div class="hedge-master-container">
-                <div class="section-header">
-                    <h2>🛡️ Ghost Hedge Master</h2>
-                </div>
 
-                <!-- Lookback Hedge (Main Focus - Always Expanded) -->
-                <div class="hedge-card hedge-card-primary">
-                    <h3>🛡️ Lookback Hedge (HL / CL)</h3>
-                    <p class="card-description">High-Low + Close-Low contracts - Main hedging strategy</p>
-                    <div class="hedge-inputs-grid">
-                        <div class="control-group">
-                            <label for="lookback-market">Market</label>
-                            <select id="lookback-market" class="control-select">
-                                <option value="R_10">Volatility 10 Index</option>
-                                <option value="R_25">Volatility 25 Index</option>
-                                <option value="R_50">Volatility 50 Index</option>
-                                <option value="R_75">Volatility 75 Index</option>
-                                <option value="R_100" selected>Volatility 100 Index</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label for="lookback-duration">Duration</label>
-                            <div class="input-with-unit">
-                                <input type="number" id="lookback-duration" value="1" min="1" step="1">
-                                <span class="unit">Minutes</span>
-                            </div>
-                        </div>
-                        <div class="control-group">
-                            <label for="lookback-stake">Stake (per contract)</label>
-                            <div class="input-with-unit">
-                                <input type="number" id="lookback-stake" value="0.35" min="0.35" step="0.01">
-                                <span class="unit">USD</span>
-                            </div>
-                        </div>
-                    </div>
-                    <button onclick="executeLookbackHedge(document.getElementById('lookback-market').value, parseFloat(document.getElementById('lookback-stake').value), parseInt(document.getElementById('lookback-duration').value))" class="btn-primary btn-large">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"/>
-                        </svg>
-                        <span>🛡️ Execute Lookback Hedge</span>
-                    </button>
-                </div>
-
-                <!-- Other Hedging Strategies (Collapsible) -->
-                <div class="card" style="margin-top: 20px;">
-                    <h4 class="collapsible-header" onclick="toggleSection('other-hedges')">
-                        <span>Other Hedging Strategies</span>
-                        <svg class="collapse-arrow collapsed" id="arrow-other-hedges" viewBox="0 0 24 24" fill="none"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                        </svg>
-                    </h4>
-                    <div class="collapsible-content collapsed" id="other-hedges">
-                        <div class="hedge-grid">
-                            <!-- Dual Side Hedge -->
-                            <div class="hedge-card">
-                                <h3>Dual Side (High/Low)</h3>
-                                <p class="card-description">Simultaneous CALL + PUT contracts</p>
-                                <div class="control-group">
-                                    <label for="dual-market">Market</label>
-                                    <select id="dual-market" class="control-select">
-                                        <option value="R_10">Volatility 10 Index</option>
-                                        <option value="R_25">Volatility 25 Index</option>
-                                        <option value="R_50">Volatility 50 Index</option>
-                                        <option value="R_75">Volatility 75 Index</option>
-                                        <option value="R_100" selected>Volatility 100 Index</option>
-                                    </select>
-                                </div>
-                                <div class="control-group">
-                                    <label for="dual-stake">Stake (per contract)</label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="dual-stake" value="0.35" min="0.35" step="0.01">
-                                        <span class="unit">USD</span>
-                                    </div>
-                                </div>
-                                <button onclick="executeDualHedge(document.getElementById('dual-market').value, parseFloat(document.getElementById('dual-stake').value))" class="btn-secondary">
-                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"/>
-                                    </svg>
-                                    <span>Open Dual</span>
-                                </button>
-                            </div>
-
-                            <!-- Multi-Entry -->
-                            <div class="hedge-card">
-                                <h3>Multi-Entry (2-4 Contracts)</h3>
-                                <p class="card-description">Multiple contracts with 50ms delay</p>
-                                <div class="control-group">
-                                    <label for="multi-market">Market</label>
-                                    <select id="multi-market" class="control-select">
-                                        <option value="R_10">Volatility 10 Index</option>
-                                        <option value="R_25">Volatility 25 Index</option>
-                                        <option value="R_50">Volatility 50 Index</option>
-                                        <option value="R_75">Volatility 75 Index</option>
-                                        <option value="R_100" selected>Volatility 100 Index</option>
-                                    </select>
-                                </div>
-                                <div class="control-group">
-                                    <label for="multi-type">Contract Type</label>
-                                    <select id="multi-type" class="control-select">
-                                        <option value="CALL">High (CALL)</option>
-                                        <option value="PUT">Low (PUT)</option>
-                                    </select>
-                                </div>
-                                <div class="control-group">
-                                    <label for="multi-count">Number of Contracts</label>
-                                    <input type="number" id="multi-count" value="4" min="2" max="4" class="control-select">
-                                </div>
-                                <div class="control-group">
-                                    <label for="multi-stake">Stake (per contract)</label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="multi-stake" value="0.35" min="0.35" step="0.01">
-                                        <span class="unit">USD</span>
-                                    </div>
-                                </div>
-                                <button onclick="openMultipleContracts(parseInt(document.getElementById('multi-count').value), document.getElementById('multi-type').value, document.getElementById('multi-market').value, parseFloat(document.getElementById('multi-stake').value))" class="btn-secondary">
-                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"/>
-                                    </svg>
-                                    <span>Execute Multi</span>
-                                </button>
-                            </div>
-
-                            <!-- Over/Under Advanced -->
-                            <div class="hedge-card">
-                                <h3>Over/Under (Conditional)</h3>
-                                <p class="card-description">Smart Over/Under based on last N digits</p>
-                                <div class="control-group">
-                                    <label for="overunder-market">Market</label>
-                                    <select id="overunder-market" class="control-select">
-                                        <option value="R_10">Volatility 10 Index</option>
-                                        <option value="R_25">Volatility 25 Index</option>
-                                        <option value="R_50">Volatility 50 Index</option>
-                                        <option value="R_75">Volatility 75 Index</option>
-                                        <option value="R_100" selected>Volatility 100 Index</option>
-                                    </select>
-                                </div>
-                                <div class="control-group">
-                                    <label for="overunder-barrier">Barrier Digit</label>
-                                    <input type="number" id="overunder-barrier" value="5" min="0" max="9" class="control-select">
-                                </div>
-                                <div class="control-group">
-                                    <label for="overunder-check-last">Check Last N Digits</label>
-                                    <input type="number" id="overunder-check-last" value="5" min="1" max="100" class="control-select">
-                                </div>
-                                <div class="control-group">
-                                    <label for="overunder-if-digit">If Last Digit Is</label>
-                                    <input type="number" id="overunder-if-digit" value="5" min="0" max="9" class="control-select">
-                                </div>
-                                <div class="control-group">
-                                    <label for="overunder-stake">Stake (per contract)</label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="overunder-stake" value="0.35" min="0.35" step="0.01">
-                                        <span class="unit">USD</span>
-                                    </div>
-                                </div>
-                                <button onclick="executeConditionalOverUnder()" class="btn-secondary">
-                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"/>
-                                    </svg>
-                                    <span>Execute Conditional</span>
-                                </button>
-                            </div>
-
-                            <!-- Match/Differ Multi-Market -->
-                            <div class="hedge-card hedge-card-wide">
-                                <h3>Match/Differ (Multi-Market)</h3>
-                                <p class="card-description">DIFFER on all selected markets, MATCH on one</p>
-                                <div class="control-group">
-                                    <label>Select Markets for DIFFER</label>
-                                    <div class="checkbox-group">
-                                        <label><input type="checkbox" id="md-r10" value="R_10"> Volatility 10</label>
-                                        <label><input type="checkbox" id="md-r25" value="R_25"> Volatility 25</label>
-                                        <label><input type="checkbox" id="md-r50" value="R_50" checked> Volatility 50</label>
-                                        <label><input type="checkbox" id="md-r75" value="R_75" checked> Volatility 75</label>
-                                        <label><input type="checkbox" id="md-r100" value="R_100" checked> Volatility 100</label>
-                                    </div>
-                                </div>
-                                <div class="control-group">
-                                    <label for="matchdiffer-match-market">Market for MATCH</label>
-                                    <select id="matchdiffer-match-market" class="control-select">
-                                        <option value="R_10">Volatility 10 Index</option>
-                                        <option value="R_25">Volatility 25 Index</option>
-                                        <option value="R_50" selected>Volatility 50 Index</option>
-                                        <option value="R_75">Volatility 75 Index</option>
-                                        <option value="R_100">Volatility 100 Index</option>
-                                    </select>
-                                </div>
-                                <div class="control-group">
-                                    <label for="matchdiffer-digit">Prediction Digit</label>
-                                    <input type="number" id="matchdiffer-digit" value="5" min="0" max="9" class="control-select">
-                                </div>
-                                <div class="control-group">
-                                    <label for="matchdiffer-stake">Stake (per contract)</label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="matchdiffer-stake" value="0.35" min="0.35" step="0.01">
-                                        <span class="unit">USD</span>
-                                    </div>
-                                </div>
-                                <button onclick="executeMultiMarketMatchDiffer()" class="btn-secondary">
-                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"/>
-                                    </svg>
-                                    <span>Execute Multi-Market</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Account Overview -->
             <div class="section-header" style="margin-top: 30px;">
@@ -1324,6 +1113,239 @@
         </section>
 
         <!-- Hedging Interface -->
+        <section class="hedging-interface" id="hedging-interface" style="display: none;">
+            <!-- Hedge Master Section -->
+            <div class="hedge-master-container">
+                <div class="section-header">
+                    <h2>🛡️ Ghost Hedge Master</h2>
+                </div>
+
+                <!-- Lookback Hedge (Main Focus - Always Expanded) -->
+                <div class="hedge-card hedge-card-primary">
+                    <h3>🛡️ Lookback Hedge (HL / CL)</h3>
+                    <p class="card-description">High-Low + Close-Low contracts - Main hedging strategy</p>
+                    <div class="hedge-inputs-grid">
+                        <div class="control-group">
+                            <label for="lookback-market">Market</label>
+                            <select id="lookback-market" class="control-select">
+                                <option value="R_10">Volatility 10 Index</option>
+                                <option value="R_25">Volatility 25 Index</option>
+                                <option value="R_50">Volatility 50 Index</option>
+                                <option value="R_75">Volatility 75 Index</option>
+                                <option value="R_100" selected>Volatility 100 Index</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="lookback-duration">Duration</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="lookback-duration" value="1" min="1" step="1">
+                                <span class="unit">Minutes</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="lookback-stake">Stake (per contract)</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="lookback-stake" value="0.35" min="0.35" step="0.01">
+                                <span class="unit">USD</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        onclick="executeLookbackHedge(document.getElementById('lookback-market').value, parseFloat(document.getElementById('lookback-stake').value), parseInt(document.getElementById('lookback-duration').value))"
+                        class="btn-primary btn-large">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                stroke-width="2" />
+                        </svg>
+                        <span>🛡️ Execute Lookback Hedge</span>
+                    </button>
+                </div>
+
+                <!-- Other Hedging Strategies (Collapsible) -->
+                <div class="card" style="margin-top: 20px;">
+                    <h4 class="collapsible-header" onclick="toggleSection('other-hedges')">
+                        <span>Other Hedging Strategies</span>
+                        <svg class="collapse-arrow collapsed" id="arrow-other-hedges" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </h4>
+                    <div class="collapsible-content collapsed" id="other-hedges">
+                        <div class="hedge-grid">
+                            <!-- Dual Side Hedge -->
+                            <div class="hedge-card">
+                                <h3>Dual Side (High/Low)</h3>
+                                <p class="card-description">Simultaneous CALL + PUT contracts</p>
+                                <div class="control-group">
+                                    <label for="dual-market">Market</label>
+                                    <select id="dual-market" class="control-select">
+                                        <option value="R_10">Volatility 10 Index</option>
+                                        <option value="R_25">Volatility 25 Index</option>
+                                        <option value="R_50">Volatility 50 Index</option>
+                                        <option value="R_75">Volatility 75 Index</option>
+                                        <option value="R_100" selected>Volatility 100 Index</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="dual-stake">Stake (per contract)</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="dual-stake" value="0.35" min="0.35" step="0.01">
+                                        <span class="unit">USD</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onclick="executeDualHedge(document.getElementById('dual-market').value, parseFloat(document.getElementById('dual-stake').value))"
+                                    class="btn-secondary">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                            stroke-width="2" />
+                                    </svg>
+                                    <span>Open Dual</span>
+                                </button>
+                            </div>
+
+                            <!-- Multi-Entry -->
+                            <div class="hedge-card">
+                                <h3>Multi-Entry (2-4 Contracts)</h3>
+                                <p class="card-description">Multiple contracts with 50ms delay</p>
+                                <div class="control-group">
+                                    <label for="multi-market">Market</label>
+                                    <select id="multi-market" class="control-select">
+                                        <option value="R_10">Volatility 10 Index</option>
+                                        <option value="R_25">Volatility 25 Index</option>
+                                        <option value="R_50">Volatility 50 Index</option>
+                                        <option value="R_75">Volatility 75 Index</option>
+                                        <option value="R_100" selected>Volatility 100 Index</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="multi-type">Contract Type</label>
+                                    <select id="multi-type" class="control-select">
+                                        <option value="CALL">High (CALL)</option>
+                                        <option value="PUT">Low (PUT)</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="multi-count">Number of Contracts</label>
+                                    <input type="number" id="multi-count" value="4" min="2" max="4"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="multi-stake">Stake (per contract)</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="multi-stake" value="0.35" min="0.35" step="0.01">
+                                        <span class="unit">USD</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onclick="openMultipleContracts(parseInt(document.getElementById('multi-count').value), document.getElementById('multi-type').value, document.getElementById('multi-market').value, parseFloat(document.getElementById('multi-stake').value))"
+                                    class="btn-secondary">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                            stroke-width="2" />
+                                    </svg>
+                                    <span>Execute Multi</span>
+                                </button>
+                            </div>
+
+                            <!-- Over/Under Advanced -->
+                            <div class="hedge-card">
+                                <h3>Over/Under (Conditional)</h3>
+                                <p class="card-description">Smart Over/Under based on last N digits</p>
+                                <div class="control-group">
+                                    <label for="overunder-market">Market</label>
+                                    <select id="overunder-market" class="control-select">
+                                        <option value="R_10">Volatility 10 Index</option>
+                                        <option value="R_25">Volatility 25 Index</option>
+                                        <option value="R_50">Volatility 50 Index</option>
+                                        <option value="R_75">Volatility 75 Index</option>
+                                        <option value="R_100" selected>Volatility 100 Index</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="overunder-barrier">Barrier Digit</label>
+                                    <input type="number" id="overunder-barrier" value="5" min="0" max="9"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="overunder-check-last">Check Last N Digits</label>
+                                    <input type="number" id="overunder-check-last" value="5" min="1" max="100"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="overunder-if-digit">If Last Digit Is</label>
+                                    <input type="number" id="overunder-if-digit" value="5" min="0" max="9"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="overunder-stake">Stake (per contract)</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="overunder-stake" value="0.35" min="0.35" step="0.01">
+                                        <span class="unit">USD</span>
+                                    </div>
+                                </div>
+                                <button onclick="executeConditionalOverUnder()" class="btn-secondary">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                            stroke-width="2" />
+                                    </svg>
+                                    <span>Execute Conditional</span>
+                                </button>
+                            </div>
+
+                            <!-- Match/Differ Multi-Market -->
+                            <div class="hedge-card hedge-card-wide">
+                                <h3>Match/Differ (Multi-Market)</h3>
+                                <p class="card-description">DIFFER on all selected markets, MATCH on one</p>
+                                <div class="control-group">
+                                    <label>Select Markets for DIFFER</label>
+                                    <div class="checkbox-group">
+                                        <label><input type="checkbox" id="md-r10" value="R_10"> Volatility 10</label>
+                                        <label><input type="checkbox" id="md-r25" value="R_25"> Volatility 25</label>
+                                        <label><input type="checkbox" id="md-r50" value="R_50" checked> Volatility
+                                            50</label>
+                                        <label><input type="checkbox" id="md-r75" value="R_75" checked> Volatility
+                                            75</label>
+                                        <label><input type="checkbox" id="md-r100" value="R_100" checked> Volatility
+                                            100</label>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <label for="matchdiffer-match-market">Market for MATCH</label>
+                                    <select id="matchdiffer-match-market" class="control-select">
+                                        <option value="R_10">Volatility 10 Index</option>
+                                        <option value="R_25">Volatility 25 Index</option>
+                                        <option value="R_50" selected>Volatility 50 Index</option>
+                                        <option value="R_75">Volatility 75 Index</option>
+                                        <option value="R_100">Volatility 100 Index</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="matchdiffer-digit">Prediction Digit</label>
+                                    <input type="number" id="matchdiffer-digit" value="5" min="0" max="9"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="matchdiffer-stake">Stake (per contract)</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="matchdiffer-stake" value="0.35" min="0.35" step="0.01">
+                                        <span class="unit">USD</span>
+                                    </div>
+                                </div>
+                                <button onclick="executeMultiMarketMatchDiffer()" class="btn-secondary">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                            stroke-width="2" />
+                                    </svg>
+                                    <span>Execute Multi-Market</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
     </main>
 

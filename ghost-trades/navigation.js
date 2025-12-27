@@ -23,12 +23,15 @@ function setupNavigation() {
         showSection('ghost-eodd');
     });
 
-    // Hedging is now part of dashboard, no separate nav needed
+    hedgingNav.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSection('hedging');
+    });
 }
 
 function showSection(sectionName) {
     console.log('🔄 Showing section:', sectionName);
-    
+
     // Handle auth-container explicitly
     if (sectionName === 'auth-container') {
         if (authContainer) {
@@ -39,6 +42,7 @@ function showSection(sectionName) {
         tradingInterface.style.display = 'none';
         ghostaiInterface.style.display = 'none';
         ghosteoddInterface.style.display = 'none';
+        hedgingInterface.style.display = 'none';
     } else {
         // Hide auth container when showing any authenticated section
         if (authContainer) {
@@ -49,11 +53,13 @@ function showSection(sectionName) {
         tradingInterface.style.display = (sectionName === 'speedbot') ? 'flex' : 'none';
         ghostaiInterface.style.display = (sectionName === 'ghostai') ? 'flex' : 'none';
         ghosteoddInterface.style.display = (sectionName === 'ghost-eodd') ? 'flex' : 'none';
+        hedgingInterface.style.display = (sectionName === 'hedging') ? 'flex' : 'none';
 
         dashboardNav.classList.toggle('active', sectionName === 'dashboard');
         speedbotNav.classList.toggle('active', sectionName === 'speedbot');
         ghostaiNav.classList.toggle('active', sectionName === 'ghostai');
         ghosteoddNav.classList.toggle('active', sectionName === 'ghost-eodd');
+        hedgingNav.classList.toggle('active', sectionName === 'hedging');
 
         // Initialize chart only when speedbot is shown
         if (sectionName === 'speedbot' && !currentChart) {
