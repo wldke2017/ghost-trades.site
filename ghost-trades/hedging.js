@@ -202,20 +202,17 @@ function executeLookbackHedge(symbol, stake, duration = 1) {
     // Create unique run ID for this hedge
     const hedgeRunId = `hedge_lookback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // LBFLOATCALL (High-Low) contract request - NO BASIS parameter for Lookback contracts
+    // LBFLOATCALL (High-Low) PROPOSAL request
     const highLowRequest = {
-        "buy": 1,
-        "price": stake,
-        "parameters": {
-            "amount": stake,
-            "contract_type": "LBFLOATCALL",
-            "currency": "USD",
-            "duration": duration,
-            "duration_unit": "m",
-            "symbol": symbol
-        },
+        "proposal": 1,
+        "amount": stake,
+        "contract_type": "LBFLOATCALL",
+        "currency": "USD",
+        "duration": duration,
+        "duration_unit": "m",
+        "symbol": symbol,
         "passthrough": {
-            "purpose": "lookback_hedge",
+            "purpose": "lookback_hedge_proposal",
             "hedge_type": "lookback",
             "contract_type": "LBFLOATCALL",
             "run_id": hedgeRunId,
@@ -224,20 +221,17 @@ function executeLookbackHedge(symbol, stake, duration = 1) {
         }
     };
 
-    // LBFLOATPUT (Close-Low) contract request - NO BASIS parameter for Lookback contracts
+    // LBFLOATPUT (Close-Low) PROPOSAL request
     const closeLowRequest = {
-        "buy": 1,
-        "price": stake,
-        "parameters": {
-            "amount": stake,
-            "contract_type": "LBFLOATPUT",
-            "currency": "USD",
-            "duration": duration,
-            "duration_unit": "m",
-            "symbol": symbol
-        },
+        "proposal": 1,
+        "amount": stake,
+        "contract_type": "LBFLOATPUT",
+        "currency": "USD",
+        "duration": duration,
+        "duration_unit": "m",
+        "symbol": symbol,
         "passthrough": {
-            "purpose": "lookback_hedge",
+            "purpose": "lookback_hedge_proposal",
             "hedge_type": "lookback",
             "contract_type": "LBFLOATPUT",
             "run_id": hedgeRunId,
@@ -261,12 +255,12 @@ function executeLookbackHedge(symbol, stake, duration = 1) {
 
     // Send both requests simultaneously
     sendAPIRequest(highLowRequest)
-        .then(() => console.log(`✅ LBFLOATCALL (High-Low) contract placed for ${symbol}`))
-        .catch(error => console.error(`❌ Failed to place High-Low contract:`, error));
+        .then(() => console.log(`✅ LBFLOATCALL (High-Low) PROPOSAL requested for ${symbol}`))
+        .catch(error => console.error(`❌ Failed to request High-Low proposal:`, error));
 
     sendAPIRequest(closeLowRequest)
-        .then(() => console.log(`✅ LBFLOATPUT (Close-Low) contract placed for ${symbol}`))
-        .catch(error => console.error(`❌ Failed to place Close-Low contract:`, error));
+        .then(() => console.log(`✅ LBFLOATPUT (Close-Low) PROPOSAL requested for ${symbol}`))
+        .catch(error => console.error(`❌ Failed to request Close-Low proposal:`, error));
 
     // Update UI status
     updateHedgeStatus('lookback', symbol, stake);

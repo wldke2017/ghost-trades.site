@@ -554,6 +554,39 @@ function handleIncomingMessage(msg) {
             }
             break;
 
+        case 'proposal':
+            if (data.proposal) {
+                const proposal = data.proposal;
+                const passthrough = data.echo_req.passthrough;
+
+                // Check if this is a Lookback Hedge proposal
+                if (passthrough && passthrough.purpose === 'lookback_hedge_proposal') {
+                    console.log(`✅ Proposal received for Lookback Hedge (${passthrough.contract_type}): ${proposal.id}`);
+
+                    // Execute the BUY request using the proposal ID
+                    const buyRequest = {
+                        "buy": proposal.id,
+                        "price": proposal.ask_price,
+                        "passthrough": {
+                            "purpose": "lookback_hedge", // Switch back to original purpose for buy handler
+                            "hedge_type": "lookback",
+                            "contract_type": passthrough.contract_type,
+                            "run_id": passthrough.run_id,
+                            "symbol": passthrough.symbol,
+                            "stake": passthrough.stake
+                        }
+                    };
+
+                    sendAPIRequest(buyRequest)
+                        .then(() => console.log(`✅ Buy request sent for ${passthrough.contract_type} on ${passthrough.symbol}`))
+                        .catch(error => {
+                            console.error(`❌ Failed to buy proposal ${proposal.id}:`, error);
+                            showToast(`Failed to execute ${passthrough.contract_type}: ${error.message}`, 'error');
+                        });
+                }
+            }
+            break;
+
         case 'proposal_open_contract':
             const contract = data.proposal_open_contract;
 
