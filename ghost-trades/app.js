@@ -207,6 +207,35 @@ function handleIncomingMessage(msg) {
                 // Update UI using new UI module
                 updateAuthUI(data);
 
+                // --- CRITICAL SAFETY FIX: STOP ALL BOTS ON ACCOUNT SWITCH ---
+                let botsStopped = false;
+
+                // 1. Ghost AI Bot
+                if (typeof isBotRunning !== 'undefined' && isBotRunning) {
+                    console.warn('⚠️ Safety: Stopping Ghost AI Bot due to account switch/login');
+                    stopGhostAiBot();
+                    botsStopped = true;
+                }
+
+                // 2. Even/Odd Bot
+                if (typeof evenOddBotState !== 'undefined' && evenOddBotState.isTrading) {
+                    console.warn('⚠️ Safety: Stopping Even/Odd Bot due to account switch/login');
+                    stopEvenOddBot();
+                    botsStopped = true;
+                }
+
+                // 3. Market Summary Bot (Check global state if it exists)
+                if (window.marketSummaryBotState && window.marketSummaryBotState.isActive) {
+                    console.warn('⚠️ Safety: Stopping Market Summary Bot due to account switch/login');
+                    stopMarketSummaryBot();
+                    botsStopped = true;
+                }
+
+                if (botsStopped) {
+                    showToast('Safety: All running bots have been stopped due to account switch.', 'warning', 5000);
+                }
+                // -----------------------------------------------------------
+
                 // Check if it's OAuth authorization
                 const isOAuth = data.echo_req && data.echo_req.passthrough && data.echo_req.passthrough.purpose === 'oauth_login';
 
