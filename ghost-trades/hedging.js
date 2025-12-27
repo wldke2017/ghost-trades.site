@@ -8,9 +8,10 @@
 const hedgingState = {
     activeDualHedges: {}, // { symbol: { callContractId, putContractId, stake, timestamp } }
     activeMultiHedges: {}, // { symbol: { contracts: [], stake, timestamp } }
-    activeLookbackHedges: {}, // { symbol: { highLowContractId, closeLowContractId, stake, timestamp } }
+    activeLookbackHedges: {}, // { runId: { symbol, hlContractId, clContractId, stake, duration, timestamp, hlPL: 0, clPL: 0 } }
     totalHedgeProfit: 0,
-    hedgeHistory: []
+    hedgeHistory: [],
+    lookbackHistory: [] // Store completed Lookback trades
 };
 
 /**
@@ -180,7 +181,7 @@ function executeMultiHedge(symbol, stake, count) {
  */
 function executeLookbackHedge(symbol, stake, duration = 1) {
     console.log(`🛡️ Executing Lookback Hedge on ${symbol} with stake $${stake} and duration ${duration}m`);
-    
+
     // Validate inputs
     if (!symbol || !stake || stake < 0.35) {
         showToast('Invalid parameters for Lookback hedge', 'error');
@@ -245,14 +246,17 @@ function executeLookbackHedge(symbol, stake, duration = 1) {
         }
     };
 
-    // Track the hedge
-    hedgingState.activeLookbackHedges[symbol] = {
-        highLowContractId: null,
-        closeLowContractId: null,
+    // Track the hedge with runId as key
+    hedgingState.activeLookbackHedges[hedgeRunId] = {
+        symbol: symbol,
+        hlContractId: null,
+        clContractId: null,
         stake: stake,
         duration: duration,
         timestamp: Date.now(),
-        runId: hedgeRunId
+        runId: hedgeRunId,
+        hlPL: 0,
+        clPL: 0
     };
 
     // Send both requests simultaneously
@@ -267,6 +271,9 @@ function executeLookbackHedge(symbol, stake, duration = 1) {
     // Update UI status
     updateHedgeStatus('lookback', symbol, stake);
     showToast(`Lookback Hedge executed on ${symbol} (${duration}m)`, 'success');
+
+    // Update display
+    updateLookbackContractsDisplay();
 }
 
 /**
@@ -589,6 +596,293 @@ function executeMultiMarketMatchDiffer() {
     }, differMarkets.length * 50);
 
     showToast(`Multi-Market Match/Differ executed: ${differMarkets.length} DIFFER + 1 MATCH`, 'success');
+}
+
+// ===================================
+// LOOKBACK HEDGE ENHANCEMENTS
+// ===================================
+
+/**
+ * Toggle duration mode between Auto and Manual
+ */
+function toggleDurationMode() {
+    const durationInput = document.getElementById('lookback-duration');
+    const isAuto = document.querySelector('input[name="duration-mode"]:checked').value === 'auto';
+    durationInput.disabled = isAuto;
+
+    if (isAuto) {
+        const symbol = document.getElementById('lookback-market').value;
+        const duration = calculateDynamicDuration(symbol);
+        durationInput.value = duration;
+    }
+}
+
+/**
+ * Calculate optimal duration based on market volatility
+ */
+function calculateDynamicDuration(symbol) {
+    const recentTicks = marketTickHistory[symbol] || [];
+
+    if (recentTicks.length < 20) {
+        console.log('📊 Insufficient data for dynamic duration, using default 1 min');
+        return 1;
+    }
+
+    // Calculate volatility from last 20 ticks
+    const prices = recentTicks.slice(-20).map(t => parseFloat(t.quote));
+    const high = Math.max(...prices);
+    const low = Math.min(...prices);
+    const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+    const volatility = ((high - low) / avgPrice) * 100;
+
+    console.log(`📊 Market volatility: ${volatility.toFixed(3)}%`);
+
+    // Dynamic duration based on volatility
+    if (volatility > 1.5) {
+        console.log('⚡ High volatility detected: Using 1 minute duration');
+        return 1;
+    } else if (volatility > 0.8) {
+        console.log('📈 Moderate volatility: Using 2 minute duration');
+        return 2;
+    } else {
+        console.log('📉 Low volatility: Using 3 minute duration');
+        return 3;
+    }
+}
+
+/**
+ * Execute Lookback Hedge with mode selection
+ */
+function executeLookbackHedgeWithMode() {
+    const symbol = document.getElementById('lookback-market').value;
+    const stake = parseFloat(document.getElementById('lookback-stake').value);
+    const isAuto = document.querySelector('input[name="duration-mode"]:checked').value === 'auto';
+
+    let duration;
+    if (isAuto) {
+        duration = calculateDynamicDuration(symbol);
+        document.getElementById('lookback-duration').value = duration;
+    } else {
+        duration = parseInt(document.getElementById('lookback-duration').value);
+    }
+
+    executeLookbackHedge(symbol, stake, duration);
+}
+
+/**
+ * Update Lookback hedge state with contract IDs
+ */
+function updateLookbackHedgeContract(runId, contractType, contractId, buyPrice) {
+    if (hedgingState.activeLookbackHedges[runId]) {
+        if (contractType === 'LBFLOATCALL') {
+            hedgingState.activeLookbackHedges[runId].hlContractId = contractId;
+            hedgingState.activeLookbackHedges[runId].hlBuyPrice = buyPrice;
+        } else if (contractType === 'LBFLOATPUT') {
+            hedgingState.activeLookbackHedges[runId].clContractId = contractId;
+            hedgingState.activeLookbackHedges[runId].clBuyPrice = buyPrice;
+        }
+        updateLookbackContractsDisplay();
+    }
+}
+
+/**
+ * Update Lookback contract P/L in real-time
+ */
+function updateLookbackContractPL(contractId, currentPL) {
+    for (const runId in hedgingState.activeLookbackHedges) {
+        const hedge = hedgingState.activeLookbackHedges[runId];
+        if (hedge.hlContractId === contractId) {
+            hedge.hlPL = currentPL;
+            updateLookbackContractsDisplay();
+            break;
+        } else if (hedge.clContractId === contractId) {
+            hedge.clPL = currentPL;
+            updateLookbackContractsDisplay();
+            break;
+        }
+    }
+}
+
+/**
+ * Display active Lookback contracts
+ */
+function updateLookbackContractsDisplay() {
+    const container = document.getElementById('lookback-contracts-list');
+    const totalPLElement = document.getElementById('lookback-total-pl');
+    const closeAllBtn = document.getElementById('close-all-lookback');
+
+    const activeHedges = Object.keys(hedgingState.activeLookbackHedges);
+
+    if (activeHedges.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 20px;">No active hedges</p>';
+        totalPLElement.textContent = '$0.00';
+        totalPLElement.style.color = 'var(--text-primary)';
+        closeAllBtn.style.display = 'none';
+        return;
+    }
+
+    closeAllBtn.style.display = 'block';
+    let totalPL = 0;
+    let html = '';
+
+    activeHedges.forEach(runId => {
+        const hedge = hedgingState.activeLookbackHedges[runId];
+        const pairPL = (hedge.hlPL || 0) + (hedge.clPL || 0);
+        totalPL += pairPL;
+
+        const plColor = pairPL >= 0 ? '#10b981' : '#ef4444';
+        const plSign = pairPL >= 0 ? '+' : '';
+
+        html += `
+            <div style="padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-md); border: 1px solid var(--glass-border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div>
+                        <strong>${hedge.symbol}</strong>
+                        <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 8px;">${hedge.duration}m</span>
+                    </div>
+                    <button onclick="closeLookbackPair('${runId}')" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">
+                        Close Pair
+                    </button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem;">
+                    <div>
+                        <div style="color: var(--text-muted);">HL P/L</div>
+                        <div style="color: ${(hedge.hlPL || 0) >= 0 ? '#10b981' : '#ef4444'};">
+                            ${(hedge.hlPL || 0) >= 0 ? '+' : ''}$${(hedge.hlPL || 0).toFixed(2)}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted);">CL P/L</div>
+                        <div style="color: ${(hedge.clPL || 0) >= 0 ? '#10b981' : '#ef4444'};">
+                            ${(hedge.clPL || 0) >= 0 ? '+' : ''}$${(hedge.clPL || 0).toFixed(2)}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted);">Total P/L</div>
+                        <div style="color: ${plColor}; font-weight: 600;">
+                            ${plSign}$${pairPL.toFixed(2)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    const totalColor = totalPL >= 0 ? '#10b981' : '#ef4444';
+    const totalSign = totalPL >= 0 ? '+' : '';
+    totalPLElement.textContent = `${totalSign}$${totalPL.toFixed(2)}`;
+    totalPLElement.style.color = totalColor;
+}
+
+/**
+ * Close a Lookback hedge pair (both HL and CL contracts)
+ */
+function closeLookbackPair(runId) {
+    const hedge = hedgingState.activeLookbackHedges[runId];
+    if (!hedge) {
+        console.error('Hedge not found:', runId);
+        return;
+    }
+
+    console.log(`🛑 Closing Lookback pair for ${hedge.symbol} (runId: ${runId})`);
+
+    // Send sell requests for both contracts
+    if (hedge.hlContractId) {
+        const sellHL = { "sell": hedge.hlContractId, "price": 0 };
+        sendAPIRequest(sellHL)
+            .then(() => console.log(`✅ Closed HL contract ${hedge.hlContractId}`))
+            .catch(err => console.error(`❌ Failed to close HL:`, err));
+    }
+
+    if (hedge.clContractId) {
+        const sellCL = { "sell": hedge.clContractId, "price": 0 };
+        sendAPIRequest(sellCL)
+            .then(() => console.log(`✅ Closed CL contract ${hedge.clContractId}`))
+            .catch(err => console.error(`❌ Failed to close CL:`, err));
+    }
+
+    showToast(`Closing Lookback pair for ${hedge.symbol}`, 'info');
+}
+
+/**
+ * Close all active Lookback hedges
+ */
+function closeAllLookbackHedges() {
+    const activeHedges = Object.keys(hedgingState.activeLookbackHedges);
+    if (activeHedges.length === 0) {
+        showToast('No active Lookback hedges to close', 'info');
+        return;
+    }
+
+    console.log(`🛑 Closing all ${activeHedges.length} Lookback hedge(s)`);
+    activeHedges.forEach(runId => closeLookbackPair(runId));
+    showToast(`Closing ${activeHedges.length} Lookback hedge pair(s)`, 'info');
+}
+
+/**
+ * Remove completed Lookback hedge and add to history
+ */
+function completeLookbackHedge(runId, finalPL) {
+    const hedge = hedgingState.activeLookbackHedges[runId];
+    if (!hedge) return;
+
+    // Add to history
+    hedgingState.lookbackHistory.unshift({
+        timestamp: Date.now(),
+        symbol: hedge.symbol,
+        duration: hedge.duration,
+        stake: hedge.stake,
+        pl: finalPL
+    });
+
+    // Keep only last 50 trades
+    if (hedgingState.lookbackHistory.length > 50) {
+        hedgingState.lookbackHistory = hedgingState.lookbackHistory.slice(0, 50);
+    }
+
+    // Remove from active
+    delete hedgingState.activeLookbackHedges[runId];
+
+    // Update displays
+    updateLookbackContractsDisplay();
+    updateLookbackHistoryDisplay();
+
+    console.log(`✅ Lookback hedge completed: ${hedge.symbol}, P/L: $${finalPL.toFixed(2)}`);
+}
+
+/**
+ * Update trade history display
+ */
+function updateLookbackHistoryDisplay() {
+    const tbody = document.getElementById('lookback-history-body');
+
+    if (hedgingState.lookbackHistory.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem;">No trade history yet</td></tr>';
+        return;
+    }
+
+    let html = '';
+    hedgingState.lookbackHistory.forEach(trade => {
+        const time = new Date(trade.timestamp).toLocaleTimeString();
+        const plColor = trade.pl >= 0 ? '#10b981' : '#ef4444';
+        const plSign = trade.pl >= 0 ? '+' : '';
+
+        html += `
+            <tr style="border-bottom: 1px solid var(--glass-border);">
+                <td style="padding: 8px;">${time}</td>
+                <td style="padding: 8px;">${trade.symbol}</td>
+                <td style="padding: 8px; text-align: center;">${trade.duration}m</td>
+                <td style="padding: 8px; text-align: right;">$${trade.stake.toFixed(2)}</td>
+                <td style="padding: 8px; text-align: right; color: ${plColor}; font-weight: 600;">
+                    ${plSign}$${trade.pl.toFixed(2)}
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
 }
 
 console.log('✅ Hedging module loaded');

@@ -1149,9 +1149,24 @@
                             </select>
                         </div>
                         <div class="control-group">
+                            <label>Duration Mode</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="radio" name="duration-mode" value="auto" checked
+                                        onchange="toggleDurationMode()">
+                                    <span>Auto</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="radio" name="duration-mode" value="manual"
+                                        onchange="toggleDurationMode()">
+                                    <span>Manual</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="control-group">
                             <label for="lookback-duration">Duration</label>
                             <div class="input-with-unit">
-                                <input type="number" id="lookback-duration" value="1" min="1" step="1">
+                                <input type="number" id="lookback-duration" value="1" min="1" max="5" step="1" disabled>
                                 <span class="unit">Minutes</span>
                             </div>
                         </div>
@@ -1163,15 +1178,69 @@
                             </div>
                         </div>
                     </div>
-                    <button
-                        onclick="executeLookbackHedge(document.getElementById('lookback-market').value, parseFloat(document.getElementById('lookback-stake').value), parseInt(document.getElementById('lookback-duration').value))"
-                        class="btn-primary btn-large">
+                    <button onclick="executeLookbackHedgeWithMode()" class="btn-primary btn-large">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
                                 stroke-width="2" />
                         </svg>
                         <span>🛡️ Execute Lookback Hedge</span>
                     </button>
+
+                    <!-- Open Contracts Section -->
+                    <div class="lookback-open-contracts" style="margin-top: 20px;">
+                        <h4
+                            style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Active Lookback Hedges</span>
+                            <button id="close-all-lookback" onclick="closeAllLookbackHedges()" class="btn-secondary"
+                                style="padding: 6px 12px; font-size: 0.85rem; display: none;">
+                                Close All
+                            </button>
+                        </h4>
+                        <div id="lookback-contracts-list"
+                            style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">
+                            <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 20px;">
+                                No active hedges</p>
+                        </div>
+                        <div class="total-pl"
+                            style="padding: 10px; background: var(--bg-secondary); border-radius: var(--radius-md); text-align: center; font-weight: 600;">
+                            Total P/L: <span id="lookback-total-pl" style="color: var(--text-primary);">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Trade History Section -->
+                    <div class="lookback-history" style="margin-top: 20px;">
+                        <h4 style="margin-bottom: 10px;">Trade History</h4>
+                        <div style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
+                            <table id="lookback-history-table" style="width: 100%; border-collapse: collapse;">
+                                <thead style="position: sticky; top: 0; background: var(--bg-secondary); z-index: 1;">
+                                    <tr>
+                                        <th
+                                            style="padding: 8px; text-align: left; border-bottom: 1px solid var(--glass-border);">
+                                            Time</th>
+                                        <th
+                                            style="padding: 8px; text-align: left; border-bottom: 1px solid var(--glass-border);">
+                                            Symbol</th>
+                                        <th
+                                            style="padding: 8px; text-align: center; border-bottom: 1px solid var(--glass-border);">
+                                            Duration</th>
+                                        <th
+                                            style="padding: 8px; text-align: right; border-bottom: 1px solid var(--glass-border);">
+                                            Stake</th>
+                                        <th
+                                            style="padding: 8px; text-align: right; border-bottom: 1px solid var(--glass-border);">
+                                            P/L</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lookback-history-body">
+                                    <tr>
+                                        <td colspan="5"
+                                            style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+                                            No trade history yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Other Hedging Strategies (Collapsible) -->

@@ -509,6 +509,33 @@ function handleIncomingMessage(msg) {
                     });
                 }
             }
+            // Check if this is a Lookback Hedge trade
+            else if (passthrough && passthrough.purpose === 'lookback_hedge' && passthrough.run_id) {
+                if (contractInfo) {
+                    const runId = passthrough.run_id;
+                    const contractType = passthrough.contract_type;
+
+                    console.log(`✅ Lookback: ${contractType} contract opened: ${contractInfo.contract_id}`);
+
+                    // Update hedge state with contract ID
+                    if (typeof updateLookbackHedgeContract === 'function') {
+                        updateLookbackHedgeContract(runId, contractType, contractInfo.contract_id, contractInfo.buy_price);
+                    }
+
+                    // Subscribe to contract updates for real-time P/L
+                    sendAPIRequest({
+                        "proposal_open_contract": 1,
+                        "contract_id": contractInfo.contract_id,
+                        "subscribe": 1,
+                        "passthrough": {
+                            "purpose": "lookback_hedge",
+                            "run_id": runId,
+                            "contract_type": contractType,
+                            "symbol": passthrough.symbol
+                        }
+                    });
+                }
+            }
             else if (contractInfo) {
                 currentContractId = contractInfo.contract_id;
                 const payout = parseFloat(contractInfo.payout).toFixed(2);
@@ -879,6 +906,49 @@ function handleIncomingMessage(msg) {
                     }
 
                     updateEvenOddProfitLossDisplay();
+                }
+                // Check if this is a Lookback Hedge contract
+                else if (passthrough && passthrough.purpose === 'lookback_hedge') {
+                    const contractId = contract.contract_id;
+                    const profit = parseFloat(contract.profit);
+
+                    // Update real-time P/L
+                    if (typeof updateLookbackContractPL === 'function') {
+                        updateLookbackContractPL(contractId, profit);
+                    }
+
+                    // Handle completed contract
+                    if (contract.is_expired || contract.is_sold) {
+                        console.log(`📊 Lookback contract ${passthrough.contract_type} completed: ${contractId}, P/L: $${profit.toFixed(2)}`);
+
+                        // Check if both contracts in the pair are complete
+                        const runId = passthrough.run_id;
+                        if (hedgingState && hedgingState.activeLookbackHedges && hedgingState.activeLookbackHedges[runId]) {
+                            const hedge = hedgingState.activeLookbackHedges[runId];
+
+                            // Mark this contract as complete
+                            if (passthrough.contract_type === 'LBFLOATCALL') {
+                                hedge.hlComplete = true;
+                            } else if (passthrough.contract_type === 'LBFLOATPUT') {
+                                hedge.clComplete = true;
+                            }
+
+                            // If both are complete, finalize the hedge
+                            if (hedge.hlComplete && hedge.clComplete) {
+                                const totalPL = (hedge.hlPL || 0) + (hedge.clPL || 0);
+                                console.log(`✅ Lookback pair complete: ${hedge.symbol}, Total P/L: $${totalPL.toFixed(2)}`);
+
+                                if (typeof completeLookbackHedge === 'function') {
+                                    completeLookbackHedge(runId, totalPL);
+                                }
+
+                                showToast(`Lookback Hedge closed: ${hedge.symbol}, P/L: ${totalPL >= 0 ? '+' : ''}$${totalPL.toFixed(2)}`, totalPL >= 0 ? 'success' : 'error');
+                            }
+                        }
+
+                        // Unsubscribe from updates
+                        sendAPIRequest({ "forget": contract.id });
+                    }
                 }
                 else if (contract.contract_id === currentContractId) {
                     const status = contract.is_sold ? 'SOLD' : 'EXPIRED';
