@@ -307,11 +307,7 @@ function populateAccountSwitcher(accounts) {
         const option = document.createElement('option');
         option.value = acc.token;
         option.dataset.accountId = acc.id;
-
-        // Show US flag for Real accounts, "USD" for Demo
-        const isDemo = acc.id.startsWith('VRTC');
-        option.textContent = isDemo ? 'USD' : '🇺🇸';
-
+        option.textContent = `${acc.id} (${acc.currency})`;
         select.appendChild(option);
     });
 
