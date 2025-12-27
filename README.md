@@ -1,3 +1,4 @@
+https://ghost-trades-site.onrender.com
 # Ghost Trades & SecureEscrow Monorepo
 
 Multi-app platform hosting both Ghost Trades (binary options trading) and SecureEscrow (liquidity banking) applications.
