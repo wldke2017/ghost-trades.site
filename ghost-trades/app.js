@@ -932,10 +932,13 @@ function handleIncomingMessage(msg) {
 function handleOAuthRedirectAndInit() {
     console.log('🔄 Checking for OAuth redirect...');
     const hash = window.location.hash;
+    const search = window.location.search;
 
-    // 1. FIRST: Check if we're returning from OAuth callback (Deriv uses token1/acct1 format in hash)
-    if (hash && (hash.includes('token1=') || hash.includes('acct1='))) {
-        console.log('🎯 OAuth Hash detected! Processing before UI load...');
+    // 1. FIRST: Check if we're returning from OAuth callback (Deriv uses token1/acct1 format)
+    // Check both Hash and Search Query
+    if ((hash && (hash.includes('token1=') || hash.includes('acct1='))) ||
+        (search && (search.includes('token1=') || search.includes('acct1=')))) {
+        console.log('🎯 OAuth parameters detected! Processing before UI load...');
         // Process the OAuth callback immediately
         if (typeof handleOAuthCallback === 'function') {
             handleOAuthCallback();
