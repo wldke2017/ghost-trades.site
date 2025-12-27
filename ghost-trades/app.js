@@ -200,31 +200,12 @@ function handleIncomingMessage(msg) {
                 console.log("✅ Authorization successful:", data.authorize.loginid);
                 showToast(`Welcome! Logged in as ${data.authorize.loginid}`, 'success');
 
-                loginIdDisplay.textContent = data.authorize.loginid;
-
-                setButtonLoading(loginButton, false);
-
                 // Store login ID in oauthState
                 window.oauthState.login_id = data.authorize.loginid;
-
-                // 🔥 CRITICAL FIX: Save login ID to localStorage
                 localStorage.setItem('deriv_login_id', data.authorize.loginid);
 
-                // ------------------------------------------------------------------
-                // 🔥 CRITICAL FIX: SHOW THE DASHBOARD AND HIDE LOGIN UI
-                // ------------------------------------------------------------------
-
-                // 1. Hide the login form/area
-                const loginInterface = document.querySelector('.auth-container');
-                if (loginInterface) {
-                    loginInterface.style.display = 'none';
-                }
-
-                // 2. Show the main dashboard section (This is the critical line)
-                showSection('dashboard');
-
-                // 3. Update the connection status to show success
-                updateConnectionStatus('connected');
+                // Update UI using new UI module
+                updateAuthUI(data);
 
                 // Check if it's OAuth authorization
                 const isOAuth = data.echo_req && data.echo_req.passthrough && data.echo_req.passthrough.purpose === 'oauth_login';
@@ -242,7 +223,7 @@ function handleIncomingMessage(msg) {
                     statusMessage.textContent = "Loading your account data...";
                 }
 
-                // 🔥 THE FIX: Request balance and active symbols right now
+                // Request balance and active symbols
                 console.log('🔄 Requesting balance and symbols after authorization...');
                 if (typeof requestBalance === 'function') {
                     requestBalance();
@@ -255,21 +236,7 @@ function handleIncomingMessage(msg) {
 
         case 'balance':
             if (data.balance) {
-                const balance = parseFloat(data.balance.balance).toFixed(2);
-                const currency = data.balance.currency;
-
-                balanceDisplay.textContent = formatCurrency(balance, currency);
-
-                const headerBalance = document.getElementById('headerBalance');
-                const headerBalanceAmount = document.getElementById('headerBalanceAmount');
-                const logoutButton = document.getElementById('logoutButton');
-                if (headerBalance && headerBalanceAmount) {
-                    headerBalance.style.display = 'flex';
-                    headerBalanceAmount.textContent = formatCurrency(balance, currency);
-                }
-                if (logoutButton) {
-                    logoutButton.style.display = 'flex';
-                }
+                updateBalanceUI(data.balance.balance, data.balance.currency);
             }
             break;
 
@@ -379,49 +346,8 @@ function handleIncomingMessage(msg) {
                 }
 
                 // 3. Update Ticker Watch Table
-                const row = document.getElementById(`row-${symbol}`);
-                if (row) {
-                    // --- BOT TICK HANDLING ---
-                    // Pass tick to both bots - they will check trade locks internally
-                    if (isBotRunning) {
-                        handleBotTick(data.tick);
-                    }
-                    // --- GHOST_E/ODD BOT TICK HANDLING ---
-                    if (evenOddBotState.isTrading) {
-                        handleEvenOddTick(data.tick);
-                    }
-                    // --- END BOT ---
-
-                    const priceCell = row.cells[1];
-                    const changeCell = row.cells[2];
-
-                    if (lastPrices[symbol]) {
-                        const lastPrice = lastPrices[symbol];
-
-                        priceCell.classList.remove('price-up', 'price-down');
-                        if (price > lastPrice) {
-                            priceCell.classList.add('price-up');
-                        } else if (price < lastPrice) {
-                            priceCell.classList.add('price-down');
-                        }
-
-                        const percentageChange = ((price - lastPrice) / lastPrice) * 100;
-                        changeCell.textContent = `${percentageChange.toFixed(2)}%`;
-
-                        row.style.backgroundColor = (price > lastPrice) ? '#e6ffe6' : '#ffe6e6';
-                        setTimeout(() => {
-                            row.style.backgroundColor = '';
-                        }, 500);
-                    }
-
-                    priceCell.textContent = price.toFixed(5);
-                    lastPrices[symbol] = price;
-
-                    // Update digit analysis if this is the currently selected chart market
-                    if (symbol === CHART_MARKET && typeof updateDigitAnalysisDisplay === 'function') {
-                        updateDigitAnalysisDisplay(symbol);
-                    }
-                }
+                updateTickerUI(symbol, price, lastPrices[symbol]);
+                lastPrices[symbol] = price;
             }
             break;
 
@@ -528,13 +454,13 @@ function handleIncomingMessage(msg) {
 
                 showToast(`Trade placed successfully! Contract ID: ${contractInfo.contract_id}`, 'success');
 
-                tradeMessageContainer.innerHTML = `
+                updateTradeMessageUI(`
                     <svg class="message-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     <span>✅ Trade placed! Contract: ${contractInfo.contract_id} | Payout: ${payout} ${contractInfo.currency}</span>
-                `;
+                `);
 
                 sendAPIRequest({ "proposal_open_contract": 1, "contract_id": currentContractId, "subscribe": 1 });
             }
@@ -898,7 +824,7 @@ function handleIncomingMessage(msg) {
                     const profit = parseFloat(contract.profit).toFixed(2);
                     const classColor = profit >= 0 ? 'price-up' : 'price-down';
 
-                    tradeMessageContainer.innerHTML = `<span class="${classColor}">💵 ${status}! P/L: ${profit} ${contract.currency}</span>`;
+                    updateTradeMessageUI(`<span class="${classColor}">💵 ${status}! P/L: ${profit} ${contract.currency}</span>`);
                     sendAPIRequest({ "forget": contract.id });
                     currentContractId = null;
                 }
@@ -912,10 +838,10 @@ function handleIncomingMessage(msg) {
                     techIndicatorText = ` | EMA: ${emaValue ? emaValue.toFixed(2) : 'N/A'} SMA: ${smaValue ? smaValue.toFixed(2) : 'N/A'}`;
                 }
 
-                tradeMessageContainer.innerHTML = `
+                updateTradeMessageUI(`
                     Contract Open: Running P/L: <span class="${pnlClass}">${pnl} ${contract.currency}</span>
                     (Entry: ${contract.entry_tick_display_value})${techIndicatorText}
-                `;
+                `);
             }
             break;
 
@@ -986,6 +912,11 @@ function handleOAuthRedirectAndInit() {
             statusMessage.textContent = "Restoring your session...";
         }
 
+        // Restore account switcher
+        if (typeof populateAccountSwitcher === 'function') {
+            populateAccountSwitcher(); // Loads from localStorage
+        }
+
         // Connect and authorize with stored token
         connectAndAuthorize(storedToken);
         showSection('dashboard');
@@ -998,40 +929,7 @@ function handleOAuthRedirectAndInit() {
     }
 }
 
-/**
- * Update Ghost AI button states (all three buttons)
- */
-function updateGhostAIButtonStates(isRunning) {
-    const buttons = [
-        document.getElementById('ghost-ai-toggle-button'),
-        document.getElementById('ghost-ai-toggle-button-bottom'),
-        document.getElementById('ghost-ai-toggle-button-history')
-    ];
-
-    buttons.forEach(button => {
-        if (button) {
-            if (isRunning) {
-                button.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="6" y="6" width="12" height="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>Stop Bot</span>
-                `;
-                button.classList.remove('btn-start', 'primary-button');
-                button.classList.add('btn-stop', 'stop-button');
-            } else {
-                button.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <polygon points="5 3 19 12 5 21 5 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>Start Bot</span>
-                `;
-                button.classList.remove('btn-stop', 'stop-button');
-                button.classList.add('btn-start', 'primary-button');
-            }
-        }
-    });
-}
+// function updateGhostAIButtonStates moved to ui.js
 
 // Add this line where you set up other event listeners in app.js
 document.addEventListener('DOMContentLoaded', () => {

@@ -253,6 +253,9 @@ function handleOAuthCallback() {
     console.log('Accounts:', accounts.map(a => ({ id: a.id, currency: a.currency })));
 
     if (accounts.length > 0) {
+        // Save accounts to localStorage for persistence
+        localStorage.setItem('deriv_all_accounts', JSON.stringify(accounts));
+
         // Populate the account switcher dropdown
         populateAccountSwitcher(accounts);
 
@@ -272,6 +275,22 @@ function handleOAuthCallback() {
  * Populates the account switcher dropdown with available accounts
  */
 function populateAccountSwitcher(accounts) {
+    // If no accounts provided, try to load from storage
+    if (!accounts || accounts.length === 0) {
+        const storedAccounts = localStorage.getItem('deriv_all_accounts');
+        if (storedAccounts) {
+            try {
+                accounts = JSON.parse(storedAccounts);
+                console.log('📦 Loaded accounts from localStorage:', accounts.length);
+            } catch (e) {
+                console.error('Failed to parse stored accounts', e);
+                return;
+            }
+        } else {
+            return; // No accounts to show
+        }
+    }
+
     const select = document.getElementById('active-account-select');
     const accountSwitcher = document.getElementById('accountSwitcher');
 

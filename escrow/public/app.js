@@ -1095,28 +1095,142 @@ function showDepositRequestModal() {
 
 function closeDepositRequestModal() {
     document.getElementById('deposit-request-modal').classList.add('hidden');
-    document.getElementById('deposit-request-form').reset();
+    // document.getElementById('deposit-request-form').reset(); // Old form removed
     document.getElementById('mpesa-deposit-form').reset();
     // Reset to manual deposit tab
     switchToManualDeposit();
+    backToMethodSelection(); // Reset manual sub-forms
 }
 
-function initializeDepositTabs() {
-    const manualTab = document.getElementById('manual-deposit-tab');
-    const mpesaTab = document.getElementById('mpesa-deposit-tab');
+function selectManualMethod(method) {
+    document.getElementById('manual-method-selection').classList.add('hidden');
+    if (method === 'ksh') {
+        document.getElementById('ksh-deposit-flow').classList.remove('hidden');
+    } else {
+        document.getElementById('crypto-deposit-flow').classList.remove('hidden');
+    }
+}
 
-    manualTab.addEventListener('click', switchToManualDeposit);
-    mpesaTab.addEventListener('click', switchToMpesaDeposit);
+function backToMethodSelection() {
+    document.getElementById('manual-method-selection').classList.remove('hidden');
+    document.getElementById('ksh-deposit-flow').classList.add('hidden');
+    document.getElementById('crypto-deposit-flow').classList.add('hidden');
 
-    // Start with manual deposit
-    switchToManualDeposit();
+    // Reset steps in ksh flow
+    document.getElementById('ksh-amount-step').classList.remove('hidden');
+    document.getElementById('agent-search-loader').classList.add('hidden');
+    document.getElementById('agent-details-step').classList.add('hidden');
+}
+
+function searchForAgents() {
+    const amount = document.getElementById('ksh-deposit-amount').value;
+    if (!amount || amount < 100) {
+        showToast('Please enter a valid amount (Min 100 Ksh)', 'error');
+        return;
+    }
+
+    document.getElementById('ksh-amount-step').classList.add('hidden');
+    document.getElementById('agent-search-loader').classList.remove('hidden');
+
+    // Fake search for 3 seconds
+    setTimeout(() => {
+        document.getElementById('agent-search-loader').classList.add('hidden');
+        document.getElementById('agent-details-step').classList.remove('hidden');
+    }, 3000);
+}
+
+function copyAgentNumber(number) {
+    navigator.clipboard.writeText(number).then(() => {
+        showToast('Agent number copied!', 'success');
+    });
+}
+
+async function submitKshDeposit(event) {
+    event.preventDefault();
+    const amountKsh = document.getElementById('ksh-deposit-amount').value;
+    const message = document.getElementById('ksh-mpesa-message').value;
+    const screenshot = document.getElementById('ksh-screenshot').files[0];
+
+    // Simple conversion for database (assuming 1 USD = 130 Ksh for UI placeholder)
+    const amountUsd = (parseFloat(amountKsh) / 130).toFixed(2);
+
+    const formData = new FormData();
+    formData.append('amount', amountUsd);
+    if (screenshot) formData.append('screenshot', screenshot);
+    formData.append('notes', `Ksh Deposit: ${amountKsh} Ksh. Message: ${message}`);
+    formData.append('metadata', JSON.stringify({ method: 'ksh', amount_ksh: amountKsh }));
+
+    try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch('/transaction-requests/deposit', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (!response.ok) throw new Error('Failed to submit request');
+
+        showToast('Ksh Deposit request submitted!', 'success');
+        closeDepositRequestModal();
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
+function updateWalletAddress() {
+    const wallet = document.getElementById('crypto-wallet').value;
+    const display = document.getElementById('wallet-address-display');
+    const address = document.getElementById('wallet-address');
+
+    const addresses = {
+        'btc': 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+        'usdt_trc20': 'TR7NHqjeKQxGChE8N6vS2xRZNFXMRoD223',
+        'eth': '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
+    };
+
+    if (wallet && addresses[wallet]) {
+        address.textContent = addresses[wallet];
+        display.classList.remove('hidden');
+    } else {
+        display.classList.add('hidden');
+    }
+}
+
+async function submitCryptoDeposit(event) {
+    event.preventDefault();
+    const amount = document.getElementById('crypto-deposit-amount').value;
+    const wallet = document.getElementById('crypto-wallet').value;
+    const screenshot = document.getElementById('crypto-screenshot').files[0];
+
+    const formData = new FormData();
+    formData.append('amount', amount);
+    formData.append('screenshot', screenshot);
+    formData.append('notes', `Crypto Deposit via ${wallet.toUpperCase()}`);
+    formData.append('metadata', JSON.stringify({ method: 'crypto', walletType: wallet }));
+
+    try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch('/transaction-requests/deposit', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (!response.ok) throw new Error('Failed to submit request');
+
+        showToast('Crypto Deposit request submitted!', 'success');
+        closeDepositRequestModal();
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
 }
 
 function switchToManualDeposit() {
     document.getElementById('manual-deposit-tab').classList.add('active-tab');
     document.getElementById('mpesa-deposit-tab').classList.remove('active-tab');
-    document.getElementById('deposit-request-form').classList.remove('hidden');
+    // document.getElementById('deposit-request-form').classList.remove('hidden'); // Old form
     document.getElementById('mpesa-deposit-form').classList.add('hidden');
+    document.getElementById('manual-method-selection').classList.remove('hidden');
 }
 
 function switchToMpesaDeposit() {

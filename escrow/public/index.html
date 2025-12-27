@@ -981,55 +981,142 @@
                     </button>
                 </div>
 
-                <!-- Manual Deposit Form -->
-                <form id="deposit-request-form" onsubmit="submitDepositRequest(event)" class="deposit-form">
-                    <div class="space-y-4">
+                <!-- Manual Deposit Selection -->
+                <div id="manual-method-selection" class="deposit-form">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Select Deposit Method:</p>
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <button type="button" onclick="selectManualMethod('ksh')"
+                            class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-500 dark:hover:border-blue-400 transition group">
+                            <i class="ti ti-cash text-3xl text-gray-400 group-hover:text-blue-500 mb-2"></i>
+                            <span class="font-bold text-gray-700 dark:text-gray-200">Ksh Deposit</span>
+                        </button>
+                        <button type="button" onclick="selectManualMethod('crypto')"
+                            class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-orange-500 dark:hover:border-orange-400 transition group">
+                            <i
+                                class="ti ti-currency-bitcoin text-3xl text-gray-400 group-hover:text-orange-500 mb-2"></i>
+                            <span class="font-bold text-gray-700 dark:text-gray-200">Crypto Deposit</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ksh Deposit Form -->
+                <div id="ksh-deposit-flow" class="deposit-form hidden">
+                    <button type="button" onclick="backToMethodSelection()"
+                        class="text-xs text-blue-500 hover:underline mb-4 flex items-center">
+                        <i class="ti ti-arrow-left mr-1"></i> Back to selection
+                    </button>
+                    <div id="ksh-amount-step">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount
+                                (Ksh)</label>
+                            <input type="number" id="ksh-deposit-amount" step="1" min="100"
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                                placeholder="Enter amount in Ksh">
+                        </div>
+                        <button type="button" onclick="searchForAgents()"
+                            class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg flex items-center justify-center space-x-2">
+                            <i class="ti ti-search"></i>
+                            <span>Use Agents</span>
+                        </button>
+                    </div>
+
+                    <!-- Agent Search Loader -->
+                    <div id="agent-search-loader" class="hidden py-8 text-center">
+                        <div
+                            class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4">
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-400 animate-pulse">Searching for available agents...</p>
+                    </div>
+
+                    <!-- Agent Details & Final Step -->
+                    <div id="agent-details-step" class="hidden space-y-4">
+                        <div
+                            class="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-4">
+                            <div class="flex items-center space-x-3 mb-3">
+                                <div
+                                    class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                                    AK</div>
+                                <div>
+                                    <p class="font-bold text-gray-900 dark:text-white">ALLAN KARIBA</p>
+                                    <p class="text-sm text-blue-600 dark:text-blue-400">Verified Agent</p>
+                                </div>
+                            </div>
+                            <div
+                                class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-100 dark:border-blue-700">
+                                <p class="text-xs text-gray-500 mb-1">Send Money to:</p>
+                                <p
+                                    class="text-xl font-mono font-bold text-gray-900 dark:text-white flex items-center justify-between">
+                                    0101395336
+                                    <button type="button" onclick="copyAgentNumber('0101395336')"
+                                        class="text-blue-500 text-sm font-normal">Copy</button>
+                                </p>
+                            </div>
+                        </div>
+
+                        <form onsubmit="submitKshDeposit(event)">
+                            <div class="space-y-4">
+                                <div>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">M-Pesa
+                                        Message / Screenshot *</label>
+                                    <textarea id="ksh-mpesa-message" rows="2" required
+                                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 mb-2"
+                                        placeholder="Paste your M-Pesa message here..."></textarea>
+                                    <input type="file" id="ksh-screenshot" accept="image/*"
+                                        class="w-full px-2 py-2 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg">
+                                </div>
+                                <button type="submit"
+                                    class="w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition shadow-lg">
+                                    I Have Sent the Money
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Crypto Deposit Form -->
+                <div id="crypto-deposit-flow" class="deposit-form hidden">
+                    <button type="button" onclick="backToMethodSelection()"
+                        class="text-xs text-blue-500 hover:underline mb-4 flex items-center">
+                        <i class="ti ti-arrow-left mr-1"></i> Back to selection
+                    </button>
+                    <form onsubmit="submitCryptoDeposit(event)" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount
-                                (<span class="currency-label">USD</span>)</label>
-                            <input type="number" id="deposit-amount" step="0.01" min="0.01" required
+                                (USD)</label>
+                            <input type="number" id="crypto-deposit-amount" step="0.01" min="10" required
                                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Enter amount">
+                                placeholder="Enter amount in USD">
                         </div>
-
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment
-                                Screenshot *</label>
-                            <input type="file" id="deposit-screenshot" accept="image/*" required
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select
+                                Wallet</label>
+                            <select id="crypto-wallet" onchange="updateWalletAddress()"
                                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Upload proof of payment (max
-                                5MB)
-                            </p>
+                                <option value="">-- Choose a Wallet --</option>
+                                <option value="btc">Bitcoin (BTC)</option>
+                                <option value="usdt_trc20">USDT (TRC20)</option>
+                                <option value="eth">Ethereum (ETH)</option>
+                            </select>
                         </div>
-
+                        <div id="wallet-address-display"
+                            class="hidden p-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-xl">
+                            <p class="text-xs text-orange-700 dark:text-orange-300 mb-1">Transfer to:</p>
+                            <p id="wallet-address"
+                                class="font-mono text-sm break-all font-bold text-gray-900 dark:text-white"></p>
+                        </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes
-                                (Optional)</label>
-                            <textarea id="deposit-notes" rows="3"
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Add any additional information..."></textarea>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proof of
+                                Payment *</label>
+                            <input type="file" id="crypto-screenshot" accept="image/*" required
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg">
                         </div>
-
-                        <div class="bg-blue-50 dark:bg-blue-900 p-3 rounded-lg">
-                            <p class="text-xs text-blue-800 dark:text-blue-200">
-                                <i class="ti ti-info-circle"></i> Your request will be reviewed by admin. Once
-                                approved,
-                                funds will be added to your wallet.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="flex space-x-3 mt-6">
-                        <button type="button" onclick="closeDepositRequestModal()"
-                            class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                            Cancel
-                        </button>
                         <button type="submit"
-                            class="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition">
-                            Submit Request
+                            class="w-full bg-orange-600 text-white font-bold py-3 rounded-xl hover:bg-orange-700 transition shadow-lg">
+                            Submit Crypto Deposit
                         </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
 
                 <!-- M-Pesa Deposit Form -->
                 <form id="mpesa-deposit-form" onsubmit="submitMpesaDeposit(event)" class="deposit-form hidden">

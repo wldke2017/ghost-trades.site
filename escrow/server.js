@@ -1948,7 +1948,7 @@ app.get('/middleman/earnings', authenticateToken, async (req, res) => {
 // Create deposit request (with screenshot upload)
 app.post('/transaction-requests/deposit', authenticateToken, uploadLimiter, transactionLimiter, upload.single('screenshot'), validate('transactionRequest'), async (req, res) => {
   try {
-    const { amount, notes } = req.body;
+    let { amount, notes, metadata } = req.body;
 
     if (!amount || parseFloat(amount) <= 0) {
       return res.status(400).json({ error: 'Amount must be greater than 0' });
@@ -1958,13 +1958,23 @@ app.post('/transaction-requests/deposit', authenticateToken, uploadLimiter, tran
       return res.status(400).json({ error: 'Screenshot is required for deposit requests' });
     }
 
+    // Parse metadata if it's stringified
+    if (metadata && typeof metadata === 'string') {
+      try {
+        metadata = JSON.parse(metadata);
+      } catch (e) {
+        console.error('Error parsing deposit metadata:', e);
+      }
+    }
+
     const transactionRequest = await TransactionRequest.create({
       user_id: req.user.id,
       type: 'deposit',
       amount: parseFloat(amount),
       screenshot_path: req.file.filename,
       notes: notes || null,
-      status: 'pending'
+      status: 'pending',
+      metadata: metadata || null
     });
 
     // Emit WebSocket event to admin

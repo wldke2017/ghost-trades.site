@@ -69,7 +69,8 @@ const schemas = {
       .required(),
     notes: Joi.string()
       .max(500)
-      .allow('', null)
+      .allow('', null),
+    metadata: Joi.any().allow(null)
   }),
 
   // Dispute resolution
@@ -101,7 +102,7 @@ const schemas = {
 const validate = (schemaName) => {
   return (req, res, next) => {
     const schema = schemas[schemaName];
-    
+
     if (!schema) {
       return res.status(500).json({ error: 'Validation schema not found' });
     }
