@@ -43,7 +43,7 @@ function connectAndAuthorize(token) {
     // Create connection if it doesn't exist
     if (!connection || connection.readyState !== WebSocket.OPEN) {
         connection = new WebSocket(WS_URL);
-        
+
         connection.onopen = () => {
             console.log("🚀 WebSocket Open. Sending Authorization...");
             updateConnectionStatus('connected');
@@ -119,7 +119,7 @@ function attemptReconnect() {
     reconnectAttempts++;
     const delay = RECONNECT_DELAY * reconnectAttempts;
 
-    statusMessage.textContent = `Reconnecting in ${delay/1000}s... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`;
+    statusMessage.textContent = `Reconnecting in ${delay / 1000}s... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`;
 
     reconnectTimer = setTimeout(() => {
         console.log(`🔄 Reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
@@ -157,12 +157,21 @@ function sendAPIRequest(request) {
  * @returns {Array|null} Array of account objects or null if no tokens found
  */
 function getDerivTokensFromURL() {
-    const hash = window.location.hash.substring(1);
-    if (!hash) return null;
+    let params;
 
-    const params = new URLSearchParams(hash);
+    // Check for hash fragment first (default for some OAuth flows)
+    if (window.location.hash) {
+        params = new URLSearchParams(window.location.hash.substring(1));
+    }
+    // Fallback to query parameters (what user is seeing)
+    else if (window.location.search) {
+        params = new URLSearchParams(window.location.search);
+    }
+
+    if (!params) return null;
+
     const accounts = [];
-    
+
     // Deriv returns acct1, token1, acct2, token2, etc.
     let i = 1;
     while (params.has(`acct${i}`)) {
@@ -173,7 +182,7 @@ function getDerivTokensFromURL() {
         });
         i++;
     }
-    
+
     return accounts.length > 0 ? accounts : null;
 }
 
@@ -183,12 +192,22 @@ function getDerivTokensFromURL() {
 function handleOAuthCallback() {
     console.log('🔄 OAuth callback detected, processing...');
 
-    // 🔥 FIX: Use substring(1) to remove the # character
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    
-    console.log('📋 Hash parameters:', hash);
-    
+    let params;
+
+    // Check hash first, then search (query params)
+    if (window.location.hash.length > 1) {
+        params = new URLSearchParams(window.location.hash.substring(1));
+        console.log('📋 Found params in Hash');
+    } else if (window.location.search.length > 1) {
+        params = new URLSearchParams(window.location.search);
+        console.log('📋 Found params in Search Query');
+    } else {
+        console.error('No OAuth parameters found in URL');
+        return;
+    }
+
+    console.log('📋 URL parameters found');
+
     // Check for errors
     const error = params.get('error');
     if (error) {
@@ -231,7 +250,7 @@ function handleOAuthCallback() {
     if (accounts.length > 0) {
         // Populate the account switcher dropdown
         populateAccountSwitcher(accounts);
-        
+
         // Default to the first account (usually the last one used)
         switchAccount(accounts[0].token, accounts[0].id);
     } else {
@@ -250,7 +269,7 @@ function handleOAuthCallback() {
 function populateAccountSwitcher(accounts) {
     const select = document.getElementById('active-account-select');
     const accountSwitcher = document.getElementById('accountSwitcher');
-    
+
     if (!select || !accountSwitcher) {
         console.error('Account switcher elements not found');
         return;
@@ -287,7 +306,7 @@ function populateAccountSwitcher(accounts) {
  */
 function switchAccount(token, accountId) {
     console.log(`🔄 Switching to account: ${accountId}`);
-    
+
     if (!token || !accountId) {
         console.error('Invalid token or account ID');
         showToast('Invalid account selection', 'error');
@@ -366,10 +385,10 @@ async function connectToDerivWithOAuth() {
         // Authorize with OAuth token
         console.log('Authorizing with OAuth token...');
         await authorizeWithOAuthToken();
-        
+
         // Authorization successful - the UI should now be updated by app.js message handler
         console.log('✅ OAuth login completed successfully');
-        
+
         // Clean up URL parameters
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
@@ -443,7 +462,7 @@ function startOAuthLogin() {
 
     // Build the authorization URL without forcing a specific account type
     const authUrl = `${OAUTH_CONFIG.authorization_url}?app_id=${OAUTH_CONFIG.app_id}&l=${OAUTH_CONFIG.language}&brand=${OAUTH_CONFIG.brand}&state=${state}&response_type=token`;
-    
+
     console.log('🚀 Redirecting to Deriv for unified login...');
     console.log('Auth URL:', authUrl);
 
