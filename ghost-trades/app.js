@@ -51,6 +51,12 @@ let globalTradeLocks = {}; // { symbol: { timestamp, botType } }
 const TRADE_LOCK_DURATION = 5000; // 5 seconds lock per symbol (increased for safety)
 // ----------------------------------------
 
+// --- ERROR TOAST DEDUPLICATION ---
+// Prevents showing the same error toast multiple times
+let recentErrors = new Map(); // { errorCode: timestamp }
+const ERROR_TOAST_COOLDOWN = 5000; // Don't show same error within 5 seconds
+// ----------------------------------------
+
 // --- Chart Setup ---
 let currentChart = null;
 let candleSeries = null;
@@ -171,7 +177,26 @@ function handleIncomingMessage(msg) {
 
         const userMessage = errorMessages[data.error.code] || data.error.message;
 
-        showToast(userMessage, 'error');
+        // Check if we've shown this error recently (deduplication)
+        const errorKey = `${data.error.code}_${data.msg_type || 'unknown'}`;
+        const now = Date.now();
+        const lastShown = recentErrors.get(errorKey);
+
+        // Only show toast if this error hasn't been shown in the last 5 seconds
+        if (!lastShown || (now - lastShown) > ERROR_TOAST_COOLDOWN) {
+            showToast(userMessage, 'error');
+            recentErrors.set(errorKey, now);
+
+            // Clean up old entries (older than 10 seconds)
+            for (const [key, timestamp] of recentErrors.entries()) {
+                if (now - timestamp > ERROR_TOAST_COOLDOWN * 2) {
+                    recentErrors.delete(key);
+                }
+            }
+        } else {
+            console.log('🔕 Suppressed duplicate error toast:', errorKey);
+        }
+
         statusMessage.textContent = `❌ ${userMessage}`;
 
         // Re-enable buttons
