@@ -140,7 +140,7 @@ async function handleGenerateStrategy() {
 
     try {
         // Get token from storage similar to auth.js/app.js
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('deriv_token');
 
         const response = await fetch(AI_API_ENDPOINT, {
             method: 'POST',

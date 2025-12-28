@@ -211,6 +211,7 @@ function executeLookbackHedge(symbol, stake, duration = 1) {
         "duration": duration,
         "duration_unit": "m",
         "symbol": symbol,
+        "multiplier": 1,
         "passthrough": {
             "purpose": "lookback_hedge_proposal",
             "hedge_type": "lookback",
@@ -230,6 +231,7 @@ function executeLookbackHedge(symbol, stake, duration = 1) {
         "duration": duration,
         "duration_unit": "m",
         "symbol": symbol,
+        "multiplier": 1,
         "passthrough": {
             "purpose": "lookback_hedge_proposal",
             "hedge_type": "lookback",

@@ -100,14 +100,11 @@ const durationInput = document.getElementById('durationInput');
 const buyButtonUp = document.getElementById('buyButtonUp');
 const buyButtonDown = document.getElementById('buyButtonDown');
 
-// Ghost AI Bot Controls
 const botInitialStake = document.getElementById('botInitialStake');
 const botTargetProfit = document.getElementById('botTargetProfit');
-const startBotButton = document.getElementById('startBotButton');
 const botPayoutPercentage = document.getElementById('botPayoutPercentage');
 const botStopLoss = document.getElementById('botStopLoss');
 const botMaxMartingale = document.getElementById('botMaxMartingale');
-const stopBotButton = document.getElementById('stopBotButton');
 const botLogContainer = document.getElementById('bot-log-container');
 const botHistoryTableBody = document.querySelector('#bot-history-table tbody');
 
@@ -429,6 +426,16 @@ function handleIncomingMessage(msg) {
                         // We can add more context like percentages if needed, but digits array often sufficient for simple strategies
                     };
                     window.aiStrategyRunner.execute(aiTickContext);
+                }
+
+                // 5. Feed Ghost AI Bot
+                if (isBotRunning && typeof handleBotTick === 'function') {
+                    handleBotTick(data.tick);
+                }
+
+                // 6. Feed Ghost Even/Odd Bot
+                if (evenOddBotState && evenOddBotState.isTrading && typeof handleEvenOddTick === 'function') {
+                    handleEvenOddTick(data.tick);
                 }
             }
             break;
