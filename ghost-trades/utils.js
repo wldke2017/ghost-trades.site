@@ -7,13 +7,13 @@ function toggleSection(sectionId) {
     const content = document.getElementById(sectionId);
     const arrow = document.getElementById('arrow-' + sectionId);
     const placeholder = document.getElementById('placeholder-' + sectionId);
-    
+
     if (content && arrow) {
         const isCollapsing = !content.classList.contains('collapsed');
-        
+
         content.classList.toggle('collapsed');
         arrow.classList.toggle('collapsed');
-        
+
         // Show placeholder image when collapsed (only for activity logs)
         if (placeholder) {
             if (isCollapsing) {
@@ -37,28 +37,28 @@ function toggleSection(sectionId) {
  */
 function acquireTradeLock(symbol, botType) {
     const now = Date.now();
-    
+
     // Check if there's an existing lock
     if (globalTradeLocks[symbol]) {
         const lock = globalTradeLocks[symbol];
         const timeSinceLock = now - lock.timestamp;
-        
+
         // If lock is still active (within duration)
         if (timeSinceLock < TRADE_LOCK_DURATION) {
             console.log(`⚠️ Trade lock active on ${symbol} by ${lock.botType} (${(TRADE_LOCK_DURATION - timeSinceLock)}ms remaining)`);
             return false;
         }
-        
+
         // Lock has expired, can be overwritten
         console.log(`🔓 Expired lock on ${symbol} from ${lock.botType}, acquiring new lock for ${botType}`);
     }
-    
+
     // Acquire the lock
     globalTradeLocks[symbol] = {
         timestamp: now,
         botType: botType
     };
-    
+
     console.log(`🔒 Trade lock acquired on ${symbol} by ${botType} for ${TRADE_LOCK_DURATION}ms`);
     return true;
 }
@@ -84,6 +84,20 @@ function clearAllTradeLocks() {
     if (count > 0) {
         console.log(`🔓 Cleared ${count} trade lock(s)`);
     }
+}
+
+/**
+ * Checks if a symbol is allowed for Ghost AI and Ghost Even/Odd bots
+ * Restricted to Volatility, Jump, and Daily Reset Indices (Bear/Bull Market Index)
+ * @param {string} symbol - The market symbol
+ * @returns {boolean} - True if allowed, false otherwise
+ */
+function isAllowedBotMarket(symbol) {
+    return symbol.startsWith('R_') ||
+        symbol.startsWith('1HZ') ||
+        symbol.startsWith('JD') ||
+        symbol === 'RDBEAR' ||
+        symbol === 'RDBULL';
 }
 
 // ===================================
@@ -210,17 +224,17 @@ function clearAllPendingStakes() {
  */
 function checkDistributionData() {
     console.log('=== DISTRIBUTION DATA STATUS ===');
-    
+
     const distributionMarketSelector = document.getElementById('distributionMarketSelector');
     const selectedSymbol = distributionMarketSelector?.value || 'unknown';
-    
+
     console.log(`Selected Market: ${selectedSymbol}`);
     console.log(`\nAll Markets Data:`);
-    
+
     Object.keys(marketFullTickDigits).forEach(symbol => {
         const tickCount = marketFullTickDigits[symbol]?.length || 0;
         console.log(`  ${symbol}: ${tickCount} ticks`);
-        
+
         if (tickCount > 0) {
             const counts = {};
             marketFullTickDigits[symbol].forEach(d => {
@@ -229,7 +243,7 @@ function checkDistributionData() {
             console.log(`    Distribution:`, counts);
         }
     });
-    
+
     console.log(`\nSelected Market (${selectedSymbol}) Details:`);
     if (marketFullTickDigits[selectedSymbol]) {
         console.log(`  Total ticks: ${marketFullTickDigits[selectedSymbol].length}`);
@@ -238,7 +252,7 @@ function checkDistributionData() {
     } else {
         console.log(`  ❌ No data available for ${selectedSymbol}`);
     }
-    
+
     console.log('=== END STATUS ===');
 }
 
@@ -318,27 +332,27 @@ function updateConnectionStatus(status) {
 // Logout function to clear session
 function logout() {
     console.log('🚪 Logging out...');
-    
+
     // Clear localStorage
     localStorage.removeItem('deriv_token');
     localStorage.removeItem('deriv_account_type');
     localStorage.removeItem('deriv_account_id');
     localStorage.removeItem('deriv_login_id');
-    
+
     // Clear OAuth state
     oauthState.access_token = null;
     oauthState.account_type = ACCOUNT_TYPES.DEMO;
     oauthState.account_id = null;
     oauthState.login_id = null;
-    
+
     // Close WebSocket connection
     if (connection && connection.readyState === WebSocket.OPEN) {
         connection.close();
     }
-    
+
     // Show toast
     showToast('Logged out successfully', 'success');
-    
+
     // Reload page to reset state
     setTimeout(() => {
         window.location.reload();

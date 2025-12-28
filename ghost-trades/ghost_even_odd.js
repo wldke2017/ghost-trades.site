@@ -183,12 +183,8 @@ function getCurrentStake() {
 }
 
 function getAvailableMarkets() {
-    // Return all available volatility markets like Ghost AI
-    return Object.keys(marketTickHistory).filter(symbol =>
-        symbol.startsWith('R_') ||
-        symbol.startsWith('JD') ||
-        marketTickHistory[symbol]
-    );
+    // Return filtered markets based on allowed list
+    return Object.keys(marketTickHistory).filter(isAllowedBotMarket);
 }
 
 // Store active patterns configuration

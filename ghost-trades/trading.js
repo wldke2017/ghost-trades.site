@@ -105,9 +105,9 @@ function subscribeToAllVolatilities() {
             else if (symbol.includes('CRASH')) displayName = symbol.replace('CRASH', 'Crash ');
             else if (symbol.includes('BOOM')) displayName = symbol.replace('BOOM', 'Boom ');
 
-            // Range Break
-            else if (symbol.includes('RDBEAR')) displayName = 'Bear Break';
-            else if (symbol.includes('RDBULL')) displayName = 'Bull Break';
+            // Daily Reset Indices
+            else if (symbol.includes('RDBEAR')) displayName = 'Bear Market Index';
+            else if (symbol.includes('RDBULL')) displayName = 'Bull Market Index';
 
             // Step Indices
             else if (symbol === 'STPIDX') displayName = 'Step Index';

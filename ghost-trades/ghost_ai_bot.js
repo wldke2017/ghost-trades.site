@@ -48,20 +48,20 @@ function updateProfitLossDisplay() {
 function cleanupStaleContracts() {
     const now = Date.now();
     const maxAge = 60000; // 60 seconds
-    
+
     for (const [contractId, info] of Object.entries(activeContracts)) {
         const age = now - info.startTime;
         if (age > maxAge) {
             console.warn(`🧹 Cleaning up stale contract ${contractId} (${age}ms old) for ${info.symbol}`);
-            
+
             if (info.strategy === 'S1') {
                 activeS1Symbols.delete(info.symbol);
             }
-            
+
             delete activeContracts[contractId];
             clearPendingStake(info.symbol, 'ghost_ai');
-            
-            addBotLog(`⚠️ Cleaned up stale contract for ${info.symbol} (was active for ${(age/1000).toFixed(1)}s)`, 'warning');
+
+            addBotLog(`⚠️ Cleaned up stale contract for ${info.symbol} (was active for ${(age / 1000).toFixed(1)}s)`, 'warning');
         }
     }
 }
@@ -95,7 +95,7 @@ async function startGhostAiBot() {
     addBotLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'info');
     addBotLog(`🔄 New Bot Session Started`, 'info');
     addBotLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'info');
-    
+
     // Update button states (if updateGhostAIButtonStates function exists)
     if (typeof updateGhostAIButtonStates === 'function') {
         updateGhostAIButtonStates(true);
@@ -107,7 +107,7 @@ async function startGhostAiBot() {
     const payoutPercentage = parseFloat(botPayoutPercentage.value);
     const stopLoss = parseFloat(botStopLoss.value);
     const maxMartingaleSteps = parseInt(botMaxMartingale.value);
-    
+
     // Load new configuration parameters
     const analysisDigits = parseInt(document.getElementById('botAnalysisDigits')?.value || 15);
     const s1UseDigitCheck = document.getElementById('botS1UseDigitCheck')?.checked ?? true;
@@ -192,21 +192,21 @@ async function startGhostAiBot() {
     }
 
     addBotLog(`💰 Initial Stake: $${botState.initialStake.toFixed(2)} | Target: $${botState.targetProfit.toFixed(2)} | Stop Loss: $${botState.stopLoss.toFixed(2)}`);
-    
+
     // Build S1 condition string
     let s1Conditions = [];
     if (s1UseDigitCheck) s1Conditions.push(`Last ${s1CheckDigits} ${s1DigitOperator} ${s1MaxDigit}`);
     if (s1UsePercentage) s1Conditions.push(`Over ${s1Prediction}% ${s1PercentageOperator} ${s1Percentage}%`);
     s1Conditions.push(`Most digit >4 & Least digit <4`);
     addBotLog(`📈 S1: ${s1Conditions.join(' & ')} → ${s1ContractType} ${s1Prediction} | Max Losses: ${s1MaxLosses}`);
-    
+
     // Build S2 condition string
     let s2Conditions = [];
     if (s2UseDigitCheck) s2Conditions.push(`Last ${s2CheckDigits} ${s2DigitOperator} ${s2MaxDigit}`);
     if (s2UsePercentage) s2Conditions.push(`Over ${s2Prediction}% ${s2PercentageOperator} ${s2Percentage}%`);
     s2Conditions.push(`Most digit >4 & Least digit <4`);
     addBotLog(`📉 S2: ${s2Conditions.join(' & ')} → ${s2ContractType} ${s2Prediction}`);
-    
+
     addBotLog(`⏳ Waiting for valid entry conditions...`);
 
     // Initialize technical indicators
@@ -215,7 +215,7 @@ async function startGhostAiBot() {
     // Debug: Log current market data
     console.log('Bot started - Current market data:', marketTickHistory);
     console.log('Bot state:', botState);
-    
+
     // Start periodic cleanup of stale contracts (every 30 seconds)
     if (botLoopInterval) {
         clearInterval(botLoopInterval);
@@ -379,7 +379,7 @@ function updateWinPercentage() {
 
         addBotLog(`📊 Win/Loss: ${botState.winCount}W/${botState.lossCount}L | Win Rate: ${botState.winPercentage.toFixed(1)}%`, 'info');
     }
-    
+
     updateBotStats();
 }
 
@@ -447,7 +447,7 @@ function handleBotTick(tick) {
         // 2. Calculate and store digit percentages (only if we have enough data)
         if (marketTickHistory[symbol].length >= 20) {
             marketDigitPercentages[symbol] = calculateDigitPercentages(symbol);
-            
+
             // Reduce logging frequency
             if (Math.random() < 0.02) {
                 const last7Digits = marketTickHistory[symbol].slice(-7).join(', ');
@@ -477,7 +477,7 @@ function handleBotTick(tick) {
  * Implements Rammy Auto Strategy with percentage analysis and third condition.
  */
 function scanAndPlaceMultipleTrades() {
-    const symbolsToScan = Object.keys(marketTickHistory);
+    const symbolsToScan = Object.keys(marketTickHistory).filter(isAllowedBotMarket);
     let validS1Markets = [];
     let validS2Markets = [];
 
@@ -485,7 +485,7 @@ function scanAndPlaceMultipleTrades() {
     for (const symbol of symbolsToScan) {
         const lastDigits = marketTickHistory[symbol] || [];
         const percentages = marketDigitPercentages[symbol];
-        
+
         // Skip if not enough data
         if (lastDigits.length < 20 || !percentages) continue;
 
@@ -498,18 +498,18 @@ function scanAndPlaceMultipleTrades() {
             const minPercentage = botState.s1Percentage || 70;
             const useDigitCheck = botState.s1UseDigitCheck ?? true;
             const usePercentage = botState.s1UsePercentage ?? true;
-            
+
             // Check conditions based on toggles
             let digitCheckPassed = true;
             let percentageCheckPassed = true;
-            
+
             const lastN = lastDigits.slice(-checkCount);
-            
+
             // Only check digit condition if enabled
             if (useDigitCheck) {
                 digitCheckPassed = lastN.every(d => compareWithOperator(d, botState.s1DigitOperator, botState.s1MaxDigit));
             }
-            
+
             // Only check percentage condition if enabled
             if (usePercentage) {
                 const overPercentage = percentages[`over${prediction}`] || 0;
@@ -550,18 +550,18 @@ function scanAndPlaceMultipleTrades() {
             const contractType = botState.s2ContractType || 'UNDER';
             const useDigitCheck = botState.s2UseDigitCheck ?? true;
             const usePercentage = botState.s2UsePercentage ?? true;
-            
+
             // Check conditions based on toggles
             let digitCheckPassed = true;
             let percentageCheckPassed = true;
-            
+
             const lastN = lastDigits.slice(-checkCount);
-            
+
             // Only check digit condition if enabled
             if (useDigitCheck) {
                 digitCheckPassed = lastN.every(d => compareWithOperator(d, botState.s2DigitOperator, botState.s2MaxDigit));
             }
-            
+
             // Only check percentage condition if enabled
             if (usePercentage) {
                 const overPercentage = percentages[`over${prediction}`] || 0;
@@ -603,13 +603,13 @@ function scanAndPlaceMultipleTrades() {
         // Sort by over percentage (highest first) and pick the best one
         validS1Markets.sort((a, b) => b.overPercentage - a.overPercentage);
         const selectedMarket = validS1Markets[0];
-        
+
         // CRITICAL: Check if symbol already has active S1 trade BEFORE acquiring lock
         if (activeS1Symbols.has(selectedMarket.symbol)) {
             console.log(`⚠️ ${selectedMarket.symbol} already has active S1 trade, skipping`);
             return;
         }
-        
+
         // DUAL PREVENTION: Check both stake-based and signature-based duplicate prevention
         console.log(`🎯 [S1] Checking trade: ${selectedMarket.symbol}, stake=$${selectedMarket.stake}, prediction=${selectedMarket.prediction}`);
 
@@ -732,7 +732,7 @@ function scanAndPlaceMultipleTrades() {
         const lastNStr = selected.lastN.join(', ');
         const s2Operator = botState.s2PercentageOperator || '>=';
         addBotLog(`✓ S2 Recovery: ${validS2Markets.length} market(s) valid | Trading ${selected.symbol} | Last ${selected.lastN.length}: [${lastNStr}] ${botState.s2DigitOperator} ${botState.s2MaxDigit} | Over ${selected.prediction}%: ${selected.overPercentage.toFixed(1)}% ${s2Operator} ${botState.s2Percentage}% | Most: ${selected.mostDigit} (>4) | Least: ${selected.leastDigit} (<4) | ${selected.contractType} ${selected.prediction} | Stake: $${selected.stake.toFixed(2)}`, 'warning');
-        
+
         executeTradeWithTracking(selected);
     }
 }
@@ -853,10 +853,10 @@ function sendBotPurchaseWithStrategy(prediction, stake, symbol, strategy, contra
         "buy": 1,
         "price": stake,
         // Pass the symbol, barrier, and strategy so we know where the result came from
-        "passthrough": { 
-            "purpose": "ghost_ai_trade", 
-            "run_id": botState.runId, 
-            "symbol": symbol, 
+        "passthrough": {
+            "purpose": "ghost_ai_trade",
+            "run_id": botState.runId,
+            "symbol": symbol,
             "barrier": prediction,
             "strategy": strategy,
             "stake": stake
