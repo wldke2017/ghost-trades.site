@@ -3,1528 +3,1557 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecureEscrow - Liquidity Banking Platform</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont/tabler-icons.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js/minified/introjs.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/intro.js/minified/intro.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
-                        },
-                        success: '#10b981',
-                        warning: '#f59e0b',
-                        danger: '#ef4444',
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        body {
-            font-family: 'Inter', sans-serif;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-        }
-
-        .dark .glass-effect {
-            background: rgba(31, 41, 55, 0.9);
-        }
-
-        .modal-backdrop {
-            backdrop-filter: blur(4px);
-        }
-
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .active-tab {
-            background: white;
-            color: #1f2937;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .dark .active-tab {
-            background: #374151;
-            color: white;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ghost_Trades - Advanced Trading Platform</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
 </head>
 
-<body
-    class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 min-h-screen transition-colors duration-300">
+<body>
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
 
-    <!-- Header -->
-    <header class="glass-effect border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-3">
-                    <div
-                        class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                        <img src="icons/wallet.svg" alt="Logo" class="w-6 h-6 filter invert">
+    <header>
+        <div class="header-container">
+            <div class="header-left">
+                <div class="site-branding">
+                    <div class="logo-wrapper">
+                        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        <h1>Ghost_Trades</h1>
                     </div>
-                    <div>
-                        <h1 class="text-xl font-bold text-gray-900 dark:text-white">SecureEscrow</h1>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">Liquidity Banking
-                            Platform</p>
-                    </div>
-                </div>
-
-                <!-- Desktop Menu -->
-                <div class="hidden md:flex items-center space-x-4">
-                    <!-- Dark Mode Toggle -->
-                    <button onclick="toggleDarkMode()"
-                        class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                        <i class="ti ti-sun text-xl text-gray-700 dark:text-gray-300 dark:hidden"></i>
-                        <i class="ti ti-moon text-xl text-gray-300 hidden dark:inline-block"></i>
-                    </button>
-
-                    <!-- Enhanced User Info Display -->
-                    <div
-                        class="flex items-center space-x-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 px-5 py-3 rounded-xl shadow-md border-2 border-blue-200 dark:border-gray-600">
-                        <div
-                            class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                            <i class="ti ti-user text-white text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Welcome back,</p>
-                            <p id="current-user-display" class="text-sm font-bold text-gray-900 dark:text-white">
-                                Loading...</p>
-                        </div>
-                        <div id="user-role-badge" class="hidden px-3 py-1 rounded-full text-xs font-bold"></div>
-                    </div>
-
-                    <!-- Admin Switcher (Hidden for non-admins) -->
-                    <button id="admin-switch-btn" onclick="window.location.href='/escrow/admin.html'"
-                        class="hidden flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-lg hover:shadow-xl transform hover:scale-105">
-                        <i class="ti ti-shield-lock"></i>
-                        <span>Admin Panel</span>
-                    </button>
-
-                    <!-- Onboarding Button -->
-                    <button onclick="startOnboarding()"
-                        class="flex items-center space-x-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:from-teal-600 hover:to-emerald-700 transition shadow-lg hover:shadow-xl transform hover:scale-105">
-                        <i class="ti ti-help"></i>
-                        <span class="hidden lg:inline">Quick Tour</span>
-                    </button>
-
-                    <!-- Settings Button -->
-                    <button onclick="showSettings()" id="settings-btn"
-                        class="flex items-center space-x-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:from-gray-600 hover:to-gray-700 transition shadow-lg hover:shadow-xl transform hover:scale-105">
-                        <i class="ti ti-settings"></i>
-                        <span>Settings</span>
-                    </button>
-
-                    <!-- Logout Button -->
-                    <button onclick="logout()"
-                        class="flex items-center space-x-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition shadow-lg hover:shadow-xl transform hover:scale-105">
-                        <i class="ti ti-logout"></i>
-                        <span>Logout</span>
-                    </button>
-                </div>
-
-                <!-- Mobile Menu Button -->
-                <div class="md:hidden flex items-center">
-                    <button onclick="toggleMobileMenu()"
-                        class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transition">
-                        <i class="ti ti-menu-2 text-2xl"></i>
-                    </button>
+                    <span class="powered-by">powered by <span class="deriv-red">deriv</span></span>
                 </div>
             </div>
-        </div>
-
-        <!-- Mobile Menu Dropdown -->
-        <div id="mobile-menu"
-            class="hidden md:hidden glass-effect border-t border-gray-200 dark:border-gray-700 animate-fade-in">
-            <div class="px-4 py-3 space-y-3">
-                <!-- Mobile User Info -->
-                <div class="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div
-                        class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
-                        <i class="ti ti-user text-white text-xl"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p id="mobile-user-display" class="text-sm font-bold text-gray-900 dark:text-white truncate">
-                            Loading...</p>
-                        <div id="mobile-role-badge"
-                            class="hidden inline-block px-2 py-0.5 rounded-full text-[10px] font-bold mt-1"></div>
-                    </div>
+            <div class="header-right">
+                <!-- Connection Status Indicator -->
+                <div id="connection-status" class="connection-status">
+                    <div class="status-dot"></div>
+                    <span class="status-text">Connecting...</span>
                 </div>
-
-                <!-- Mobile Actions -->
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="toggleDarkMode()"
-                        class="flex items-center justify-center space-x-2 p-3 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium">
-                        <i class="ti ti-sun dark:hidden"></i>
-                        <i class="ti ti-moon hidden dark:inline"></i>
-                        <span>Theme</span>
-                    </button>
-
-                    <button id="mobile-admin-btn" onclick="window.location.href='/escrow/admin.html'"
-                        class="hidden flex items-center justify-center space-x-2 p-3 rounded-lg bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 font-medium">
-                        <i class="ti ti-shield-lock"></i>
-                        <span>Admin</span>
-                    </button>
+                <!-- Account Switcher -->
+                <div class="account-switcher" id="accountSwitcher" style="display: none;">
+                    <label for="active-account-select" style="margin-right: 8px; font-size: 14px;">Account:</label>
+                    <select id="active-account-select" class="account-select">
+                        <option value="">--.--</option>
+                    </select>
                 </div>
-
-                <button onclick="showSettings(); toggleMobileMenu()"
-                    class="w-full flex items-center justify-center space-x-2 p-3 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium mb-2">
-                    <i class="ti ti-settings"></i>
-                    <span>Settings</span>
-                </button>
-
-                <button onclick="logout()"
-                    class="w-full flex items-center justify-center space-x-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400 font-semibold hover:bg-red-100 dark:hover:bg-red-900 transition">
-                    <i class="ti ti-logout"></i>
-                    <span>Logout</span>
+                <div class="balance-display" id="headerBalance" style="display: none;">
+                    <svg class="balance-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    <span class="balance-amount" id="headerBalanceAmount">0.00 USD</span>
+                </div>
+                <button class="btn-logout" id="logoutButton" onclick="logout()" style="display: none;" title="Logout">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                        <polyline points="16 17 21 12 16 7" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                        <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
                 </button>
             </div>
         </div>
+
+        <nav class="nav-bar">
+            <a href="#" id="dashboard-nav" class="nav-item active">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                </svg>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="#" id="speedbot-nav" class="nav-item">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span class="nav-text">Speedbot</span>
+            </a>
+            <a href="#" id="ghostai-nav" class="nav-item">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="2" />
+                    <circle cx="8" cy="16" r="1" fill="currentColor" />
+                    <circle cx="16" cy="16" r="1" fill="currentColor" />
+                    <path d="M9 11V7C9 5.34315 10.3431 4 12 4C13.6569 4 15 5.34315 15 7V11" stroke="currentColor"
+                        stroke-width="2" />
+                </svg>
+                <span class="nav-text">Ghost AI</span>
+            </a>
+            <a href="#" id="ghost-eodd-nav" class="nav-item">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <path d="M8 12L12 16L16 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <span class="nav-text">GHOST E/ODD</span>
+            </a>
+            <a href="#" id="ghostai-strategy-nav" class="nav-item">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7V5.73A2 2 0 0 1 12 2z"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M10 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <span class="nav-text">AI Strategy</span>
+            </a>
+            <a href="#" id="hedging-nav" class="nav-item">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span class="nav-text">Hedging</span>
+            </a>
+        </nav>
     </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="main-content">
+        <!-- Authentication Section -->
+        <section class="auth-container" id="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2>Welcome to Ghost_Trades</h2>
+                    <p class="auth-subtitle">Connect your Deriv account to start trading</p>
+                </div>
+                <div class="auth-body">
+                    <p id="statusMessage" class="status-message">Initializing secure connection...</p>
 
-        <!-- Earnings Dashboard (Middleman Only) -->
-        <div id="earnings-dashboard"
-            class="hidden bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-xl p-6 mb-8 text-white">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                        <i class="ti ti-trophy text-3xl"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-2xl font-bold">My Earnings</h2>
-                        <p class="text-sm text-emerald-100">Performance & Commission Tracker</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4">
-                    <div class="flex items-center space-x-2 mb-2">
-                        <i class="ti ti-wallet text-xl"></i>
-                        <p class="text-sm text-emerald-100">Total Earned</p>
-                    </div>
-                    <p class="text-3xl font-bold"><span id="earnings-total">0.00</span></p>
-                    <p class="text-xs text-emerald-100 mt-1">Lifetime commission</p>
-                </div>
-
-                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4">
-                    <div class="flex items-center space-x-2 mb-2">
-                        <i class="ti ti-calendar-month text-xl"></i>
-                        <p class="text-sm text-emerald-100">This Month</p>
-                    </div>
-                    <p class="text-3xl font-bold"><span id="earnings-month">0.00</span></p>
-                    <p class="text-xs text-emerald-100 mt-1">Current month earnings</p>
-                </div>
-
-                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4">
-                    <div class="flex items-center space-x-2 mb-2">
-                        <i class="ti ti-check-circle text-xl"></i>
-                        <p class="text-sm text-emerald-100">Success Rate</p>
-                    </div>
-                    <p class="text-3xl font-bold"><span id="earnings-success-rate">0</span>%</p>
-                    <p class="text-xs text-emerald-100 mt-1">Completed orders</p>
-                </div>
-
-                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4">
-                    <div class="flex items-center space-x-2 mb-2">
-                        <i class="ti ti-trending-up text-xl"></i>
-                        <p class="text-sm text-emerald-100">Avg Order Value</p>
-                    </div>
-                    <p class="text-3xl font-bold"><span id="earnings-avg-order">0.00</span></p>
-                    <p class="text-xs text-emerald-100 mt-1">Average amount</p>
-                </div>
-
-                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4">
-                    <div class="flex items-center space-x-2 mb-2">
-                        <i class="ti ti-arrow-down-circle text-xl"></i>
-                        <p class="text-sm text-emerald-100 uppercase tracking-wider">Deposited</p>
-                    </div>
-                    <p class="text-3xl font-bold"><span id="total-deposited">0.00</span></p>
-                    <p class="text-xs text-emerald-100 mt-1">Pending: <span id="pending-deposited">0.00</span></p>
-                </div>
-
-                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4">
-                    <div class="flex items-center space-x-2 mb-2">
-                        <i class="ti ti-arrow-up-circle text-xl"></i>
-                        <p class="text-sm text-emerald-100 uppercase tracking-wider">Withdrawn</p>
-                    </div>
-                    <p class="text-3xl font-bold"><span id="total-withdrawn">0.00</span></p>
-                    <p class="text-xs text-emerald-100 mt-1">Pending: <span id="pending-withdrawn">0.00</span></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- My Active Orders (Middleman Only) -->
-        <div id="active-orders-section"
-            class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                        <i class="ti ti-briefcase text-2xl text-blue-600 dark:text-blue-400"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">My Active Orders</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Orders you're currently working on</p>
-                    </div>
-                </div>
-                <span id="active-order-count"
-                    class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-4 py-2 rounded-lg font-bold">0
-                    Active</span>
-            </div>
-
-            <div id="active-orders-list" class="space-y-4">
-                <!-- Active orders will be loaded here -->
-            </div>
-
-            <div id="empty-active-orders" class="hidden text-center py-12">
-                <i class="ti ti-briefcase-off text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
-                <p class="text-gray-500 dark:text-gray-400 font-medium">No active orders</p>
-                <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">Claim an order from the Available Orders
-                    section</p>
-            </div>
-        </div>
-
-        <!-- Analytics Section -->
-        <div
-            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                        <i class="ti ti-chart-line text-2xl text-purple-600 dark:text-purple-400"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Transaction trends and statistics</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Stats Cards -->
-            <div id="earnings-dashboard" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div
-                    class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg p-4">
-                    <p class="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Orders</p>
-                    <p class="text-3xl font-bold text-blue-900 dark:text-blue-100 mt-2" id="stat-total-orders">0</p>
-                </div>
-                <div
-                    class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 rounded-lg p-4">
-                    <p class="text-sm text-green-700 dark:text-green-300 font-medium">Completed</p>
-                    <p class="text-3xl font-bold text-green-900 dark:text-green-100 mt-2" id="stat-completed">0</p>
-                </div>
-                <div
-                    class="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900 dark:to-yellow-800 rounded-lg p-4">
-                    <p class="text-sm text-yellow-700 dark:text-yellow-300 font-medium">Pending</p>
-                    <p class="text-3xl font-bold text-yellow-900 dark:text-yellow-100 mt-2" id="stat-pending">0</p>
-                </div>
-                <div
-                    class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-lg p-4">
-                    <p class="text-sm text-purple-700 dark:text-purple-300 font-medium">Total Commission</p>
-                    <p class="text-3xl font-bold text-purple-900 dark:text-purple-100 mt-2"><span
-                            id="stat-commission">0.00</span></p>
-                </div>
-            </div>
-
-            <!-- Charts -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Order Status
-                        Distribution
-                    </h3>
-                    <canvas id="statusChart"></canvas>
-                </div>
-                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Transaction Volume</h3>
-                    <canvas id="volumeChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Wallet Balance Cards -->
-        <div id="balance-cards" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div
-                class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-xl p-6 text-white transform transition hover:scale-105">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                            <img src="icons/wallet.svg" alt="Wallet" class="w-8 h-8 filter invert">
+                    <!-- OAuth Authentication Options (Primary) -->
+                    <div class="auth-options">
+                        <div class="account-buttons">
+                            <button class="btn btn-oauth btn-unified" onclick="startOAuthLogin()">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM11 7H13V15H11V7ZM11 17H13V19H11V17Z"
+                                        fill="white" fill-opacity="0.2" />
+                                    <path d="M12 2L2 22H22L12 2Z" fill="white" transform="scale(0.6) translate(8,8)" />
+                                </svg>
+                                <span class="btn-text">Log in with Deriv</span>
+                            </button>
                         </div>
-                        <div>
-                            <p class="text-sm text-blue-100 font-medium">Available Balance</p>
-                            <p class="text-xs text-blue-200">Ready to use</p>
+                        <div class="oauth-info">
+                            <small>🔒 Secure & Fast Login • Supports Real & Demo</small>
                         </div>
                     </div>
-                </div>
-                <div class="mt-4">
-                    <p class="text-4xl font-bold"><span id="avail-bal">0.00</span></p>
-                    <p class="text-sm text-blue-100 mt-2">Available for transactions</p>
-                </div>
-                <div class="mt-4 flex space-x-2">
-                    <button onclick="showDepositRequestModal()" id="deposit-btn"
-                        class="flex-1 bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition">
-                        <i class="ti ti-plus"></i> Deposit
-                    </button>
-                    <button onclick="showWithdrawalRequestModal()" id="withdraw-btn"
-                        class="flex-1 bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition">
-                        <i class="ti ti-minus"></i> Withdraw
-                    </button>
-                    <button onclick="refreshBalance()"
-                        class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition"
-                        title="Refresh Balance">
-                        <i class="ti ti-refresh"></i>
-                    </button>
-                </div>
-            </div>
 
-            <div
-                class="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl shadow-xl p-6 text-white transform transition hover:scale-105">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                            <img src="icons/lock.svg" alt="Lock" class="w-8 h-8 filter invert">
-                        </div>
-                        <div>
-                            <p class="text-sm text-purple-100 font-medium">Locked Balance</p>
-                            <p class="text-xs text-purple-200">Secured collateral</p>
-                        </div>
+                    <!-- Toggle for Manual Token -->
+                    <div class="auth-divider">
+                        <span>or</span>
                     </div>
-                </div>
-                <div class="mt-4">
-                    <p class="text-4xl font-bold"><span id="lock-bal">0.00</span></p>
-                    <p class="text-sm text-purple-100 mt-2">Locked in escrow orders</p>
-                </div>
-                <button onclick="showMyTransactionRequests()"
-                    class="mt-4 w-full bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition">
-                    <i class="ti ti-history"></i> My Transaction Requests
-                </button>
-            </div>
-        </div>
 
-        <!-- System Health Cards (Admin Only) -->
-        <div id="system-health-section" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                        <i class="ti ti-wallet text-2xl"></i>
-                    </div>
-                </div>
-                <p class="text-sm opacity-90 mb-1">Total Liquidity</p>
-                <p class="text-3xl font-bold">$<span id="system-total-liquidity">0.00</span></p>
-                <p class="text-xs opacity-75 mt-2">Sum of all available balances</p>
-            </div>
-
-            <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                        <i class="ti ti-lock text-2xl"></i>
-                    </div>
-                </div>
-                <p class="text-sm opacity-90 mb-1">Total Escrowed</p>
-                <p class="text-3xl font-bold">$<span id="system-total-escrowed">0.00</span></p>
-                <p class="text-xs opacity-75 mt-2">Sum of all locked balances</p>
-            </div>
-
-            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                        <i class="ti ti-chart-line text-2xl"></i>
-                    </div>
-                </div>
-                <p class="text-sm opacity-90 mb-1">Projected Commission</p>
-                <p class="text-3xl font-bold">$<span id="system-projected-commission">0.00</span></p>
-                <p class="text-xs opacity-75 mt-2">5% from all active orders</p>
-            </div>
-        </div>
-
-        <!-- Admin Master Overview -->
-        <div id="admin-overview"
-            class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                        <i class="ti ti-dashboard text-2xl text-purple-600 dark:text-purple-400"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Master Overview</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">All wallets and orders at a glance</p>
-                    </div>
-                </div>
-                <div class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg shadow-md">
-                    <div class="flex items-center space-x-2">
-                        <i class="ti ti-crown text-xl"></i>
-                        <span class="font-bold">ADMIN CONTROL</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Wallets Overview -->
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">All Wallets</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-gray-200 dark:border-gray-700">
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    User</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Role</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Status</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Available</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Locked</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Total</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="wallets-overview-body">
-                            <!-- Wallets will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- All Orders Overview -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">All Orders</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-gray-200 dark:border-gray-700">
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    ID</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Amount</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Status</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Buyer</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Middleman</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Created</th>
-                            </tr>
-                        </thead>
-                        <tbody id="orders-overview-body">
-                            <!-- Orders will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Transaction Requests Section (Admin Only) -->
-        <div id="transaction-requests-section"
-            class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
-            <div class="flex items-center space-x-3 mb-6">
-                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                    <i class="ti ti-wallet text-2xl text-green-600 dark:text-green-400"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Transaction Requests</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Pending deposit and withdrawal requests</p>
-                </div>
-            </div>
-
-            <div id="transaction-requests-list" class="space-y-4">
-                <!-- Transaction requests will be loaded here -->
-            </div>
-
-            <div id="empty-transaction-requests" class="text-center py-12 hidden">
-                <div
-                    class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="ti ti-check text-4xl text-green-400"></i>
-                </div>
-                <p class="text-gray-500 dark:text-gray-400 font-medium">No pending requests</p>
-                <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">All requests have been processed!</p>
-            </div>
-        </div>
-
-        <!-- Audit Trail Section (Admin Only) -->
-        <div id="audit-trail-section"
-            class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
-            <div class="flex items-center space-x-3 mb-6">
-                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                    <i class="ti ti-history text-2xl text-blue-600 dark:text-blue-400"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Audit Trail</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Complete log of all system activities</p>
-                </div>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b border-gray-200 dark:border-gray-700">
-                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                User
-                            </th>
-                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Action</th>
-                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Details</th>
-                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Timestamp</th>
-                        </tr>
-                    </thead>
-                    <tbody id="audit-trail-body">
-                        <!-- Audit logs will be loaded here -->
-                    </tbody>
-                </table>
-
-                <div id="empty-audit-trail" class="text-center py-12 hidden">
-                    <div
-                        class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="ti ti-history text-4xl text-gray-400"></i>
-                    </div>
-                    <p class="text-gray-500 dark:text-gray-400 font-medium">No activity logs yet</p>
-                    <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Activity logs will appear here</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Disputed Orders Section (Admin Only) -->
-        <div id="disputed-orders"
-            class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
-            <div class="flex items-center space-x-3 mb-6">
-                <div class="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
-                    <i class="ti ti-alert-triangle text-2xl text-red-600 dark:text-red-400"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Disputed Orders</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Resolve disputes and award funds</p>
-                </div>
-            </div>
-
-            <div id="disputed-orders-list" class="space-y-4">
-                <!-- Disputed orders will be loaded here -->
-            </div>
-
-            <div id="empty-disputed" class="text-center py-12 hidden">
-                <div
-                    class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="ti ti-check text-4xl text-green-400"></i>
-                </div>
-                <p class="text-gray-500 dark:text-gray-400 font-medium">No disputed orders</p>
-                <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">All orders are running smoothly!</p>
-            </div>
-        </div>
-
-        <!-- Create Order Section (Admin Only) -->
-        <div id="create-order-section"
-            class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
-            <div class="flex items-center space-x-3 mb-6">
-                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                    <i class="ti ti-circle-plus text-2xl text-blue-600 dark:text-blue-400"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Create New Escrow Order</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Post a new order for middlemen to claim</p>
-                </div>
-            </div>
-
-            <!-- Virtual Cash Info -->
-            <div
-                class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900 rounded-lg border border-blue-200 dark:border-blue-700">
-                <div class="flex items-start space-x-3">
-                    <i class="ti ti-info-circle text-2xl text-blue-600 dark:text-blue-400 mt-1"></i>
-                    <div>
-                        <h3 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">💰 Virtual Cash System</h3>
-                        <p class="text-sm text-blue-800 dark:text-blue-200 mb-2">
-                            As Admin, you create orders using <strong>virtual cash</strong> - no real money is
-                            deducted
-                            from your wallet!
-                        </p>
-                        <ul class="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
-                            <li>You post an order with any amount (e.g., $1000)</li>
-                            <li>Middleman locks their <strong>real collateral</strong> (same amount) to claim it
-                            </li>
-                            <li>When completed, middleman gets collateral back + 5% commission</li>
-                            <li>The payment is virtual - it's tracking the transaction value</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Order Amount
-                        ($)</label>
-                    <input type="number" id="order-amount" placeholder="Enter amount"
-                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description
-                        (Optional)</label>
-                    <input type="text" id="order-description" placeholder="Order description"
-                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
-                </div>
-            </div>
-
-            <button onclick="createNewOrder()"
-                class="mt-4 w-full md:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition transform hover:scale-105 shadow-lg">
-                Post Order
-            </button>
-        </div>
-
-        <!-- Bulk Create Order Section (Admin Only) -->
-        <div id="bulk-order-section"
-            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700 hidden">
-            <div class="flex items-center justify-between mb-6 cursor-pointer" onclick="toggleBulkSection()">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center">
-                        <i class="ti ti-layers-intersect text-2xl text-indigo-600 dark:text-indigo-400"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Bulk Order Generator</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Generate multiple random orders at once
-                        </p>
-                    </div>
-                </div>
-                <i id="bulk-toggle-icon" class="ti ti-chevron-down text-xl text-gray-400 transition-transform"></i>
-            </div>
-
-            <div id="bulk-form-container" class="hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Number of
-                            Orders</label>
-                        <input type="number" id="bulk-count" placeholder="e.g. 10" min="2" max="50"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Total Amount
-                            ($)</label>
-                        <input type="number" id="bulk-total" placeholder="e.g. 1000" min="10"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Min Order
-                            Amount ($)</label>
-                        <input type="number" id="bulk-min" placeholder="e.g. 10" min="1"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Order
-                            Amount ($)</label>
-                        <input type="number" id="bulk-max" placeholder="e.g. 100" min="1"
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                </div>
-
-                <div class="flex space-x-4">
-                    <button onclick="previewBulkOrders()"
-                        class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                        <i class="ti ti-eye"></i> Preview Distribution
-                    </button>
-                    <button onclick="submitBulkOrders()"
-                        class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition shadow-lg">
-                        <i class="ti ti-bolt"></i> Generate & Post
-                    </button>
-                </div>
-
-                <!-- Preview Area -->
-                <div id="bulk-preview" class="mt-6 hidden">
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Preview Orders</h3>
-                    <div
-                        class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700">
-                        <div id="bulk-preview-list" class="space-y-2"></div>
-                    </div>
-                    <div class="mt-2 text-right text-xs text-gray-500">
-                        Total Sum: $<span id="bulk-preview-sum">0.00</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Available Orders Section -->
-        <div id="available-orders-section"
-            class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                        <i class="ti ti-clock text-2xl text-green-600 dark:text-green-400"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Available Escrow Orders</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Pending escrow orders ready to claim</p>
-                    </div>
-                </div>
-                <span
-                    class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-semibold px-3 py-1 rounded-full"
-                    id="order-count">0 Orders</span>
-            </div>
-
-            <!-- Search and Filter -->
-            <div class="flex flex-col md:flex-row gap-4 mb-6">
-                <div class="flex-1 relative">
-                    <i class="ti ti-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" id="order-search" placeholder="Search orders..."
-                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                        onkeyup="filterOrders()">
-                </div>
-                <select id="order-status-filter" onchange="filterOrders()"
-                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
-                    <option value="all">All Status</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="CLAIMED">Claimed</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="DISPUTED">Disputed</option>
-                </select>
-                <select id="order-amount-filter" onchange="filterOrders()"
-                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
-                    <option value="all">All Amounts</option>
-                    <option value="0-100">$0 - $100</option>
-                    <option value="100-500">$100 - $500</option>
-                    <option value="500-1000">$500 - $1000</option>
-                    <option value="1000+">$1000+</option>
-                </select>
-            </div>
-
-            <div id="orders-list" class="space-y-4">
-                <!-- Orders will be loaded here -->
-            </div>
-
-            <div id="empty-orders" class="text-center py-12 hidden">
-                <div
-                    class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="ti ti-clock text-4xl text-gray-400"></i>
-                </div>
-                <p class="text-gray-500 dark:text-gray-400 font-medium">No pending orders available</p>
-                <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">New orders will appear here</p>
-            </div>
-        </div>
-
-        <!-- Transaction History -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                        <i class="ti ti-history text-2xl text-purple-600 dark:text-purple-400"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Transaction History</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Completed escrow transactions</p>
-                    </div>
-                </div>
-                <button onclick="exportToCSV()"
-                    class="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition shadow-md">
-                    <i class="ti ti-download"></i>
-                    <span>Export CSV</span>
-                </button>
-            </div>
-
-            <!-- Search History -->
-            <div class="mb-4">
-                <div class="relative">
-                    <i class="ti ti-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" id="history-search" placeholder="Search transaction history..."
-                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                        onkeyup="filterHistory()">
-                </div>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b border-gray-200 dark:border-gray-700">
-                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Order
-                                ID</th>
-                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Amount</th>
-                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Commission</th>
-                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Status</th>
-                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Date
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body">
-                        <!-- History will be loaded here -->
-                    </tbody>
-                </table>
-
-                <div id="empty-history" class="text-center py-12 hidden">
-                    <div
-                        class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="ti ti-history text-4xl text-gray-400"></i>
-                    </div>
-                    <p class="text-gray-500 dark:text-gray-400 font-medium">No transaction history yet</p>
-                    <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Completed orders will appear here</p>
-                </div>
-
-                <!-- Load More Container -->
-                <div id="load-more-container" class="hidden">
-                    <!-- Load more button will be inserted here -->
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Order Details Modal -->
-    <div id="order-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4">
-            <div class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop" onclick="closeOrderModal()"></div>
-            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full p-6 animate-fade-in">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Order Details</h3>
-                    <button onclick="closeOrderModal()"
-                        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
-                        <i class="ti ti-x text-2xl text-gray-600 dark:text-gray-400"></i>
-                    </button>
-                </div>
-                <div id="order-modal-content" class="space-y-4">
-                    <!-- Content will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Confirmation Dialog -->
-    <div id="confirm-dialog" class="hidden fixed inset-0 z-[100] overflow-hidden">
-        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm modal-backdrop"></div>
-        <div class="flex items-center justify-center min-h-screen p-4 relative">
-            <div
-                class="bg-white dark:bg-gray-800 rounded-[2rem] shadow-2xl max-w-md w-full p-8 animate-fade-in border border-gray-100 dark:border-gray-700">
-                <div class="text-center mb-8">
-                    <div
-                        class="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <i class="ti ti-alert-circle text-5xl text-orange-500 animate-pulse"></i>
-                    </div>
-                    <h3 class="text-2xl font-black text-gray-900 dark:text-white mb-3 tracking-tight"
-                        id="confirm-title">Confirm Action</h3>
-                    <p class="text-gray-500 dark:text-gray-400 font-medium leading-relaxed" id="confirm-message">Are you
-                        sure you want to proceed?</p>
-                </div>
-                <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-                    <button onclick="closeConfirmDialog()"
-                        class="flex-1 px-6 py-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
-                        Cancel
-                    </button>
-                    <button id="confirm-action-btn"
-                        class="flex-1 px-6 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold transition-all shadow-lg shadow-orange-500/20">
-                        Confirm
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Deposit Request Modal -->
-    <div id="deposit-request-modal"
-        class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center z-50 p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full animate-fade-in">
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Deposit Funds</h3>
-                    <button onclick="closeDepositRequestModal()"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                        <i class="ti ti-x text-2xl"></i>
-                    </button>
-                </div>
-
-                <!-- Payment Method Tabs -->
-                <div class="flex mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                    <button type="button" id="manual-deposit-tab" onclick="switchDepositTab('manual')"
-                        class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition active-tab">
-                        Manual Deposit
-                    </button>
-                    <button type="button" id="mpesa-deposit-tab" onclick="switchDepositTab('mpesa')"
-                        class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition">
-                        M-Pesa
-                    </button>
-                </div>
-
-                <!-- Manual Deposit Selection -->
-                <div id="manual-method-selection" class="deposit-form">
-                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Select Deposit Method:</p>
-                    <div class="grid grid-cols-2 gap-4 mb-6">
-                        <button type="button" onclick="selectManualMethod('ksh')"
-                            class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-500 dark:hover:border-blue-400 transition group">
-                            <i class="ti ti-cash text-3xl text-gray-400 group-hover:text-blue-500 mb-2"></i>
-                            <span class="font-bold text-gray-700 dark:text-gray-200">Ksh Deposit</span>
-                        </button>
-                        <button type="button" onclick="selectManualMethod('crypto')"
-                            class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-orange-500 dark:hover:border-orange-400 transition group">
-                            <i
-                                class="ti ti-currency-bitcoin text-3xl text-gray-400 group-hover:text-orange-500 mb-2"></i>
-                            <span class="font-bold text-gray-700 dark:text-gray-200">Crypto Deposit</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Ksh Deposit Form -->
-                <div id="ksh-deposit-flow" class="deposit-form hidden">
-                    <button type="button" onclick="backToMethodSelection()"
-                        class="text-xs text-blue-500 hover:underline mb-4 flex items-center">
-                        <i class="ti ti-arrow-left mr-1"></i> Back to selection
-                    </button>
-                    <div id="ksh-amount-step">
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount
-                                (Ksh)</label>
-                            <input type="number" id="ksh-deposit-amount" step="1" min="100"
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Enter amount in Ksh">
-                        </div>
-                        <button type="button" onclick="searchForAgents()"
-                            class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg flex items-center justify-center space-x-2">
-                            <i class="ti ti-search"></i>
-                            <span>Use Agents</span>
+                    <div class="alt-login-toggle">
+                        <button class="btn-text-link"
+                            onclick="document.getElementById('apiLoginSection').classList.toggle('show')">
+                            Use API Token instead
                         </button>
                     </div>
 
-                    <!-- Agent Search Loader -->
-                    <div id="agent-search-loader" class="hidden py-8 text-center">
-                        <div
-                            class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4">
+                    <!-- Hidden API Token Input -->
+                    <div id="apiLoginSection" class="api-login-section">
+                        <div class="input-group">
+                            <label for="apiTokenInput">Personal API Token</label>
+                            <input type="password" id="apiTokenInput" name="apiToken"
+                                placeholder="Paste your API token here" autocomplete="off">
+                            <small class="input-hint">Create a token at <a
+                                    href="https://app.deriv.com/account/api-token"
+                                    target="_blank">deriv.com/account/api-token</a> (Read & Trade scopes)</small>
                         </div>
-                        <p class="text-gray-600 dark:text-gray-400 animate-pulse">Searching for available agents...</p>
-                    </div>
-
-                    <!-- Agent Details & Final Step -->
-                    <div id="agent-details-step" class="hidden space-y-4">
-                        <div
-                            class="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-4">
-                            <div class="flex items-center space-x-3 mb-3">
-                                <div
-                                    class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                                    AK</div>
-                                <div>
-                                    <p class="font-bold text-gray-900 dark:text-white">ALLAN KARIBA</p>
-                                    <p class="text-sm text-blue-600 dark:text-blue-400">Verified Agent</p>
-                                </div>
-                            </div>
-                            <div
-                                class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-100 dark:border-blue-700">
-                                <p class="text-xs text-gray-500 mb-1">Send Money to:</p>
-                                <p
-                                    class="text-xl font-mono font-bold text-gray-900 dark:text-white flex items-center justify-between">
-                                    0101395336
-                                    <button type="button" onclick="copyAgentNumber('0101395336')"
-                                        class="text-blue-500 text-sm font-normal">Copy</button>
-                                </p>
-                            </div>
-                        </div>
-
-                        <form onsubmit="submitKshDeposit(event)">
-                            <div class="space-y-4">
-                                <div>
-                                    <label
-                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">M-Pesa
-                                        Message / Screenshot *</label>
-                                    <textarea id="ksh-mpesa-message" rows="2" required
-                                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 mb-2"
-                                        placeholder="Paste your M-Pesa message here..."></textarea>
-                                    <input type="file" id="ksh-screenshot" accept="image/*"
-                                        class="w-full px-2 py-2 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg">
-                                </div>
-                                <button type="submit"
-                                    class="w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition shadow-lg">
-                                    I Have Sent the Money
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Crypto Deposit Form -->
-                <div id="crypto-deposit-flow" class="deposit-form hidden">
-                    <button type="button" onclick="backToMethodSelection()"
-                        class="text-xs text-blue-500 hover:underline mb-4 flex items-center">
-                        <i class="ti ti-arrow-left mr-1"></i> Back to selection
-                    </button>
-                    <form onsubmit="submitCryptoDeposit(event)" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount
-                                (USD)</label>
-                            <input type="number" id="crypto-deposit-amount" step="0.01" min="10" required
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Enter amount in USD">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select
-                                Wallet</label>
-                            <select id="crypto-wallet" onchange="updateWalletAddress()"
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="">-- Choose a Wallet --</option>
-                                <option value="btc">Bitcoin (BTC)</option>
-                                <option value="usdt_trc20">USDT (TRC20)</option>
-                                <option value="eth">Ethereum (ETH)</option>
-                            </select>
-                        </div>
-                        <div id="wallet-address-display"
-                            class="hidden p-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-xl">
-                            <p class="text-xs text-orange-700 dark:text-orange-300 mb-1">Transfer to:</p>
-                            <p id="wallet-address"
-                                class="font-mono text-sm break-all font-bold text-gray-900 dark:text-white"></p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proof of
-                                Payment *</label>
-                            <input type="file" id="crypto-screenshot" accept="image/*" required
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg">
-                        </div>
-                        <button type="submit"
-                            class="w-full bg-orange-600 text-white font-bold py-3 rounded-xl hover:bg-orange-700 transition shadow-lg">
-                            Submit Crypto Deposit
+                        <button id="loginButton" onclick="handleLogin()" class="btn-primary">
+                            <span class="btn-text">Connect Manual</span>
+                            <div class="btn-loader" style="display: none;"></div>
                         </button>
-                    </form>
-                </div>
-
-                <!-- M-Pesa Deposit Form -->
-                <form id="mpesa-deposit-form" onsubmit="submitMpesaDeposit(event)" class="deposit-form hidden">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount
-                                (KES)</label>
-                            <input type="number" id="mpesa-amount" step="1" min="1" required
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Enter amount in KES">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Amount in Kenyan Shillings</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">M-Pesa
-                                Phone
-                                Number *</label>
-                            <input type="tel" id="mpesa-phone" pattern="254[0-9]{9}" required
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="254XXXXXXXXX">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Format: 254XXXXXXXXX (without
-                                +)
-                            </p>
-                        </div>
-
-                        <div class="bg-green-50 dark:bg-green-900 p-3 rounded-lg">
-                            <p class="text-xs text-green-800 dark:text-green-200">
-                                <i class="ti ti-device-mobile"></i> Instant payment via M-Pesa. You'll receive a
-                                prompt
-                                on your phone to enter your PIN.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="flex space-x-3 mt-6">
-                        <button type="button" onclick="closeDepositRequestModal()"
-                            class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                            Cancel
-                        </button>
-                        <button type="submit"
-                            class="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition">
-                            Pay with M-Pesa
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Withdrawal Request Modal -->
-    <div id="withdrawal-request-modal"
-        class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center z-50 p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full animate-fade-in">
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Request Withdrawal</h3>
-                    <button onclick="closeWithdrawalRequestModal()"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                        <i class="ti ti-x text-2xl"></i>
-                    </button>
-                </div>
-
-                <form id="withdrawal-request-form" onsubmit="submitWithdrawalRequest(event)">
-                    <div class="space-y-4">
-                        <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-                            <p class="text-sm text-gray-600 dark:text-gray-400">Available Balance</p>
-                            <p class="text-2xl font-bold text-gray-900 dark:text-white"><span
-                                    id="withdrawal-available-balance">0.00</span></p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount
-                                (<span class="currency-label">USD</span>)</label>
-                            <input type="number" id="withdrawal-amount" step="0.01" min="1.00" required
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Enter amount">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">M-Pesa Phone
-                                Number</label>
-                            <input type="tel" id="withdrawal-phone" pattern="254[0-9]{9}" required
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="254XXXXXXXXX">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Funds will be sent to this M-Pesa
-                                number. Format: 254XXXXXXXXX</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes to
-                                Admin (Optional)</label>
-                            <textarea id="withdrawal-notes" rows="2"
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Any additional details..."></textarea>
-                        </div>
-
-                        <div class="flex items-center space-x-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                            <input type="checkbox" id="withdrawal-confirm" required
-                                class="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
-                            <label for="withdrawal-confirm" class="text-xs font-medium text-red-800 dark:text-red-200">
-                                I confirm that the M-Pesa number provided is correct. I understand that funds sent to a
-                                wrong number cannot be recovered.
+                        <div style="margin-top: 10px; text-align: center;">
+                            <label style="font-size: 12px; color: var(--text-muted); cursor: pointer;">
+                                <input type="checkbox" id="rememberToken" checked> Keep me logged in
                             </label>
                         </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes
-                                (Optional)</label>
-                            <textarea id="withdrawal-notes" rows="3"
-                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Bank details or withdrawal method..."></textarea>
-                        </div>
-
-                        <div class="bg-yellow-50 dark:bg-yellow-900 p-3 rounded-lg">
-                            <p class="text-xs text-yellow-800 dark:text-yellow-200">
-                                <i class="ti ti-alert-triangle"></i> Your request will be reviewed by admin. Funds
-                                will
-                                be processed after approval.
-                            </p>
-                        </div>
                     </div>
 
-                    <div class="flex space-x-3 mt-6">
-                        <button type="button" onclick="closeWithdrawalRequestModal()"
-                            class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                            Cancel
-                        </button>
-                        <button type="submit"
-                            class="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold hover:from-red-600 hover:to-red-700 transition">
-                            Submit Request
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- My Transaction Requests Modal -->
-    <div id="my-requests-modal"
-        class="hidden fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center z-50 p-4">
-        <div
-            class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-fade-in">
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">My Transaction Requests</h3>
-                    <button onclick="closeMyRequestsModal()"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                        <i class="ti ti-x text-2xl"></i>
+                    <!-- WebSocket Test Button -->
+                    <button onclick="testWebSocketConnection()" class="btn-secondary"
+                        style="margin-top: var(--spacing-md);">
+                        <span>Test WebSocket Connection</span>
                     </button>
                 </div>
+            </div>
+        </section>
 
-                <div id="my-requests-list" class="space-y-4">
-                    <!-- Requests will be loaded here -->
+        <!-- Dashboard Section -->
+        <section class="dashboard" id="dashboard" style="display: none;">
+
+
+            <!-- Account Overview -->
+            <div class="section-header" style="margin-top: 30px;">
+                <h2>Account Overview</h2>
+                <button class="btn-refresh" onclick="requestBalance()" title="Refresh Balance">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M21.5 2V8M21.5 8H16M21.5 8L18 4.5C16.7429 3.24286 15.1767 2.34896 13.4606 1.91867C11.7446 1.48838 9.94218 1.53936 8.25178 2.06617C6.56138 2.59298 5.04687 3.57791 3.86331 4.91677C2.67975 6.25563 1.86869 7.89648 1.51406 9.66438"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path
+                            d="M2.5 22V16M2.5 16H8M2.5 16L6 19.5C7.25714 20.7571 8.82332 21.651 10.5394 22.0813C12.2554 22.5116 14.0578 22.4606 15.7482 21.9338C17.4386 21.407 18.9531 20.4221 20.1367 19.0832C21.3203 17.7444 22.1313 16.1035 22.4859 14.3356"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+            <div class="dashboard-grid">
+                <div class="card stat-card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <h3>Login ID</h3>
+                        <p id="loginIdDisplay" class="stat-value">...</p>
+                    </div>
+                </div>
+                <div class="card stat-card highlight">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M12 2V22M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <h3>Current Balance</h3>
+                        <p id="balanceDisplay" class="balance-large">...</p>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <h3>Active Markets</h3>
+                        <p id="symbolCountDisplay" class="stat-value">...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Trading Interface (Speedbot) -->
+        <section class="trading-interface" id="trading-interface" style="display: none;">
+            <div class="trading-controls">
+                <h3 class="controls-title">Trade Controls</h3>
+                <div class="control-group">
+                    <label for="marketSelector">Market</label>
+                    <select id="marketSelector"></select>
+                </div>
+                <div class="control-group">
+                    <label for="stakeInput">Stake Amount</label>
+                    <div class="input-with-unit">
+                        <input type="number" id="stakeInput" name="stakeAmount" value="1.00" min="0.35" step="0.01">
+                        <span class="unit">USD</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="durationInput">Duration</label>
+                    <div class="input-with-unit">
+                        <input type="number" id="durationInput" name="duration" value="1" min="1">
+                        <span class="unit">Ticks</span>
+                    </div>
                 </div>
 
-                <div id="empty-my-requests" class="text-center py-12 hidden">
+
+                <div class="contract-details">
+                    <div class="control-group">
+                        <label for="trade-type-select">Trade Type</label>
+                        <select id="trade-type-select" class="control-select">
+                            <option value="call">Rise</option>
+                            <option value="put">Fall</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="trade-actions">
+                    <button id="buyButtonUp" onclick="sendPurchaseRequest('CALL')" class="btn-trade btn-up">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>BUY UP</span>
+                    </button>
+                    <button id="buyButtonDown" onclick="sendPurchaseRequest('PUT')" class="btn-trade btn-down">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5V19M5 12L12 19L19 12" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>BUY DOWN</span>
+                    </button>
+                </div>
+                <div id="tradeMessageContainer" class="trade-message">
+                    <svg class="message-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    <span>Select market and trade parameters</span>
+                </div>
+            </div>
+
+            <div class="trading-main-area">
+
+                <div class="market-watch">
+                    <h4>Market Watch</h4>
+                    <div class="market-watch-container">
+                        <div id="marketWatchSkeleton" class="market-watch-skeleton">
+                            <div class="skeleton skeleton-card"></div>
+                            <div class="skeleton skeleton-card"></div>
+                            <div class="skeleton skeleton-card"></div>
+                        </div>
+                        <table id="tickerTable" class="ticker-table" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Price</th>
+                                    <th>Change</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="digit-analysis">
                     <div
-                        class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="ti ti-inbox text-4xl text-gray-400"></i>
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="margin: 0;">Digit Distribution (Last 1000 Ticks)</h4>
+                        <div class="distribution-legend">
+                            <div class="legend-item">
+                                <div class="legend-color most-frequent"></div>
+                                <span>Most</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color second-frequent"></div>
+                                <span>2nd</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color third-frequent"></div>
+                                <span>3rd</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color least-frequent"></div>
+                                <span>Least</span>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-gray-500 dark:text-gray-400 font-medium">No requests yet</p>
-                    <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Submit a deposit or withdrawal request
-                        to
-                        get started</p>
+
+                    <!-- Volatility Selector for Distribution -->
+                    <div class="distribution-market-selector">
+                        <label for="distributionMarketSelector" class="selector-label">
+                            <svg class="selector-icon" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 3h18v18H3V3z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M3 9h18M9 21V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            Select Volatility:
+                        </label>
+                        <select id="distributionMarketSelector" class="market-select-dropdown"
+                            onchange="handleDistributionMarketChange()">
+                            <option value="R_10">Volatility 10 Index</option>
+                            <option value="R_25">Volatility 25 Index</option>
+                            <option value="R_50">Volatility 50 Index</option>
+                            <option value="R_75">Volatility 75 Index</option>
+                            <option value="R_100" selected>Volatility 100 Index</option>
+                            <option value="1HZ10V">Volatility 10 (1s) Index</option>
+                            <option value="1HZ25V">Volatility 25 (1s) Index</option>
+                            <option value="1HZ50V">Volatility 50 (1s) Index</option>
+                            <option value="1HZ75V">Volatility 75 (1s) Index</option>
+                            <option value="1HZ100V">Volatility 100 (1s) Index</option>
+                        </select>
+                        <button id="refreshDistributionBtn" class="refresh-distribution-btn"
+                            onclick="refreshDistributionData()" title="Refresh distribution data">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="digit-analysis-container">
+                        <div id="digitAnalysisSkeleton" class="digit-analysis-skeleton">
+                            <div class="skeleton skeleton-bar"></div>
+                            <div class="skeleton skeleton-bar"></div>
+                            <div class="skeleton skeleton-bar"></div>
+                        </div>
+                        <div id="digitAnalysisContent" class="digit-analysis-content" style="display: none;">
+                            <div class="distribution-summary">
+                                <div class="summary-item">
+                                    <span class="summary-label">Data Size:</span>
+                                    <span id="distributionTickCount" class="summary-value">--</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Most Frequent:</span>
+                                    <span id="mostFrequentDigit" class="summary-value">--</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Least Frequent:</span>
+                                    <span id="leastFrequentDigit" class="summary-value">--</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Distribution Check:</span>
+                                    <span id="distributionCheck" class="summary-value">--</span>
+                                </div>
+                            </div>
+                            <div class="digit-bars-horizontal">
+                                <div class="digit-bar-row" id="digitRow0">
+                                    <div class="digit-label-box">0</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar0" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent0" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator0"></div>
+                                </div>
+                                <div class="digit-bar-row" id="digitRow1">
+                                    <div class="digit-label-box">1</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar1" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent1" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator1"></div>
+                                </div>
+                                <div class="digit-bar-row" id="digitRow2">
+                                    <div class="digit-label-box">2</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar2" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent2" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator2"></div>
+                                </div>
+                                <div class="digit-bar-row" id="digitRow3">
+                                    <div class="digit-label-box">3</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar3" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent3" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator3"></div>
+                                </div>
+                                <div class="digit-bar-row" id="digitRow4">
+                                    <div class="digit-label-box">4</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar4" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent4" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator4"></div>
+                                </div>
+                                <div class="digit-bar-row" id="digitRow5">
+                                    <div class="digit-label-box">5</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar5" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent5" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator5"></div>
+                                </div>
+                                <div class="digit-bar-row" id="digitRow6">
+                                    <div class="digit-label-box">6</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar6" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent6" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator6"></div>
+                                </div>
+                                <div class="digit-bar-row" id="digitRow7">
+                                    <div class="digit-label-box">7</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar7" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent7" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator7"></div>
+                                </div>
+                                <div class="digit-bar-row" id="digitRow8">
+                                    <div class="digit-label-box">8</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar8" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent8" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator8"></div>
+                                </div>
+                                <div class="digit-bar-row" id="digitRow9">
+                                    <div class="digit-label-box">9</div>
+                                    <div class="digit-bar-horizontal">
+                                        <div id="digitBar9" class="digit-bar-fill-horizontal" style="width: 0%">
+                                            <span id="digitPercent9" class="digit-percentage">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="last-digit-indicator" id="lastDigitIndicator9"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- Settings Modal Overlay -->
-    <div id="settings-modal"
-        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-        <div id="settings-dashboard"
-            class="bg-white dark:bg-gray-800 rounded-[2rem] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-100 dark:border-gray-700 animate-fade-in">
-            <div class="p-8">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                            <i class="ti ti-settings text-2xl text-gray-600 dark:text-gray-300"></i>
+        <!-- Ghost AI Bot Interface -->
+        <section class="ghostai-interface" id="ghostai-interface" style="display: none;">
+            <div class="bot-header-controls">
+                <h3 class="ghost-ai-heading">GHOST AI</h3>
+                <button id="ghost-ai-toggle-button" class="action-button primary-button">
+                    Start Bot
+                </button>
+            </div>
+            <div class="bot-grid">
+                <div class="bot-controls">
+                    <h4 class="collapsible-header" onclick="toggleSection('bot-config-ghost-ai')">
+                        <span>Bot Configuration</span>
+                        <svg class="collapse-arrow" id="arrow-bot-config-ghost-ai" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </h4>
+                    <div class="collapsible-content" id="bot-config-ghost-ai">
+                        <div class="control-group">
+                            <label for="botInitialStake">Initial Stake</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="botInitialStake" name="botInitialStake" value="0.35" min="0.35"
+                                    step="0.01">
+                                <span class="unit">USD</span>
+                            </div>
                         </div>
-                        <div>
-                            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Settings & Security</h2>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Manage your profile and account security
-                            </p>
+                        <div class="control-group">
+                            <label for="botTargetProfit">Target Profit</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="botTargetProfit" name="botTargetProfit" value="0.5" min="1">
+                                <span class="unit">USD</span>
+                            </div>
                         </div>
-                    </div>
-                    <button onclick="closeSettings()"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                        <i class="ti ti-x text-2xl"></i>
-                    </button>
-                </div>
+                        <div class="control-group">
+                            <label for="botPayoutPercentage">Payout %</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="botPayoutPercentage" name="botPayoutPercentage" value="75"
+                                    min="1" max="100">
+                                <span class="unit">%</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="botStopLoss">Stop Loss</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="botStopLoss" name="botStopLoss" value="50" min="1">
+                                <span class="unit">USD</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="botMaxMartingale">Max Martingale Steps</label>
+                            <input type="number" id="botMaxMartingale" name="botMaxMartingale" value="15" min="0">
+                        </div>
 
-                <!-- Settings Tabs -->
-                <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
-                    <button onclick="switchSettingsTab('profile')" id="tab-btn-profile"
-                        class="px-6 py-3 border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 font-semibold focus:outline-none">
-                        <i class="ti ti-user"></i> Profile
-                    </button>
-                    <button onclick="switchSettingsTab('security')" id="tab-btn-security"
-                        class="px-6 py-3 border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium focus:outline-none transition">
-                        <i class="ti ti-lock"></i> Security
-                    </button>
-                </div>
+                        <div class="control-group">
+                            <label for="botAnalysisDigits">Analysis Digits (Last N)</label>
+                            <input type="number" id="botAnalysisDigits" name="botAnalysisDigits" value="15" min="10"
+                                max="100" title="Number of last digits to use for percentage analysis">
+                        </div>
 
-                <!-- Profile Tab Content -->
-                <div id="settings-tab-profile" class="space-y-6">
+                        <h5 class="collapsible-header" style="margin-top: 20px; color: var(--primary-color);"
+                            onclick="toggleSection('s1-config')">
+                            <span>S1 Strategy Configuration</span>
+                            <svg class="collapse-arrow collapsed" id="arrow-s1-config" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </h5>
+                        <div class="collapsible-content collapsed" id="s1-config">
+                            <div class="control-group">
+                                <label style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="botS1UseDigitCheck" name="botS1UseDigitCheck" checked
+                                        style="width: auto;">
+                                    <span>Enable "Check Last N Digits"</span>
+                                </label>
+                            </div>
 
-                    <!-- Profile Tab Content -->
-                    <div id="settings-tab-profile" class="space-y-8">
+                            <div class="control-group">
+                                <label for="botS1CheckDigits">S1: Check Last N Digits</label>
+                                <input type="number" id="botS1CheckDigits" name="botS1CheckDigits" value="4" min="1"
+                                    max="10" title="Number of last digits to check for S1 condition">
+                            </div>
 
-                        <!-- Avatar Section (Centered) -->
-                        <div class="flex flex-col items-center justify-center">
-                            <div class="relative group">
-                                <img id="settings-avatar-preview"
-                                    src="https://ui-avatars.com/api/?name=User&background=random"
-                                    class="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-700 shadow-xl">
-                                <div class="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
-                                    onclick="document.getElementById('avatar-upload').click()">
-                                    <i class="ti ti-camera text-white text-3xl"></i>
+                            <div class="control-group">
+                                <label>S1: Digit Comparison</label>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <select id="botS1DigitOperator" name="botS1DigitOperator" class="control-select"
+                                        style="flex: 0 0 auto; width: 60px; padding: 8px 4px; font-size: 18px; text-align: center;"
+                                        title="Comparison operator for digits">
+                                        <option value="<=" selected>≤</option>
+                                        <option value=">=">≥</option>
+                                        <option value="=">=</option>
+                                        <option value="<">
+                                            << /option>
+                                        <option value=">">></option>
+                                    </select>
+                                    <div class="input-with-unit" style="flex: 1;">
+                                        <input type="number" id="botS1MaxDigit" name="botS1MaxDigit" value="3" min="0"
+                                            max="9" title="Comparison value for digits">
+                                        <span class="unit">Value</span>
+                                    </div>
                                 </div>
-                                <input type="file" id="avatar-upload" hidden accept="image/*"
-                                    onchange="uploadAvatar(this)">
-                            </div>
-                            <h3 id="profile-display-name" class="mt-4 text-xl font-bold text-gray-900 dark:text-white">
-                                Loading...</h3>
-                            <p id="profile-display-email" class="text-sm text-gray-500 dark:text-gray-400">
-                                loading@example.com
-                            </p>
-                        </div>
-
-                        <div class="border-t border-gray-200 dark:border-gray-700"></div>
-
-                        <div class="flex items-center space-x-2 text-purple-600 dark:text-purple-400">
-                            <i class="ti ti-user text-xl"></i>
-                            <h4 class="font-bold">Personal Information</h4>
-                        </div>
-
-                        <form onsubmit="updateProfile(event)" class="space-y-6">
-                            <div>
-                                <label
-                                    class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Full
-                                    Name</label>
-                                <input type="text" id="settings-fullname"
-                                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
                             </div>
 
-                            <div>
-                                <label
-                                    class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Email
-                                    Address</label>
-                                <input type="email" id="settings-email"
-                                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
+                            <div class="control-group">
+                                <label style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="botS1UsePercentage" name="botS1UsePercentage" checked
+                                        style="width: auto;">
+                                    <span>Enable "Min Percentage"</span>
+                                </label>
                             </div>
 
-                            <div>
-                                <label
-                                    class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Phone
-                                    Number</label>
-                                <input type="tel" id="settings-phone"
-                                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
+                            <div class="control-group">
+                                <label for="botS1Prediction">S1: Prediction Barrier</label>
+                                <input type="number" id="botS1Prediction" name="botS1Prediction" value="2" min="0"
+                                    max="9" title="Barrier for OVER prediction">
                             </div>
 
-                            <div>
-                                <label
-                                    class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Country</label>
-                                <input type="text" id="settings-country"
-                                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
+                            <div class="control-group">
+                                <label for="botS1Percentage">S1: Min Percentage</label>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <select id="botS1PercentageOperator" name="botS1PercentageOperator"
+                                        class="control-select"
+                                        style="flex: 0 0 auto; width: 60px; padding: 8px 4px; font-size: 18px; text-align: center;"
+                                        title="Comparison operator">
+                                        <option value=">">></option>
+                                        <option value=">=" selected>≥</option>
+                                        <option value="=">=</option>
+                                        <option value="<=">≤</option>
+                                        <option value="<">
+                                            << /option>
+                                    </select>
+                                    <div class="input-with-unit" style="flex: 1;">
+                                        <input type="number" id="botS1Percentage" name="botS1Percentage" value="70"
+                                            min="0" max="100">
+                                        <span class="unit">%</span>
+                                    </div>
+                                </div>
                             </div>
 
-                            <!-- Hidden fields -->
-                            <input type="hidden" id="settings-username">
-                            <input type="hidden" id="settings-role">
-                            <input type="hidden" id="settings-mpesa">
-
-                            <div class="pt-4">
-                                <label
-                                    class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Currency
-                                    Display</label>
-                                <select id="settings-currency"
-                                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition">
-                                    <option value="USD">USD ($)</option>
-                                    <option value="KES">KES (Ksh)</option>
+                            <div class="control-group">
+                                <label for="botS1ContractType">S1: Contract Type</label>
+                                <select id="botS1ContractType" name="botS1ContractType" class="control-select">
+                                    <option value="OVER" selected>OVER (Digits above barrier)</option>
+                                    <option value="UNDER">UNDER (Digits below barrier)</option>
                                 </select>
                             </div>
 
-                            <div class="pt-6">
-                                <button type="submit"
-                                    class="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
-                                    <i class="ti ti-device-floppy"></i>
-                                    <span>UPDATE PROFILE</span>
-                                </button>
+                            <div class="control-group">
+                                <label for="botS1MaxLosses">S1: Max Consecutive Losses</label>
+                                <input type="number" id="botS1MaxLosses" name="botS1MaxLosses" value="1" min="1"
+                                    max="10" title="Stop S1 after this many consecutive losses until recovery">
                             </div>
-                        </form>
-                    </div>
+                        </div>
 
-                    <!-- Security Tab Content -->
-                    <div id="settings-tab-security" class="hidden space-y-6">
-                        <div
-                            class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-                            <div class="flex items-start space-x-3">
-                                <i class="ti ti-shield-lock text-yellow-600 dark:text-yellow-400 text-xl mt-0.5"></i>
-                                <div>
-                                    <h4 class="font-bold text-yellow-800 dark:text-yellow-200">Password Requirements
-                                    </h4>
-                                    <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                                        For your security, please use a strong password with at least 8 characters.
-                                    </p>
+                        <h5 class="collapsible-header" style="margin-top: 20px; color: var(--accent-color);"
+                            onclick="toggleSection('s2-config')">
+                            <span>S2 Recovery Configuration</span>
+                            <svg class="collapse-arrow collapsed" id="arrow-s2-config" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </h5>
+                        <div class="collapsible-content collapsed" id="s2-config">
+                            <div class="control-group">
+                                <label style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="botS2UseDigitCheck" name="botS2UseDigitCheck" checked
+                                        style="width: auto;">
+                                    <span>Enable "Check Last N Digits"</span>
+                                </label>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="botS2CheckDigits">S2: Check Last N Digits</label>
+                                <input type="number" id="botS2CheckDigits" name="botS2CheckDigits" value="6" min="1"
+                                    max="10" title="Number of last digits to check for S2 condition">
+                            </div>
+
+                            <div class="control-group">
+                                <label>S2: Digit Comparison</label>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <select id="botS2DigitOperator" name="botS2DigitOperator" class="control-select"
+                                        style="flex: 0 0 auto; width: 60px; padding: 8px 4px; font-size: 18px; text-align: center;"
+                                        title="Comparison operator for digits">
+                                        <option value="<=" selected>≤</option>
+                                        <option value=">=">≥</option>
+                                        <option value="=">=</option>
+                                        <option value="<">
+                                            << /option>
+                                        <option value=">">></option>
+                                    </select>
+                                    <div class="input-with-unit" style="flex: 1;">
+                                        <input type="number" id="botS2MaxDigit" name="botS2MaxDigit" value="4" min="0"
+                                            max="9" title="Comparison value for digits">
+                                        <span class="unit">Value</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="control-group">
+                                <label style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="botS2UsePercentage" name="botS2UsePercentage" checked
+                                        style="width: auto;">
+                                    <span>Enable "Min Percentage"</span>
+                                </label>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="botS2Prediction">S2: Prediction Barrier</label>
+                                <input type="number" id="botS2Prediction" name="botS2Prediction" value="4" min="0"
+                                    max="9" title="Barrier for prediction">
+                            </div>
+
+                            <div class="control-group">
+                                <label for="botS2ContractType">S2: Contract Type</label>
+                                <select id="botS2ContractType" name="botS2ContractType" class="control-select">
+                                    <option value="UNDER">UNDER (Digits below barrier)</option>
+                                    <option value="OVER" selected>OVER (Digits above barrier)</option>
+                                </select>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="botS2Percentage">S2: Min Percentage</label>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <select id="botS2PercentageOperator" name="botS2PercentageOperator"
+                                        class="control-select"
+                                        style="flex: 0 0 auto; width: 60px; padding: 8px 4px; font-size: 18px; text-align: center;"
+                                        title="Comparison operator">
+                                        <option value=">">></option>
+                                        <option value=">=" selected>≥</option>
+                                        <option value="=">=</option>
+                                        <option value="<=">≤</option>
+                                        <option value="<">
+                                            << /option>
+                                    </select>
+                                    <div class="input-with-unit" style="flex: 1;">
+                                        <input type="number" id="botS2Percentage" name="botS2Percentage" value="45"
+                                            min="0" max="100">
+                                        <span class="unit">%</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <form onsubmit="changePassword(event)" class="space-y-4 max-w-md mx-auto">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current
-                                    Password</label>
-                                <div class="relative">
-                                    <input type="password" id="current-password" required
-                                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
-                                </div>
-                            </div>
+                        <button id="ghost-ai-toggle-button-bottom" class="btn-bot btn-start">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <polygon points="5 3 19 12 5 21 5 3" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <span>Start Bot</span>
+                        </button>
+                    </div>
+                </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New
-                                    Password</label>
-                                <div class="relative">
-                                    <input type="password" id="new-password" required minlength="6"
-                                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
-                                </div>
-                            </div>
+                <div class="bot-status">
+                    <h4 class="collapsible-header" onclick="toggleSection('activity-log-ghost-ai')">
+                        <span>Activity Log</span>
+                        <svg class="collapse-arrow collapsed" id="arrow-activity-log-ghost-ai" viewBox="0 0 24 24"
+                            fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </h4>
+                    <div class="collapsed-placeholder" id="placeholder-activity-log-ghost-ai" style="display: block;">
+                        <img src="images/back.jpg" alt="Activity Log Collapsed" class="collapsed-image">
+                    </div>
+                    <div class="collapsible-content collapsed" id="activity-log-ghost-ai">
+                        <div id="bot-log-container" class="bot-log">
+                            <div class="log-info">[--:--:--] Waiting for initialization...</div>
+                        </div>
+                    </div>
+                </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm
-                                    New
-                                    Password</label>
-                                <div class="relative">
-                                    <input type="password" id="confirm-password" required minlength="6"
-                                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
-                                </div>
+                <div class="bot-history">
+                    <div class="bot-stats-header">
+                        <div class="history-header-top">
+                            <h4>Trade History</h4>
+                            <button id="clear-ghost-ai-history" class="btn-secondary"
+                                style="padding: 6px 12px; font-size: 12px; margin-right: 8px;"
+                                title="Clear trade history">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                    style="width: 14px; height: 14px;">
+                                    <path
+                                        d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                            <button id="ghost-ai-toggle-button-history" class="btn-bot btn-start">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <polygon points="5 3 19 12 5 21 5 3" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <span>Start Bot</span>
+                            </button>
+                        </div>
+                        <div class="bot-header-section">
+                            <div class="bot-title-info">
+                                <h2>Ghost AI Bot</h2>
+                                <span class="bot-strategy-badge">Rammy Auto Strategy</span>
                             </div>
-
-                            <div class="pt-4">
-                                <button type="submit"
-                                    class="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md flex items-center justify-center space-x-2">
-                                    <i class="ti ti-lock"></i>
-                                    <span>Update Password</span>
-                                </button>
+                            <div class="bot-profit-display">
+                                <span class="profit-label">Total P/L</span>
+                                <span id="botProfitLossDisplay" class="profit-value">$0.00</span>
                             </div>
-                        </form>
+                        </div>
+                        <div class="bot-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">Timer</div>
+                                <div class="stat-value" id="botTimerDisplay">00:00:00</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Win Rate</div>
+                                <div class="stat-value" id="botWinRateDisplay">0.0%</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Trades</div>
+                                <div class="stat-value" id="botTradesCountDisplay">0W/0L</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Total Stake</div>
+                                <div class="stat-value" id="botTotalStakeDisplay">$0.00</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Total Payout</div>
+                                <div class="stat-value" id="botTotalPayoutDisplay">$0.00</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">No. of Runs</div>
+                                <div class="stat-value" id="botRunsCountDisplay">0</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="market-watch-container">
+                        <table id="bot-history-table" class="ticker-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Contract</th>
+                                    <th>P/L</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- M-Pesa Waiting Overlay -->
-        <div id="mpesa-waiting-overlay"
-            class="fixed inset-0 z-[100] hidden items-center justify-center bg-gray-900/80 backdrop-blur-sm animate-fade-in">
-            <div
-                class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center transform transition-all scale-100">
-                <!-- Status Icon -->
-                <div id="mpesa-status-icon-container" class="relative w-24 h-24 mx-auto mb-6">
-                    <!-- Progress Ring -->
-                    <svg class="w-full h-full -rotate-90">
-                        <circle cx="48" cy="48" r="44" stroke="currentColor" stroke-width="4" fill="transparent"
-                            class="text-gray-200 dark:text-gray-700" />
-                        <circle id="mpesa-progress-ring" cx="48" cy="48" r="44" stroke="currentColor" stroke-width="4"
-                            fill="transparent" stroke-dasharray="276" stroke-dashoffset="0"
-                            class="text-blue-500 transition-all duration-300" />
-                    </svg>
-                    <!-- Center Icon/Text -->
-                    <div id="mpesa-center-icon" class="absolute inset-0 flex items-center justify-center">
-                        <div class="animate-pulse">
-                            <i class="ti ti-phone-calling text-3xl text-blue-500"></i>
+        <!-- GHOST E/ODD Bot Interface -->
+        <section class="ghostai-interface" id="ghost-eodd-interface" style="display: none;">
+            <div class="bot-header-controls">
+                <h3 class="ghost-ai-heading">GHOST E/ODD</h3>
+                <button id="even-odd-toggle-button-top" class="action-button primary-button">
+                    Start Bot
+                </button>
+            </div>
+            <div class="bot-grid">
+                <div class="bot-controls">
+                    <h4 class="collapsible-header" onclick="toggleSection('bot-config-eodd')">
+                        <span>Bot Configuration</span>
+                        <svg class="collapse-arrow" id="arrow-bot-config-eodd" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </h4>
+                    <div class="collapsible-content" id="bot-config-eodd">
+                        <div class="control-group">
+                            <label for="eoddInitialStake">Initial Stake</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="eoddInitialStake" name="eoddInitialStake" value="0.35"
+                                    min="0.35" step="0.01">
+                                <span class="unit">USD</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="eoddTargetProfit">Target Profit</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="eoddTargetProfit" name="eoddTargetProfit" value="1" min="1">
+                                <span class="unit">USD</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="eoddStopLoss">Stop Loss</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="eoddStopLoss" name="eoddStopLoss" value="999.0" min="1">
+                                <span class="unit">USD</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="eoddMartingaleFactor">Martingale Factor</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="eoddMartingaleFactor" name="eoddMartingaleFactor" value="2.12"
+                                    min="1" step="0.01">
+                                <span class="unit">x</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="eoddMartingaleLevel">Martingale Level</label>
+                            <input type="number" id="eoddMartingaleLevel" name="eoddMartingaleLevel" value="7" min="0">
+                        </div>
+
+                        <button id="even-odd-toggle-button-bottom" class="btn-bot btn-start">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <polygon points="5 3 19 12 5 21 5 3" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <span>Start Bot</span>
+                        </button>
+
+                        <div class="bot-info-panel">
+                            <h5>Pattern Configuration</h5>
+                            <div class="strategy-details">
+                                <p><strong>Select Active Patterns (O=ODD, E=EVEN)</strong></p>
+                                <div class="pattern-checkboxes"
+                                    style="max-height: 200px; overflow-y: auto; margin: 10px 0;">
+                                    <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
+                                        <input type="checkbox" class="pattern-checkbox" name="pattern-22222"
+                                            value="22222" data-action="DIGITODD">
+                                        <span style="flex: 0 0 auto;">EEEEE →</span>
+                                        <select class="pattern-action-select" name="pattern-action-22222"
+                                            data-pattern="22222"
+                                            style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
+                                            <option value="DIGITEVEN">EVEN</option>
+                                            <option value="DIGITODD" selected>ODD</option>
+                                        </select>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
+                                        <input type="checkbox" class="pattern-checkbox" name="pattern-11111"
+                                            value="11111" data-action="DIGITEVEN">
+                                        <span style="flex: 0 0 auto;">OOOOO →</span>
+                                        <select class="pattern-action-select" name="pattern-action-11111"
+                                            data-pattern="11111"
+                                            style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
+                                            <option value="DIGITEVEN" selected>EVEN</option>
+                                            <option value="DIGITODD">ODD</option>
+                                        </select>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
+                                        <input type="checkbox" class="pattern-checkbox" name="pattern-12121"
+                                            value="12121" data-action="DIGITODD">
+                                        <span style="flex: 0 0 auto;">OEOEO →</span>
+                                        <select class="pattern-action-select" name="pattern-action-12121"
+                                            data-pattern="12121"
+                                            style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
+                                            <option value="DIGITEVEN">EVEN</option>
+                                            <option value="DIGITODD" selected>ODD</option>
+                                        </select>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
+                                        <input type="checkbox" class="pattern-checkbox" name="pattern-21212"
+                                            value="21212" data-action="DIGITEVEN">
+                                        <span style="flex: 0 0 auto;">EOEOE →</span>
+                                        <select class="pattern-action-select" name="pattern-action-21212"
+                                            data-pattern="21212"
+                                            style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
+                                            <option value="DIGITEVEN" selected>EVEN</option>
+                                            <option value="DIGITODD">ODD</option>
+                                        </select>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
+                                        <input type="checkbox" class="pattern-checkbox" name="pattern-22122"
+                                            value="22122" data-action="DIGITODD">
+                                        <span style="flex: 0 0 auto;">EEOEE →</span>
+                                        <select class="pattern-action-select" name="pattern-action-22122"
+                                            data-pattern="22122"
+                                            style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
+                                            <option value="DIGITEVEN">EVEN</option>
+                                            <option value="DIGITODD" selected>ODD</option>
+                                        </select>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
+                                        <input type="checkbox" class="pattern-checkbox" name="pattern-11211"
+                                            value="11211" data-action="DIGITODD">
+                                        <span style="flex: 0 0 auto;">OOEOO →</span>
+                                        <select class="pattern-action-select" name="pattern-action-11211"
+                                            data-pattern="11211"
+                                            style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
+                                            <option value="DIGITEVEN">EVEN</option>
+                                            <option value="DIGITODD" selected>ODD</option>
+                                        </select>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
+                                        <input type="checkbox" class="pattern-checkbox" name="pattern-11122"
+                                            value="11122" data-action="DIGITEVEN">
+                                        <span style="flex: 0 0 auto;">OOOEE →</span>
+                                        <select class="pattern-action-select" name="pattern-action-11122"
+                                            data-pattern="11122"
+                                            style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
+                                            <option value="DIGITEVEN" selected>EVEN</option>
+                                            <option value="DIGITODD">ODD</option>
+                                        </select>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin: 5px 0; gap: 10px;">
+                                        <input type="checkbox" class="pattern-checkbox" name="pattern-22211"
+                                            value="22211" data-action="DIGITODD">
+                                        <span style="flex: 0 0 auto;">EEEOO →</span>
+                                        <select class="pattern-action-select" name="pattern-action-22211"
+                                            data-pattern="22211"
+                                            style="flex: 0 0 auto; padding: 2px 5px; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;">
+                                            <option value="DIGITEVEN">EVEN</option>
+                                            <option value="DIGITODD" selected>ODD</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <h5 style="margin-top: 15px;">Custom Pattern</h5>
+                                <div class="control-group">
+                                    <label for="customPattern">Pattern (O and E, up to 10 digits, e.g.,
+                                        OOOOOOOOOO)</label>
+                                    <input type="text" id="customPattern" name="customPattern"
+                                        placeholder="e.g., OOOOOOOOOO" pattern="[OEoe]{1,10}" maxlength="10"
+                                        style="width: 100%;">
+                                </div>
+                                <div class="control-group">
+                                    <label for="customPatternAction">Contract Type</label>
+                                    <select id="customPatternAction" name="customPatternAction" class="control-select"
+                                        style="width: 100%;">
+                                        <option value="DIGITEVEN">EVEN</option>
+                                        <option value="DIGITODD">ODD</option>
+                                    </select>
+                                </div>
+                                <button id="addCustomPattern" class="btn-bot btn-start"
+                                    style="width: 100%; margin-top: 10px;">
+                                    <span>Add Custom Pattern</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <h3 id="mpesa-waiting-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2">Waiting for
-                    Payment</h3>
-                <p id="mpesa-waiting-text" class="text-gray-500 dark:text-gray-400 mb-6">Please check your phone and
-                    enter your M-Pesa PIN.</p>
-
-                <div id="mpesa-waiting-details" class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-6">
-                    <div class="flex justify-between text-sm mb-1">
-                        <span class="text-gray-400">Amount:</span>
-                        <span id="mpesa-waiting-amount" class="font-bold text-gray-900 dark:text-white">...</span>
+                <div class="bot-status">
+                    <h4 class="collapsible-header" onclick="toggleSection('activity-log-eodd')">
+                        <span>Activity Log</span>
+                        <svg class="collapse-arrow" id="arrow-activity-log-eodd" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </h4>
+                    <div class="collapsed-placeholder" id="placeholder-activity-log-eodd" style="display: none;">
+                        <img src="images/back.jpg" alt="Activity Log Collapsed" class="collapsed-image">
                     </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-400">Phone:</span>
-                        <span id="mpesa-waiting-phone" class="font-bold text-gray-900 dark:text-white">...</span>
+                    <div class="collapsible-content" id="activity-log-eodd">
+                        <div id="eodd-bot-log-container" class="bot-log">
+                            <div class="log-info">[--:--:--] Pattern analysis ready...</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Footer Action (Failure only) -->
-                <div id="mpesa-waiting-footer" class="hidden pt-2">
-                    <button onclick="closeMpesaOverlay()"
-                        class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold py-2 px-4 rounded-lg transition">
-                        Done
+                <div class="bot-history">
+                    <div class="bot-stats-header">
+                        <div class="history-header-top">
+                            <h4>Trade History</h4>
+                            <button id="clear-eodd-history" class="btn-secondary"
+                                style="padding: 6px 12px; font-size: 12px; margin-right: 8px;"
+                                title="Clear trade history">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                    style="width: 14px; height: 14px;">
+                                    <path
+                                        d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                            <button id="even-odd-toggle-button-history" class="btn-bot btn-start">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <polygon points="5 3 19 12 5 21 5 3" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <span>Start Bot</span>
+                            </button>
+                        </div>
+                        <div class="bot-header-section">
+                            <div class="bot-title-info">
+                                <h2>GHOST E/ODD Bot</h2>
+                                <span class="bot-strategy-badge">Pattern Recognition Strategy</span>
+                            </div>
+                            <div class="bot-profit-display">
+                                <span class="profit-label">Total P/L</span>
+                                <span id="eoddProfitLossDisplay" class="profit-value">$0.00</span>
+                            </div>
+                        </div>
+                        <div class="bot-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">Current Pattern</div>
+                                <div class="stat-value" id="currentPatternDisplay">0</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Trades</div>
+                                <div class="stat-value" id="eoddTradesCountDisplay">0W/0L</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="market-watch-container">
+                        <table id="eodd-bot-history-table" class="ticker-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Contract</th>
+                                    <th>P/L</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Hedging Interface -->
+        <section class="hedging-interface" id="hedging-interface" style="display: none;">
+            <!-- Hedge Master Section -->
+            <div class="hedge-master-container">
+                <div class="section-header">
+                    <h2>🛡️ Ghost Hedge Master</h2>
+                </div>
+
+                <!-- Lookback Hedge (Main Focus - Always Expanded) -->
+                <div class="hedge-card hedge-card-primary">
+                    <h3>🛡️ Lookback Hedge (HL / CL)</h3>
+                    <p class="card-description">High-Low + Close-Low contracts - Main hedging strategy</p>
+                    <div class="hedge-inputs-grid">
+                        <div class="control-group">
+                            <label for="lookback-market">Market</label>
+                            <select id="lookback-market" class="control-select">
+                                <option value="R_10">Volatility 10 Index</option>
+                                <option value="R_25">Volatility 25 Index</option>
+                                <option value="R_50">Volatility 50 Index</option>
+                                <option value="R_75">Volatility 75 Index</option>
+                                <option value="R_100" selected>Volatility 100 Index</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Duration Mode</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="radio" name="duration-mode" value="auto" checked
+                                        onchange="toggleDurationMode()">
+                                    <span>Auto</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="radio" name="duration-mode" value="manual"
+                                        onchange="toggleDurationMode()">
+                                    <span>Manual</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="lookback-duration">Duration</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="lookback-duration" value="1" min="1" max="5" step="1" disabled>
+                                <span class="unit">Minutes</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="lookback-stake">Stake (per contract)</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="lookback-stake" value="0.35" min="0.35" step="0.01">
+                                <span class="unit">USD</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="executeLookbackHedgeWithMode()" class="btn-primary btn-large">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                stroke-width="2" />
+                        </svg>
+                        <span>🛡️ Execute Lookback Hedge</span>
                     </button>
+
+                    <!-- Open Contracts Section -->
+                    <div class="lookback-open-contracts" style="margin-top: 20px;">
+                        <h4
+                            style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Active Lookback Hedges</span>
+                            <button id="close-all-lookback" onclick="closeAllLookbackHedges()" class="btn-secondary"
+                                style="padding: 6px 12px; font-size: 0.85rem; display: none;">
+                                Close All
+                            </button>
+                        </h4>
+                        <div id="lookback-contracts-list"
+                            style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">
+                            <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 20px;">
+                                No active hedges</p>
+                        </div>
+                        <div class="total-pl"
+                            style="padding: 10px; background: var(--bg-secondary); border-radius: var(--radius-md); text-align: center; font-weight: 600;">
+                            Total P/L: <span id="lookback-total-pl" style="color: var(--text-primary);">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Trade History Section -->
+                    <div class="lookback-history" style="margin-top: 20px;">
+                        <h4 style="margin-bottom: 10px;">Trade History</h4>
+                        <div style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
+                            <table id="lookback-history-table" style="width: 100%; border-collapse: collapse;">
+                                <thead style="position: sticky; top: 0; background: var(--bg-secondary); z-index: 1;">
+                                    <tr>
+                                        <th
+                                            style="padding: 8px; text-align: left; border-bottom: 1px solid var(--glass-border);">
+                                            Time</th>
+                                        <th
+                                            style="padding: 8px; text-align: left; border-bottom: 1px solid var(--glass-border);">
+                                            Symbol</th>
+                                        <th
+                                            style="padding: 8px; text-align: center; border-bottom: 1px solid var(--glass-border);">
+                                            Duration</th>
+                                        <th
+                                            style="padding: 8px; text-align: right; border-bottom: 1px solid var(--glass-border);">
+                                            Stake</th>
+                                        <th
+                                            style="padding: 8px; text-align: right; border-bottom: 1px solid var(--glass-border);">
+                                            P/L</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lookback-history-body">
+                                    <tr>
+                                        <td colspan="5"
+                                            style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+                                            No trade history yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other Hedging Strategies (Collapsible) -->
+                <div class="card" style="margin-top: 20px;">
+                    <h4 class="collapsible-header" onclick="toggleSection('other-hedges')">
+                        <span>Other Hedging Strategies</span>
+                        <svg class="collapse-arrow collapsed" id="arrow-other-hedges" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </h4>
+                    <div class="collapsible-content collapsed" id="other-hedges">
+                        <div class="hedge-grid">
+                            <!-- Dual Side Hedge -->
+                            <div class="hedge-card">
+                                <h3>Dual Side (High/Low)</h3>
+                                <p class="card-description">Simultaneous CALL + PUT contracts</p>
+                                <div class="control-group">
+                                    <label for="dual-market">Market</label>
+                                    <select id="dual-market" class="control-select">
+                                        <option value="R_10">Volatility 10 Index</option>
+                                        <option value="R_25">Volatility 25 Index</option>
+                                        <option value="R_50">Volatility 50 Index</option>
+                                        <option value="R_75">Volatility 75 Index</option>
+                                        <option value="R_100" selected>Volatility 100 Index</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="dual-stake">Stake (per contract)</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="dual-stake" value="0.35" min="0.35" step="0.01">
+                                        <span class="unit">USD</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onclick="executeDualHedge(document.getElementById('dual-market').value, parseFloat(document.getElementById('dual-stake').value))"
+                                    class="btn-secondary">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                            stroke-width="2" />
+                                    </svg>
+                                    <span>Open Dual</span>
+                                </button>
+                            </div>
+
+                            <!-- Multi-Entry -->
+                            <div class="hedge-card">
+                                <h3>Multi-Entry (2-4 Contracts)</h3>
+                                <p class="card-description">Multiple contracts with 50ms delay</p>
+                                <div class="control-group">
+                                    <label for="multi-market">Market</label>
+                                    <select id="multi-market" class="control-select">
+                                        <option value="R_10">Volatility 10 Index</option>
+                                        <option value="R_25">Volatility 25 Index</option>
+                                        <option value="R_50">Volatility 50 Index</option>
+                                        <option value="R_75">Volatility 75 Index</option>
+                                        <option value="R_100" selected>Volatility 100 Index</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="multi-type">Contract Type</label>
+                                    <select id="multi-type" class="control-select">
+                                        <option value="CALL">High (CALL)</option>
+                                        <option value="PUT">Low (PUT)</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="multi-count">Number of Contracts</label>
+                                    <input type="number" id="multi-count" value="4" min="2" max="4"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="multi-stake">Stake (per contract)</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="multi-stake" value="0.35" min="0.35" step="0.01">
+                                        <span class="unit">USD</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onclick="openMultipleContracts(parseInt(document.getElementById('multi-count').value), document.getElementById('multi-type').value, document.getElementById('multi-market').value, parseFloat(document.getElementById('multi-stake').value))"
+                                    class="btn-secondary">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                            stroke-width="2" />
+                                    </svg>
+                                    <span>Execute Multi</span>
+                                </button>
+                            </div>
+
+                            <!-- Over/Under Advanced -->
+                            <div class="hedge-card">
+                                <h3>Over/Under (Conditional)</h3>
+                                <p class="card-description">Smart Over/Under based on last N digits</p>
+                                <div class="control-group">
+                                    <label for="overunder-market">Market</label>
+                                    <select id="overunder-market" class="control-select">
+                                        <option value="R_10">Volatility 10 Index</option>
+                                        <option value="R_25">Volatility 25 Index</option>
+                                        <option value="R_50">Volatility 50 Index</option>
+                                        <option value="R_75">Volatility 75 Index</option>
+                                        <option value="R_100" selected>Volatility 100 Index</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="overunder-barrier">Barrier Digit</label>
+                                    <input type="number" id="overunder-barrier" value="5" min="0" max="9"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="overunder-check-last">Check Last N Digits</label>
+                                    <input type="number" id="overunder-check-last" value="5" min="1" max="100"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="overunder-if-digit">If Last Digit Is</label>
+                                    <input type="number" id="overunder-if-digit" value="5" min="0" max="9"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="overunder-stake">Stake (per contract)</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="overunder-stake" value="0.35" min="0.35" step="0.01">
+                                        <span class="unit">USD</span>
+                                    </div>
+                                </div>
+                                <button onclick="executeConditionalOverUnder()" class="btn-secondary">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                            stroke-width="2" />
+                                    </svg>
+                                    <span>Execute Conditional</span>
+                                </button>
+                            </div>
+
+                            <!-- Match/Differ Multi-Market -->
+                            <div class="hedge-card hedge-card-wide">
+                                <h3>Match/Differ (Multi-Market)</h3>
+                                <p class="card-description">DIFFER on all selected markets, MATCH on one</p>
+                                <div class="control-group">
+                                    <label>Select Markets for DIFFER</label>
+                                    <div class="checkbox-group">
+                                        <label><input type="checkbox" id="md-r10" value="R_10"> Volatility 10</label>
+                                        <label><input type="checkbox" id="md-r25" value="R_25"> Volatility 25</label>
+                                        <label><input type="checkbox" id="md-r50" value="R_50" checked> Volatility
+                                            50</label>
+                                        <label><input type="checkbox" id="md-r75" value="R_75" checked> Volatility
+                                            75</label>
+                                        <label><input type="checkbox" id="md-r100" value="R_100" checked> Volatility
+                                            100</label>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <label for="matchdiffer-match-market">Market for MATCH</label>
+                                    <select id="matchdiffer-match-market" class="control-select">
+                                        <option value="R_10">Volatility 10 Index</option>
+                                        <option value="R_25">Volatility 25 Index</option>
+                                        <option value="R_50" selected>Volatility 50 Index</option>
+                                        <option value="R_75">Volatility 75 Index</option>
+                                        <option value="R_100">Volatility 100 Index</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="matchdiffer-digit">Prediction Digit</label>
+                                    <input type="number" id="matchdiffer-digit" value="5" min="0" max="9"
+                                        class="control-select">
+                                </div>
+                                <div class="control-group">
+                                    <label for="matchdiffer-stake">Stake (per contract)</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="matchdiffer-stake" value="0.35" min="0.35" step="0.01">
+                                        <span class="unit">USD</span>
+                                    </div>
+                                </div>
+                                <button onclick="executeMultiMarketMatchDiffer()" class="btn-secondary">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                            stroke-width="2" />
+                                    </svg>
+                                    <span>Execute Multi-Market</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- Toast Notification Container -->
-        <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+        <!-- AI Strategy Interface -->
+        <section class="ai-strategy-interface" id="ai-strategy-interface" style="display: none;">
+            <div class="ai-container">
+                <div class="ai-header">
+                    <h3>🤖 Ghost AI Generator</h3>
+                    <p class="ai-subtitle">Describe your strategy in plain English, and AI will code it for you.</p>
+                </div>
 
-        <script src="auth.js"></script>
-        <script src="app.js"></script>
-        <script src="onboarding.js"></script>
+                <div class="ai-input-group">
+                    <textarea id="ai-prompt-input" class="ai-prompt-box"
+                        placeholder="Describe your strategy... (e.g. 'Buy Call on Volatility 100 if the last digit is even')"></textarea>
+
+                    <div
+                        style="display: flex; gap: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                        <button id="ai-generate-btn" class="btn-primary">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                style="width:16px;margin-right:8px;">
+                                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Generate Code
+                        </button>
+
+                        <div
+                            style="display: flex; gap: 15px; align-items: center; background: rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                            <div style="display: flex; flex-direction: column;">
+                                <label for="ai-stake-input"
+                                    style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px;">STAKE
+                                    ($)</label>
+                                <input type="number" id="ai-stake-input" value="0.35" min="0.35" step="0.01"
+                                    style="width: 80px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: white; border-radius: 4px; padding: 4px;">
+                            </div>
+                            <div style="display: flex; flex-direction: column;">
+                                <label for="ai-martingale-input"
+                                    style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px;">MARTINGALE</label>
+                                <input type="number" id="ai-martingale-input" value="2.1" min="1.0" step="0.1"
+                                    style="width: 80px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: white; border-radius: 4px; padding: 4px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Market Selector for AI -->
+                <div class="ai-market-selector-wrapper"
+                    style="margin-top: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-size: 0.8rem; font-weight: bold; color: var(--text-muted);">SELECT MARKETS TO
+                            TRADE (Bot will run on ALL checked):</label>
+                        <div style="display: flex; gap: 5px;">
+                            <button id="ai-select-all-markets" class="btn-micro"
+                                style="font-size: 0.7rem; padding: 2px 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; cursor: pointer;">All</button>
+                            <button id="ai-clear-markets" class="btn-micro"
+                                style="font-size: 0.7rem; padding: 2px 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; cursor: pointer;">Clear</button>
+                        </div>
+                    </div>
+                    <div id="ai-market-checkboxes"
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; max-height: 150px; overflow-y: auto; padding-right: 5px;">
+                        <!-- Checkboxes populated by JS -->
+                        <span style="color: #666; font-size: 0.8rem;">Loading markets...</span>
+                    </div>
+                </div>
+
+                <div class="ai-workspace">
+                    <div class="ai-editor-section">
+                        <h4>Generated Strategy Code</h4>
+                        <textarea id="ai-code-editor" class="code-editor" spellcheck="false"
+                            placeholder="// Generated code will appear here..."></textarea>
+
+                        <div class="ai-controls">
+                            <div class="status-box">
+                                Status: <span id="ai-status-indicator" class="status-text">IDLE</span>
+                            </div>
+                            <div class="control-buttons">
+                                <button id="ai-run-btn" class="btn-bot btn-start">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                        style="width:16px;margin-right:5px;">
+                                        <polygon points="5 3 19 12 5 21 5 3" stroke="currentColor" stroke-width="2" />
+                                    </svg>
+                                    Run
+                                </button>
+                                <button id="ai-stop-btn" class="btn-secondary"
+                                    style="display: none; border-color: #e74c3c; color: #e74c3c;">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                        style="width:16px;margin-right:5px;">
+                                        <rect x="6" y="6" width="12" height="12" fill="currentColor" />
+                                    </svg>
+                                    Stop
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ai-logs-section">
+                        <h4>Live Logs</h4>
+                        <div id="ai-log-container" class="ai-logs">
+                            <div class="log-entry log-info">[System] Ready to generate strategies...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="utils.js"></script>
+    <script src="connection.js"></script>
+    <script src="trading.js"></script>
+    <script src="navigation.js"></script>
+    <script src="hedging.js"></script>
+    <script src="ghost_ai_bot.js"></script>
+    <script src="ghost_even_odd.js"></script>
+    <script src="ai_execution_engine.js"></script>
+    <script src="ai_ui.js"></script>
+    <script src="ui.js"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
