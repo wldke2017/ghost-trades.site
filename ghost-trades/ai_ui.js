@@ -102,6 +102,7 @@ window.updateAIMarketSelector = function (activeSymbols) {
     }
 
     console.log(`✅ AI UI: Received ${activeSymbols ? activeSymbols.length : 0} symbols for selector.`);
+    console.log('🔍 AI UI: Sample symbol structure:', activeSymbols[0]);
 
     aiMarketCheckboxes.innerHTML = ''; // Clear existing
 
@@ -111,22 +112,34 @@ window.updateAIMarketSelector = function (activeSymbols) {
         return;
     }
 
-    // Sort symbols: Crash/Boom first, then Volatility
-    const sortedSymbols = activeSymbols.sort((a, b) => {
-        if (a.displayName.includes('Crash') || a.displayName.includes('Boom')) return -1;
-        if (b.displayName.includes('Crash') || b.displayName.includes('Boom')) return 1;
-        return a.displayName.localeCompare(b.displayName);
+    // Filter for synthetic indices FIRST, then sort
+    const syntheticSymbols = activeSymbols.filter(symbol => {
+        // Check if it's a synthetic index
+        const isSynthetic = symbol.market === 'synthetic_index' || 
+                           symbol.submarket === 'random_index' ||
+                           symbol.submarket === 'random_daily' ||
+                           symbol.market_display_name?.includes('Synthetics');
+        
+        if (isSynthetic) {
+            console.log(`✅ Including ${symbol.symbol} (${symbol.display_name || symbol.symbol})`);
+        }
+        return isSynthetic;
+    });
+
+    console.log(`🔍 AI UI: Filtered ${syntheticSymbols.length} synthetic symbols from ${activeSymbols.length} total`);
+
+    // Sort: Crash/Boom first, then Volatility
+    const sortedSymbols = syntheticSymbols.sort((a, b) => {
+        const aName = a.display_name || a.symbol;
+        const bName = b.display_name || b.symbol;
+        
+        if (aName.includes('Crash') || aName.includes('Boom')) return -1;
+        if (bName.includes('Crash') || bName.includes('Boom')) return 1;
+        return aName.localeCompare(bName);
     });
 
     let count = 0;
     sortedSymbols.forEach(symbol => {
-        // Only include synthetic indices (and check for 'derived' which is sometimes used for new indices)
-        // Allow 'synthetic_index' OR 'derived' just in case
-        if (symbol.market !== 'synthetic_index' && symbol.submarket !== 'random_index') {
-            // Skip non-synthetic markets
-            return;
-        }
-
         const wrapper = document.createElement('div');
         wrapper.style.display = 'flex';
         wrapper.style.alignItems = 'center';
@@ -142,7 +155,7 @@ window.updateAIMarketSelector = function (activeSymbols) {
 
         const label = document.createElement('label');
         label.htmlFor = `ai-chk-${symbol.symbol}`;
-        label.textContent = symbol.displayName || symbol.symbol;
+        label.textContent = symbol.display_name || symbol.symbol;
         label.style.cursor = 'pointer';
 
         wrapper.appendChild(checkbox);
@@ -154,8 +167,31 @@ window.updateAIMarketSelector = function (activeSymbols) {
     console.log(`✅ AI UI: Successfully populated ${count} market checkboxes.`);
 
     if (count === 0) {
-        aiMarketCheckboxes.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem; padding: 5px;">No synthetic markets found.</span>';
-        console.warn('⚠️ AI UI: No synthetic markets found in active symbols');
+        // Show all symbols as fallback if no synthetic found
+        console.warn('⚠️ AI UI: No synthetic markets found, showing all symbols');
+        activeSymbols.forEach(symbol => {
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.gap = '5px';
+            wrapper.style.fontSize = '0.75rem';
+            wrapper.style.color = '#cbd5e1';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = symbol.symbol;
+            checkbox.id = `ai-chk-${symbol.symbol}`;
+
+            const label = document.createElement('label');
+            label.htmlFor = `ai-chk-${symbol.symbol}`;
+            label.textContent = symbol.display_name || symbol.symbol;
+            label.style.cursor = 'pointer';
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            aiMarketCheckboxes.appendChild(wrapper);
+        });
+        console.log(`✅ AI UI: Showing all ${activeSymbols.length} symbols as fallback`);
     }
 };
 
