@@ -104,7 +104,7 @@ class AIStrategyRunner {
         if (!this.isActive) return;
 
         // Validate signal
-        const validTypes = ['CALL', 'PUT', 'DIGITOVER', 'DIGITUNDER', 'DIGITMATCH', 'DIGITDIFF'];
+        const validTypes = ['CALL', 'PUT', 'DIGITOVER', 'DIGITUNDER', 'DIGITMATCH', 'DIGITDIFF', 'DIGITEVEN', 'DIGITODD'];
         if (!validTypes.includes(type)) {
             this.log(`Invalid signal type: ${type}`, 'warning');
             return;
