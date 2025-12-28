@@ -2,7 +2,11 @@
 // AI STRATEGY UI CONTROLLER
 // ===================================
 
-const AI_API_ENDPOINT = '/api/ai/generate';
+const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const isWrongPort = window.location.port === '5500' || window.location.port === '5501';
+const AI_API_ENDPOINT = (isLocalDev && isWrongPort)
+    ? 'http://localhost:3000/api/ai/generate'
+    : '/api/ai/generate';
 
 // UI Elements
 let aiPromptInput, aiGenerateBtn, aiCodeEditor, aiRunBtn, aiStopBtn, aiLogContainer, aiStatusIndicator;
@@ -46,7 +50,7 @@ async function handleGenerateStrategy() {
         // Get token from storage similar to auth.js/app.js
         const token = localStorage.getItem('authToken');
 
-        const response = await fetch('/api/ai/generate', {
+        const response = await fetch(AI_API_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
