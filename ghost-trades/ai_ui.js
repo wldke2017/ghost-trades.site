@@ -53,9 +53,19 @@ function initializeAIUI() {
 
 // Global function to populate markets (Called from app.js when activeSymbols are ready)
 window.updateAIMarketSelector = function (activeSymbols) {
-    if (!aiMarketCheckboxes) return;
+    if (!aiMarketCheckboxes) {
+        console.warn('AI UI: Market checkboxes container not found');
+        return;
+    }
+
+    console.log(`AI UI: Received ${activeSymbols ? activeSymbols.length : 0} symbols for selector.`);
 
     aiMarketCheckboxes.innerHTML = ''; // Clear existing
+
+    if (!activeSymbols || activeSymbols.length === 0) {
+        aiMarketCheckboxes.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem; padding: 5px;">No active symbols loaded.</span>';
+        return;
+    }
 
     // Sort symbols: Crash/Boom first, then Volatility
     const sortedSymbols = activeSymbols.sort((a, b) => {
@@ -64,9 +74,15 @@ window.updateAIMarketSelector = function (activeSymbols) {
         return a.displayName.localeCompare(b.displayName);
     });
 
+    let count = 0;
     sortedSymbols.forEach(symbol => {
-        // Only include synthetic indices
-        if (symbol.market !== 'synthetic_index') return;
+        // Only include synthetic indices (and check for 'derived' which is sometimes used for new indices)
+        // Allow 'synthetic_index' OR 'derived' just in case
+        if (symbol.market !== 'synthetic_index' && symbol.submarket !== 'random_index') {
+            // console.log(`Skipping ${symbol.symbol} (${symbol.market}/${symbol.submarket})`);
+            // We can check submarket 'random_index' which covers Volatility/Crash/Boom usually
+            return;
+        }
 
         const wrapper = document.createElement('div');
         wrapper.style.display = 'flex';
@@ -89,7 +105,14 @@ window.updateAIMarketSelector = function (activeSymbols) {
         wrapper.appendChild(checkbox);
         wrapper.appendChild(label);
         aiMarketCheckboxes.appendChild(wrapper);
+        count++;
     });
+
+    console.log(`AI UI: Populated ${count} market checkboxes.`);
+
+    if (count === 0) {
+        aiMarketCheckboxes.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem; padding: 5px;">No synthetic markets found.</span>';
+    }
 };
 
 function toggleAllMarkets(check) {
