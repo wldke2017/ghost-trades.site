@@ -315,6 +315,11 @@ function handleIncomingMessage(msg) {
 
                 populateMarketSelector();
                 subscribeToAllVolatilities();
+
+                // Populate AI Market Selector
+                if (typeof window.updateAIMarketSelector === 'function') {
+                    window.updateAIMarketSelector(activeSymbols);
+                }
             } else {
                 console.error('❌ No active_symbols data received from Deriv API');
                 showToast('Failed to load markets from Deriv', 'error');
@@ -411,6 +416,18 @@ function handleIncomingMessage(msg) {
                 // 3. Update Ticker Watch Table
                 updateTickerUI(symbol, price, lastPrices[symbol]);
                 lastPrices[symbol] = price;
+
+                // 4. Feed AI Strategy Runner
+                if (window.aiStrategyRunner && window.aiStrategyRunner.isActive) {
+                    const aiTickContext = {
+                        symbol: symbol,
+                        tick: price,
+                        digits: marketFullTickDigits[symbol] || [],
+                        lastDigit: parseInt(price.toString().slice(-1)),
+                        // We can add more context like percentages if needed, but digits array often sufficient for simple strategies
+                    };
+                    window.aiStrategyRunner.execute(aiTickContext);
+                }
             }
             break;
 

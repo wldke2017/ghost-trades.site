@@ -13,6 +13,7 @@ class AIStrategyRunner {
         this.lastExecutionTime = 0;
         this.errors = 0;
         this.consecutiveErrors = 0;
+        this.allowedMarkets = []; // List of symbols allowed to trade
     }
 
     /**
@@ -37,15 +38,23 @@ class AIStrategyRunner {
 
     /**
      * Start the strategy execution
+     * @param {Array<string>} markets - List of selected market symbols (e.g. ['R_100', '1HZ10V'])
      */
-    start() {
+    start(markets = []) {
         if (!this.compiledStrategy) {
             this.log('No strategy compiled. Please generate or write code first.', 'error');
             return false;
         }
+
+        if (!markets || markets.length === 0) {
+            this.log('No markets selected. Please select at least one market.', 'error');
+            return false;
+        }
+
+        this.allowedMarkets = markets;
         this.isActive = true;
         this.resetStats();
-        this.log('Strategy execution started.', 'success');
+        this.log(`Strategy execution started on markets: ${markets.join(', ')}`, 'success');
         return true;
     }
 
@@ -54,6 +63,7 @@ class AIStrategyRunner {
      */
     stop() {
         this.isActive = false;
+        this.allowedMarkets = [];
         this.log('Strategy execution stopped.', 'warning');
     }
 
@@ -70,13 +80,20 @@ class AIStrategyRunner {
     execute(tickContext) {
         if (!this.isActive || !this.compiledStrategy) return;
 
-        // Rate limit execution to prevent blocking UI (max once per 100ms)
-        const now = Date.now();
-        if (now - this.lastExecutionTime < 100) return;
-        this.lastExecutionTime = now;
+        // FILTER: Only run for selected markets
+        if (!this.allowedMarkets.includes(tickContext.symbol)) {
+            return;
+        }
+
+        // Rate limit execution to prevent blocking UI (max once per 100ms PER MARKET is hard to track, so we just limit global run loop slightly if needed, but per-tick is better for precision)
+        // actually, we should remove the global rate limit if we want to trade multiple markets simultaneously, 
+        // OR make it per-symbol.
+
+        // Let's remove the global 100ms throttle because it might skip ticks if multiple markets tick same time.
+        // Instead, rely on the fact that JS is single threaded and ticks come sequentially.
 
         // Prepare safe API functions
-        const signal = (type, stake) => this.handleSignal(type, stake, tickContext.symbol);
+        const signal = (type, stake, barrier) => this.handleSignal(type, stake, tickContext.symbol, barrier);
         const log = (msg) => this.log(msg, 'info');
 
         try {

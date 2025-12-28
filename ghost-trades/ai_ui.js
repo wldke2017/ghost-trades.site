@@ -10,6 +10,7 @@ const AI_API_ENDPOINT = (isLocalDev && isWrongPort)
 
 // UI Elements
 let aiPromptInput, aiGenerateBtn, aiCodeEditor, aiRunBtn, aiStopBtn, aiLogContainer, aiStatusIndicator;
+let aiMarketCheckboxes, aiSelectAllBtn, aiClearMarketsBtn; // New Elements
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeAIUI();
@@ -24,6 +25,11 @@ function initializeAIUI() {
     aiLogContainer = document.getElementById('ai-log-container');
     aiStatusIndicator = document.getElementById('ai-status-indicator');
 
+    // Market Selector Elements
+    aiMarketCheckboxes = document.getElementById('ai-market-checkboxes');
+    aiSelectAllBtn = document.getElementById('ai-select-all-markets');
+    aiClearMarketsBtn = document.getElementById('ai-clear-markets');
+
     if (!aiGenerateBtn) return; // UI might not be loaded yet
 
     // Event Listeners
@@ -31,8 +37,64 @@ function initializeAIUI() {
     aiRunBtn.addEventListener('click', handleRunStrategy);
     aiStopBtn.addEventListener('click', handleStopStrategy);
 
+    if (aiSelectAllBtn) aiSelectAllBtn.addEventListener('click', () => toggleAllMarkets(true));
+    if (aiClearMarketsBtn) aiClearMarketsBtn.addEventListener('click', () => toggleAllMarkets(false));
+
     // Initial State
     updateAIStatus('IDLE');
+}
+
+// Global function to populate markets (Called from app.js when activeSymbols are ready)
+window.updateAIMarketSelector = function (activeSymbols) {
+    if (!aiMarketCheckboxes) return;
+
+    aiMarketCheckboxes.innerHTML = ''; // Clear existing
+
+    // Sort symbols: Crash/Boom first, then Volatility
+    const sortedSymbols = activeSymbols.sort((a, b) => {
+        if (a.displayName.includes('Crash') || a.displayName.includes('Boom')) return -1;
+        if (b.displayName.includes('Crash') || b.displayName.includes('Boom')) return 1;
+        return a.displayName.localeCompare(b.displayName);
+    });
+
+    sortedSymbols.forEach(symbol => {
+        // Only include synthetic indices
+        if (symbol.market !== 'synthetic_index') return;
+
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.gap = '5px';
+        wrapper.style.fontSize = '0.75rem';
+        wrapper.style.color = '#cbd5e1';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = symbol.symbol;
+        checkbox.id = `ai-chk-${symbol.symbol}`;
+        checkbox.checked = false; // Default unchecked
+
+        const label = document.createElement('label');
+        label.htmlFor = `ai-chk-${symbol.symbol}`;
+        label.textContent = symbol.displayName;
+        label.style.cursor = 'pointer';
+
+        wrapper.appendChild(checkbox);
+        wrapper.appendChild(label);
+        aiMarketCheckboxes.appendChild(wrapper);
+    });
+};
+
+function toggleAllMarkets(check) {
+    if (!aiMarketCheckboxes) return;
+    const checkboxes = aiMarketCheckboxes.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = check);
+}
+
+function getSelectedAIMarkets() {
+    if (!aiMarketCheckboxes) return [];
+    const checkboxes = aiMarketCheckboxes.querySelectorAll('input[type="checkbox"]:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
 }
 
 async function handleGenerateStrategy() {
@@ -98,9 +160,26 @@ function handleRunStrategy() {
         return;
     }
 
+    // Get Selected Markets
+    const selectedMarkets = getSelectedAIMarkets();
+    if (selectedMarkets.length === 0) {
+        showToast('Please select at least one market to trade.', 'error');
+        return;
+    }
+
     const compiled = window.aiStrategyRunner.compile(code);
     if (compiled) {
-        const started = window.aiStrategyRunner.start();
+        // Reset Martingale State
+        const stakeInput = document.getElementById('ai-stake-input');
+        const baseStake = parseFloat(stakeInput?.value) || 0.35;
+        window.aiTradingState.currentStake = baseStake;
+        window.aiTradingState.consecutiveLosses = 0;
+        window.aiTradingState.totalProfit = 0;
+
+        window.aiStrategyRunner.log(`Starting strategy on ${selectedMarkets.length} market(s). Base Stake: $${baseStake}`, 'info');
+
+        // Start runner with selected markets
+        const started = window.aiStrategyRunner.start(selectedMarkets);
         if (started) {
             updateAIStatus('RUNNING');
             updateAIButtons(true);
