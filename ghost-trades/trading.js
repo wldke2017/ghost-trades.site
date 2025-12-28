@@ -52,9 +52,9 @@ function subscribeToAllVolatilities() {
     );
     console.log('🔍 Alternative synthetic market names:', alternativeSynthetic.length);
 
-    // Filter for ALL synthetic indices (Volatility, Crash/Boom, Range Break, Step, Jump, etc.)
+    // Filter for ALLOWED synthetic indices (Volatility, Jump, Daily Reset)
     const volatilitySymbols = activeSymbols
-        .filter(symbol => symbol.market === 'synthetic_index')
+        .filter(symbol => symbol.market === 'synthetic_index' && isAllowedBotMarket(symbol.symbol))
         .map(symbol => symbol.symbol);
 
     console.log(`✅ Subscribing to ${volatilitySymbols.length} synthetic indices:`, volatilitySymbols);
