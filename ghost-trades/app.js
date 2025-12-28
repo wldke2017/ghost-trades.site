@@ -79,12 +79,14 @@ const dashboardNav = document.getElementById('dashboard-nav');
 const speedbotNav = document.getElementById('speedbot-nav');
 const ghostaiNav = document.getElementById('ghostai-nav');
 const ghosteoddNav = document.getElementById('ghost-eodd-nav');
+const aiStrategyNav = document.getElementById('ghostai-strategy-nav');
 const hedgingNav = document.getElementById('hedging-nav');
 
 // Trading Interface
 const tradingInterface = document.getElementById('trading-interface');
 const ghostaiInterface = document.getElementById('ghostai-interface');
 const ghosteoddInterface = document.getElementById('ghost-eodd-interface');
+const aiStrategyInterface = document.getElementById('ai-strategy-interface');
 const hedgingInterface = document.getElementById('hedging-interface');
 const chartContainer = document.getElementById('chart-container');
 const tradeMessageContainer = document.getElementById('tradeMessageContainer');

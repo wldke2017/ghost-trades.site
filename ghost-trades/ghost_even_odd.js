@@ -101,7 +101,7 @@ function updateEvenOddProfitLossDisplay() {
  */
 function calculatePatternForSymbol(symbol, length = 5) {
     if (!symbolDigitHistory[symbol]) return 0;
-    
+
     const digits = symbolDigitHistory[symbol];
     let pattern = 0;
     let multiplier = 1;
@@ -131,6 +131,31 @@ function isEven(digit) {
 }
 
 /**
+ * Get the actual digit sequence for a pattern
+ * @param {string} symbol - The market symbol
+ * @param {number} length - Number of digits to extract
+ * @returns {string} Formatted digit sequence (e.g., "1-4-3-6-8")
+ */
+function getDigitSequence(symbol, length) {
+    if (!symbolDigitHistory[symbol]) return '';
+
+    const digits = symbolDigitHistory[symbol];
+    const sequence = [];
+
+    // Extract digits from digit1 to digit[length]
+    for (let i = 1; i <= length; i++) {
+        const digitKey = `digit${i}`;
+        if (digits[digitKey] === null || digits[digitKey] === undefined) {
+            return ''; // Not enough digits yet
+        }
+        sequence.push(digits[digitKey]);
+    }
+
+    // Return in reverse order (most recent first) with dashes
+    return sequence.reverse().join('-');
+}
+
+/**
  * Get current stake for a symbol considering its martingale state
  */
 function getStakeForSymbol(symbol) {
@@ -145,7 +170,7 @@ function getStakeForSymbol(symbol) {
 
     const martingale = evenOddBotState.symbolMartingale[symbol];
     const stake = parseFloat((martingale.size * mm.initStake).toFixed(2));
-    
+
     return stake;
 }
 
@@ -182,20 +207,20 @@ function determineTradeFromPattern(symbol) {
     // Check all active patterns
     for (const [patternKey, patternConfig] of Object.entries(activePatterns)) {
         if (!patternConfig.active) continue;
-        
+
         const patternNum = parseInt(patternKey);
         const patternLength = getPatternLength(patternNum);
-        
+
         // Calculate pattern for this specific length
         const calculatedPattern = calculatePatternForSymbol(symbol, patternLength);
-        
+
         if (calculatedPattern === patternNum) {
             const action = patternConfig.action;
             const patternStr = convertPatternToDisplay(patternNum.toString());
             return { action: action, reason: `Pattern ${patternStr} → ${action === 'DIGITEVEN' ? 'EVEN' : 'ODD'}`, pattern: patternNum };
         }
     }
-    
+
     return null; // No trade for inactive or unrecognized patterns
 }
 
@@ -207,17 +232,17 @@ function loadActivePatterns() {
     checkboxes.forEach(checkbox => {
         const pattern = parseInt(checkbox.value);
         const isActive = checkbox.checked;
-        
+
         // Get action from the corresponding dropdown
         const dropdown = document.querySelector(`.pattern-action-select[data-pattern="${pattern}"]`);
         const action = dropdown ? dropdown.value : checkbox.getAttribute('data-action');
-        
+
         activePatterns[pattern] = {
             action: action,
             active: isActive
         };
     });
-    
+
     addEvenOddBotLog(`📋 Loaded ${Object.values(activePatterns).filter(p => p.active).length} active patterns`, 'info');
 }
 
@@ -241,28 +266,28 @@ function convertPatternToDisplay(patternStr) {
 function addCustomPatternToConfig() {
     const patternInput = document.getElementById('customPattern');
     const actionSelect = document.getElementById('customPatternAction');
-    
+
     if (!patternInput || !actionSelect) return;
-    
+
     const patternStr = patternInput.value.trim().toUpperCase();
-    
+
     // Validate pattern (O and E, 1-15 digits)
     if (!/^[OE]{1,15}$/i.test(patternStr)) {
         showToast('Invalid pattern! Use only O and E (1-10 digits)', 'error');
         return;
     }
-    
+
     // Convert O/E to 1/2 for internal storage
     const numericPattern = convertPatternToNumeric(patternStr);
     const pattern = parseInt(numericPattern);
     const action = actionSelect.value;
-    
+
     // Add to active patterns
     activePatterns[pattern] = {
         action: action,
         active: true
     };
-    
+
     // Add checkbox to UI with O/E display
     const container = document.querySelector('.pattern-checkboxes');
     if (container) {
@@ -282,15 +307,15 @@ function addCustomPatternToConfig() {
             <span style="color: var(--accent-color); font-size: 0.9em;">(Custom)</span>
         `;
         container.appendChild(label);
-        
+
         // Add event listener for the new dropdown
         const newDropdown = label.querySelector('.pattern-action-select');
         if (newDropdown) {
-            newDropdown.addEventListener('change', function() {
+            newDropdown.addEventListener('change', function () {
                 const pattern = this.getAttribute('data-pattern');
                 const newAction = this.value;
                 const checkbox = document.querySelector(`.pattern-checkbox[value="${pattern}"]`);
-                
+
                 if (checkbox) {
                     checkbox.setAttribute('data-action', newAction);
                     if (activePatterns[pattern]) {
@@ -301,7 +326,7 @@ function addCustomPatternToConfig() {
             });
         }
     }
-    
+
     showToast(`Custom pattern ${patternStr} → ${action === 'DIGITEVEN' ? 'EVEN' : 'ODD'} added!`, 'success');
     patternInput.value = '';
 }
@@ -313,7 +338,7 @@ function initializeMoneyManagement() {
     const stopLossInput = document.getElementById('eoddStopLoss');
     const martingaleFactorInput = document.getElementById('eoddMartingaleFactor');
     const martingaleLevelInput = document.getElementById('eoddMartingaleLevel');
-    
+
     mm.initStake = initialStakeInput ? parseFloat(initialStakeInput.value) : 0.35;
     mm.winStake = mm.initStake;
     mm.totalProfit = 0.0;
@@ -329,7 +354,7 @@ function initializeMoneyManagement() {
     mm.consecutiveLosses = 0;
     mm.isInRecovery = false;
     mm.recoveryStartLoss = 0;
-    
+
     // Log the configuration being used
     addEvenOddBotLog(`⚙️ Configuration loaded: Stake=$${mm.initStake.toFixed(2)}, Target=$${mm.targetProfit.toFixed(2)}, StopLoss=$${mm.stopLoss.toFixed(2)}, Martingale=${mm.martingaleFactor}x (Max Level: ${mm.martingaleLevel})`, 'info');
 }
@@ -351,17 +376,17 @@ function updateSymbolMartingale(symbol, isWin, profit) {
         martingale.step = 0;
         martingale.size = 1;
         martingale.accumulatedLoss = 0;
-        
+
         addEvenOddBotLog(`✅ ${symbol} WIN! Profit: +$${profit.toFixed(2)} | Martingale reset`, 'win');
     } else {
         // Apply martingale for this symbol on loss
         martingale.step++;
         martingale.accumulatedLoss += Math.abs(profit);
-        
+
         if (mm.martingaleLevel === 0 || martingale.step <= mm.martingaleLevel) {
             martingale.size *= mm.martingaleFactor;
             martingale.size = parseFloat(martingale.size.toFixed(4));
-            
+
             const nextStake = parseFloat((martingale.size * mm.initStake).toFixed(2));
             addEvenOddBotLog(`❌ ${symbol} LOSS! Loss: -$${Math.abs(profit).toFixed(2)} | Step ${martingale.step}/${mm.martingaleLevel} | Next: $${nextStake.toFixed(2)}`, 'loss');
         } else {
@@ -408,14 +433,14 @@ function updateGlobalMartingale(symbol, isWin, profit) {
             // Not in recovery mode yet - count consecutive losses
             mm.consecutiveLosses++;
             addEvenOddBotLog(`❌ ${symbol} LOSS! Loss: -$${Math.abs(profit).toFixed(2)} | Consecutive losses: ${mm.consecutiveLosses}`, 'loss');
-            
+
             if (mm.consecutiveLosses >= 1) {
                 // Trigger recovery mode after 1 loss
                 mm.isInRecovery = true;
                 mm.recoveryStartLoss = mm.totalProfit; // Remember total P/L when recovery starts
                 mm.lossLevel = 0;
                 mm.martingaleSize = mm.martingaleFactor; // Start with first martingale step
-                
+
                 const nextStake = parseFloat((mm.martingaleSize * mm.initStake).toFixed(2));
                 addEvenOddBotLog(`🔥 RECOVERY MODE ACTIVATED! Loss detected. Starting martingale recovery...`, 'warning');
                 addEvenOddBotLog(`💪 Recovery target: $${Math.abs(mm.recoveryStartLoss).toFixed(2)} | Next stake: $${nextStake.toFixed(2)}`, 'info');
@@ -423,11 +448,11 @@ function updateGlobalMartingale(symbol, isWin, profit) {
         } else {
             // Already in recovery mode - continue martingale
             mm.lossLevel++;
-            
+
             if (mm.martingaleLevel === 0 || mm.lossLevel < mm.martingaleLevel) {
                 mm.martingaleSize *= mm.martingaleFactor;
                 mm.martingaleSize = parseFloat(mm.martingaleSize.toFixed(4));
-                
+
                 const nextStake = parseFloat((mm.martingaleSize * mm.initStake).toFixed(2));
                 addEvenOddBotLog(`❌ ${symbol} LOSS! Loss: -$${Math.abs(profit).toFixed(2)} | Recovery Step ${mm.lossLevel + 1}/${mm.martingaleLevel} | Next: $${nextStake.toFixed(2)}`, 'loss');
             } else {
@@ -458,23 +483,23 @@ function updateMoneyManagement(isWin, profit) {
         addEvenOddBotLog(`🎉 Target profit reached: $${mm.totalProfit.toFixed(2)} / $${mm.targetProfit.toFixed(2)}`, 'win');
         addEvenOddBotLog(`🛑 Bot stopping automatically...`, 'info');
         evenOddBotState.isTrading = false;
-        
+
         // Stop immediately
         setTimeout(() => {
             stopEvenOddBot();
         }, 100);
-        
+
         return; // Exit immediately
     } else if (Math.abs(mm.totalProfit) >= mm.stopLoss && mm.totalProfit < 0) {
         addEvenOddBotLog(`🛑 Stop loss hit: -$${Math.abs(mm.totalProfit).toFixed(2)} / $${mm.stopLoss.toFixed(2)}`, 'error');
         addEvenOddBotLog(`🛑 Bot stopping automatically...`, 'info');
         evenOddBotState.isTrading = false;
-        
+
         // Stop immediately
         setTimeout(() => {
             stopEvenOddBot();
         }, 100);
-        
+
         return; // Exit immediately
     }
 }
@@ -484,7 +509,7 @@ async function startEvenOddBot() {
 
     evenOddBotState.isTrading = true;
     evenOddBotState.runId = `even-odd-${Date.now()}`;
-    
+
     // Update all button states
     updateEvenOddButtonStates(true);
 
@@ -499,7 +524,7 @@ async function startEvenOddBot() {
     if (eoddBotLogContainer) {
         eoddBotLogContainer.innerHTML = '';
     }
-    
+
     // Add session start marker in logs
     addEvenOddBotLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'info');
     addEvenOddBotLog(`🔄 New Bot Session Started`, 'info');
@@ -538,20 +563,20 @@ async function stopEvenOddBot() {
     if (!evenOddBotState.isTrading) return;
 
     evenOddBotState.isTrading = false;
-    
+
     // Clear all trade locks when stopping
     clearAllTradeLocks();
-    
+
     // Update all button states
     updateEvenOddButtonStates(false);
-    
+
     const activeCount = Object.keys(evenOddBotState.activeContracts).length;
     addEvenOddBotLog("🛑 GHOST_E/ODD Bot stopped by user.", 'warning');
-    
+
     if (activeCount > 0) {
         addEvenOddBotLog(`⏳ Waiting for ${activeCount} active contract(s) to complete...`, 'info');
     }
-    
+
     addEvenOddBotLog(`📊 Final Stats: ${mm.winCount}W/${mm.lossCount}L | Total P/L: $${mm.totalProfit.toFixed(2)}`, 'info');
     evenOddBotState.runId = null;
     updateEvenOddProfitLossDisplay();
@@ -669,20 +694,29 @@ function handleEvenOddTick(tick) {
                 // Symbol is locked by another bot, skip this trade
                 return;
             }
-            
+
             // Get current GLOBAL stake (can recover on ANY volatility)
             const stake = getCurrentStake();
-            
-            addEvenOddBotLog(`🎯 ${symbol}: ${tradeDecision.reason} | Stake: $${stake.toFixed(2)}`, 'trade');
-            
+
+            // Get the actual digit sequence that triggered this pattern
+            const patternLength = tradeDecision.pattern.toString().length;
+            const digitSequence = getDigitSequence(symbol, patternLength);
+            const displayPattern = convertPatternToDisplay(tradeDecision.pattern.toString());
+
+            // Enhanced log with digit sequence
+            addEvenOddBotLog(`🎯 ${symbol}: Pattern ${displayPattern} (${digitSequence}) → ${tradeDecision.action === 'DIGITEVEN' ? 'EVEN' : 'ODD'} | Stake: $${stake.toFixed(2)}`, 'trade');
+
             // Update pattern tracking
             evenOddBotState.symbolPatterns[symbol] = {
                 pattern: tradeDecision.pattern,
                 lastTradeTime: now
             };
-            
+
+            // Store digit sequence for history
+            evenOddBotState.lastDigitSequence = digitSequence;
+
             // Execute trade for this symbol
-            executePatternTrade(tradeDecision.action, symbol, tradeDecision.pattern, stake);
+            executePatternTrade(tradeDecision.action, symbol, tradeDecision.pattern, stake, digitSequence);
         }
     }
 }
@@ -702,7 +736,7 @@ function executePatternTrade(action, symbol, pattern, stake) {
         releaseTradeLock(symbol, 'ghost_eodd');
         return;
     }
-    
+
     // Lock should already be acquired by caller, but double-check
     if (!globalTradeLocks[symbol] || globalTradeLocks[symbol].botType !== 'ghost_eodd') {
         console.warn(`⚠️ Trade lock not held for ${symbol}, acquiring now...`);
@@ -711,27 +745,27 @@ function executePatternTrade(action, symbol, pattern, stake) {
             return;
         }
     }
-    
+
     // Double check target/stop loss hasn't been hit
     if (mm.totalProfit >= mm.targetProfit) {
         addEvenOddBotLog(`⚠️ Target profit already reached, skipping trade`, 'warning');
         releaseTradeLock(symbol, 'ghost_eodd');
         return;
     }
-    
+
     if (Math.abs(mm.totalProfit) >= mm.stopLoss && mm.totalProfit < 0) {
         addEvenOddBotLog(`⚠️ Stop loss already hit, skipping trade`, 'warning');
         releaseTradeLock(symbol, 'ghost_eodd');
         return;
     }
-    
+
     // Validate stake amount
     if (stake < 0.35) {
         addEvenOddBotLog(`❌ ${symbol} Stake too low: $${stake.toFixed(2)} (minimum: $0.35)`, 'error');
         releaseTradeLock(symbol, 'ghost_eodd');
         return;
     }
-    
+
     if (stake > 2000) {
         addEvenOddBotLog(`❌ ${symbol} Stake too high: $${stake.toFixed(2)} (maximum: $2000)`, 'error');
         releaseTradeLock(symbol, 'ghost_eodd');
@@ -740,7 +774,7 @@ function executePatternTrade(action, symbol, pattern, stake) {
 
     const contractType = action === 'DIGITEVEN' ? 'DIGITEVEN' : 'DIGITODD';
     const predictionType = action === 'DIGITEVEN' ? 'EVEN' : 'ODD';
-    
+
     // Generate unique request ID for tracking
     const requestId = `${symbol}_${Date.now()}`;
 
@@ -841,38 +875,38 @@ function updateEvenOddButtonStates(isRunning) {
 document.addEventListener('DOMContentLoaded', () => {
     // Add event listeners for all three even/odd bot buttons
     const buttonIds = ['even-odd-toggle-button-top', 'even-odd-toggle-button-bottom', 'even-odd-toggle-button-history'];
-    
+
     buttonIds.forEach(buttonId => {
         const button = document.getElementById(buttonId);
         if (button) {
             button.addEventListener('click', toggleEvenOddBot);
         }
     });
-    
+
     // Add event listener for custom pattern button
     const addCustomPatternBtn = document.getElementById('addCustomPattern');
     if (addCustomPatternBtn) {
         addCustomPatternBtn.addEventListener('click', addCustomPatternToConfig);
     }
-    
+
     // Add event listener for clear history button
     const clearHistoryBtn = document.getElementById('clear-eodd-history');
     if (clearHistoryBtn) {
         clearHistoryBtn.addEventListener('click', clearEvenOddHistory);
     }
-    
+
     // Add event listeners for pattern action dropdowns
     const patternDropdowns = document.querySelectorAll('.pattern-action-select');
     patternDropdowns.forEach(dropdown => {
-        dropdown.addEventListener('change', function() {
+        dropdown.addEventListener('change', function () {
             const pattern = this.getAttribute('data-pattern');
             const newAction = this.value;
             const checkbox = document.querySelector(`.pattern-checkbox[value="${pattern}"]`);
-            
+
             if (checkbox) {
                 // Update the checkbox data-action attribute
                 checkbox.setAttribute('data-action', newAction);
-                
+
                 // Update activePatterns if bot is running
                 if (activePatterns[pattern]) {
                     activePatterns[pattern].action = newAction;

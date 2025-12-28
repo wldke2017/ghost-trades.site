@@ -52,46 +52,12 @@ function subscribeToAllVolatilities() {
     );
     console.log('🔍 Alternative synthetic market names:', alternativeSynthetic.length);
 
-    // Filter for ALL volatility indices including 1s versions
+    // Filter for ALL synthetic indices (Volatility, Crash/Boom, Range Break, Step, Jump, etc.)
     const volatilitySymbols = activeSymbols
-        .filter(symbol => {
-            // Check if it's a synthetic index
-            if (symbol.market !== 'synthetic_index') return false;
-
-            // Include all R_ (Volatility) and 1HZ (1s) indices
-            const isVolatility = symbol.symbol.startsWith('R_') ||
-                symbol.symbol.startsWith('1HZ') ||
-                symbol.symbol.includes('1s');
-
-            // Also include Jump indices
-            const isJump = symbol.symbol.startsWith('JD');
-
-            return isVolatility || isJump;
-        })
+        .filter(symbol => symbol.market === 'synthetic_index')
         .map(symbol => symbol.symbol);
 
-    // List of expected volatility symbols to verify subscription
-    const expectedVolatilities = [
-        'R_10', '1HZ10V',      // Volatility 10 and 10 (1s)
-        'R_25', '1HZ25V',      // Volatility 25 and 25 (1s)
-        'R_50', '1HZ50V',      // Volatility 50 and 50 (1s)
-        'R_75', '1HZ75V',      // Volatility 75 and 75 (1s)
-        'R_100', '1HZ100V',    // Volatility 100 and 100 (1s)
-        '1HZ150V',             // Volatility 150 (1s)
-        '1HZ200V',             // Volatility 200 (1s)
-        '1HZ250V',             // Volatility 250 (1s)
-        '1HZ300V'              // Volatility 300 (1s)
-    ];
-
     console.log(`✅ Subscribing to ${volatilitySymbols.length} synthetic indices:`, volatilitySymbols);
-    console.log('📋 Expected volatilities:', expectedVolatilities);
-
-    // Check which expected symbols are missing
-    const missingSymbols = expectedVolatilities.filter(exp => !volatilitySymbols.includes(exp));
-    if (missingSymbols.length > 0) {
-        console.warn('⚠️ Some expected volatility symbols not found:', missingSymbols);
-        console.warn('⚠️ This might be normal if they are not available in your region/account');
-    }
 
     if (volatilitySymbols.length === 0) {
         console.warn("⚠️ No synthetic indices found! This will prevent the bot from working.");
@@ -125,12 +91,32 @@ function subscribeToAllVolatilities() {
             row.id = `row-${symbol}`;
 
             const symbolCell = row.insertCell(0);
-            // Better display names for volatility indices
-            let displayName = symbol
-                .replace('R_', 'V')
-                .replace('1HZ', 'V')
-                .replace('V', 'Vol ')
-                .replace('JD', 'Jump ');
+            // Better display names for various indices
+            let displayName = symbol;
+
+            // Volatility Indices
+            if (symbol.startsWith('R_')) displayName = symbol.replace('R_', 'Vol ');
+            else if (symbol.startsWith('1HZ')) displayName = symbol.replace('1HZ', 'Vol ').replace('V', '');
+
+            // Jump Indices
+            else if (symbol.startsWith('JD')) displayName = symbol.replace('JD', 'Jump ');
+
+            // Crash/Boom
+            else if (symbol.includes('CRASH')) displayName = symbol.replace('CRASH', 'Crash ');
+            else if (symbol.includes('BOOM')) displayName = symbol.replace('BOOM', 'Boom ');
+
+            // Range Break
+            else if (symbol.includes('RDBEAR')) displayName = 'Bear Break';
+            else if (symbol.includes('RDBULL')) displayName = 'Bull Break';
+
+            // Step Indices
+            else if (symbol === 'STPIDX') displayName = 'Step Index';
+
+            // DEX Indices
+            else if (symbol.startsWith('DEX')) displayName = symbol.replace('DEX', 'DEX ').replace('DN', ' Down').replace('UP', ' Up');
+
+            // Drift Switching
+            else if (symbol.startsWith('DRIFT')) displayName = symbol.replace('DRIFT', 'Drift ');
 
             // Add (1s) suffix for 1-second indices
             if (symbol.startsWith('1HZ') || symbol.includes('1s')) {
@@ -399,7 +385,41 @@ function populateMarketSelector() {
     volatilitySymbols.forEach(symbolData => {
         const option = document.createElement('option');
         option.value = symbolData.symbol;
-        option.textContent = `${symbolData.symbol.replace('R_', 'V-')} (${symbolData.display_name})`;
+
+        // Better display names for various indices (matching ticker table logic)
+        let displayName = symbolData.symbol;
+        const symbol = symbolData.symbol;
+
+        // Volatility Indices
+        if (symbol.startsWith('R_')) displayName = symbol.replace('R_', 'Vol ');
+        else if (symbol.startsWith('1HZ')) displayName = symbol.replace('1HZ', 'Vol ').replace('V', '');
+
+        // Jump Indices
+        else if (symbol.startsWith('JD')) displayName = symbol.replace('JD', 'Jump ');
+
+        // Crash/Boom
+        else if (symbol.includes('CRASH')) displayName = symbol.replace('CRASH', 'Crash ');
+        else if (symbol.includes('BOOM')) displayName = symbol.replace('BOOM', 'Boom ');
+
+        // Range Break
+        else if (symbol.includes('RDBEAR')) displayName = 'Bear Break';
+        else if (symbol.includes('RDBULL')) displayName = 'Bull Break';
+
+        // Step Indices
+        else if (symbol === 'STPIDX') displayName = 'Step Index';
+
+        // DEX Indices
+        else if (symbol.startsWith('DEX')) displayName = symbol.replace('DEX', 'DEX ').replace('DN', ' Down').replace('UP', ' Up');
+
+        // Drift Switching
+        else if (symbol.startsWith('DRIFT')) displayName = symbol.replace('DRIFT', 'Drift ');
+
+        // Add (1s) suffix for 1-second indices
+        if (symbol.startsWith('1HZ') || symbol.includes('1s')) {
+            displayName += ' (1s)';
+        }
+
+        option.textContent = `${displayName} (${symbolData.display_name})`;
         marketSelector.appendChild(option);
     });
 

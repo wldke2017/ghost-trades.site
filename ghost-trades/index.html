@@ -104,6 +104,15 @@
                 </svg>
                 <span class="nav-text">GHOST E/ODD</span>
             </a>
+            <a href="#" id="ghostai-strategy-nav" class="nav-item">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7V5.73A2 2 0 0 1 12 2z"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M10 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <span class="nav-text">AI Strategy</span>
+            </a>
             <a href="#" id="hedging-nav" class="nav-item">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"
@@ -1429,6 +1438,67 @@
             </div>
         </section>
 
+        <!-- AI Strategy Interface -->
+        <section class="ai-strategy-interface" id="ai-strategy-interface" style="display: none;">
+            <div class="ai-container">
+                <div class="ai-header">
+                    <h3>🤖 Ghost AI Generator</h3>
+                    <p class="ai-subtitle">Describe your strategy in plain English, and AI will code it for you.</p>
+                </div>
+
+                <div class="ai-input-group">
+                    <textarea id="ai-prompt-input" class="ai-prompt-box"
+                        placeholder="e.g. Buy CALL if last digit is 7 and previous was 8. Stake 1.0."></textarea>
+                    <button id="ai-generate-btn" class="btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                            style="width:16px;margin-right:8px;">
+                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        Generate Code
+                    </button>
+                </div>
+
+                <div class="ai-workspace">
+                    <div class="ai-editor-section">
+                        <h4>Generated Strategy Code</h4>
+                        <textarea id="ai-code-editor" class="code-editor" spellcheck="false"
+                            placeholder="// Generated code will appear here..."></textarea>
+
+                        <div class="ai-controls">
+                            <div class="status-box">
+                                Status: <span id="ai-status-indicator" class="status-text">IDLE</span>
+                            </div>
+                            <div class="control-buttons">
+                                <button id="ai-run-btn" class="btn-bot btn-start">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                        style="width:16px;margin-right:5px;">
+                                        <polygon points="5 3 19 12 5 21 5 3" stroke="currentColor" stroke-width="2" />
+                                    </svg>
+                                    Run
+                                </button>
+                                <button id="ai-stop-btn" class="btn-secondary"
+                                    style="display: none; border-color: #e74c3c; color: #e74c3c;">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                        style="width:16px;margin-right:5px;">
+                                        <rect x="6" y="6" width="12" height="12" fill="currentColor" />
+                                    </svg>
+                                    Stop
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ai-logs-section">
+                        <h4>Live Logs</h4>
+                        <div id="ai-log-container" class="ai-logs">
+                            <div class="log-entry log-info">[System] Ready to generate strategies...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <script src="utils.js"></script>
@@ -1438,6 +1508,8 @@
     <script src="hedging.js"></script>
     <script src="ghost_ai_bot.js"></script>
     <script src="ghost_even_odd.js"></script>
+    <script src="ai_execution_engine.js"></script>
+    <script src="ai_ui.js"></script>
     <script src="ui.js"></script>
     <script src="app.js"></script>
 </body>
