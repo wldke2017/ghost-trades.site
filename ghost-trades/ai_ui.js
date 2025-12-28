@@ -159,10 +159,32 @@ window.updateAILogs = function (logEntry) {
 // Global hook for Trade Execution (Interfaces with trading.js)
 window.executeAIStratTrade = function (type, stake, symbol, barrier = null) {
     // Validate inputs
-    if (!type || !stake || !symbol) {
-        console.error('Invalid trade parameters', { type, stake, symbol });
+    if (!type || !symbol) {
+        console.error('Invalid trade parameters', { type, symbol });
         return;
     }
+
+    // --- MANUAL STAKE & MARTINGALE LOGIC ---
+    // Ignore the 'stake' from the AI prompt strategy and use manual configuration
+    const stakeInput = document.getElementById('ai-stake-input');
+    const martingaleInput = document.getElementById('ai-martingale-input');
+
+    let actualStake = 0.35; // Fallback default
+
+    if (stakeInput && martingaleInput) {
+        const baseStake = parseFloat(stakeInput.value) || 0.35;
+        // Use the tracked current stake from state
+        actualStake = window.aiTradingState.currentStake || baseStake;
+
+        // Ensure strictly no less than base stake (safety)
+        if (actualStake < baseStake) actualStake = baseStake;
+    } else {
+        actualStake = parseFloat(stake) || 0.35; // Fallback to prompt stake if inputs missing
+    }
+
+    // Round to 2 decimals
+    actualStake = Math.round(actualStake * 100) / 100;
+    // ---------------------------------------
 
     // Default parameters for AI trades
     const duration = 1;
@@ -170,9 +192,9 @@ window.executeAIStratTrade = function (type, stake, symbol, barrier = null) {
 
     const purchaseRequest = {
         "buy": 1,
-        "price": stake,
+        "price": actualStake,
         "parameters": {
-            "amount": stake,
+            "amount": actualStake,
             "basis": "stake",
             "contract_type": type, // 'CALL', 'PUT', 'DIGITOVER', etc.
             "currency": "USD",
@@ -194,7 +216,7 @@ window.executeAIStratTrade = function (type, stake, symbol, barrier = null) {
     if (typeof sendAPIRequest === 'function') {
         // Log intent
         if (window.aiStrategyRunner) {
-            let logMsg = `Placing trade: ${type} ${symbol} $${stake} (${duration}${duration_unit})`;
+            let logMsg = `Placing trade: ${type} ${symbol} $${actualStake} (${duration}${duration_unit})`;
             if (barrier !== null) logMsg += ` [Barrier: ${barrier}]`;
             window.aiStrategyRunner.log(logMsg, 'info');
         }
@@ -211,4 +233,68 @@ window.executeAIStratTrade = function (type, stake, symbol, barrier = null) {
             window.aiStrategyRunner.log('System Error: sendAPIRequest function missing', 'error');
         }
     }
+};
+
+// --- MARTINGALE STATE MANAGEMENT ---
+window.aiTradingState = {
+    currentStake: 0.35,
+    consecutiveLosses: 0,
+    totalProfit: 0
+};
+
+// Called by app.js when a contract finishes
+window.handleAIStrategyResult = function (contract) {
+    const profit = parseFloat(contract.profit);
+    const stakeInput = document.getElementById('ai-stake-input');
+    const martingaleInput = document.getElementById('ai-martingale-input');
+
+    if (!stakeInput || !martingaleInput) return;
+
+    const baseStake = parseFloat(stakeInput.value) || 0.35;
+    const martingaleMultiplier = parseFloat(martingaleInput.value) || 2.1;
+
+    window.aiTradingState.totalProfit += profit;
+
+    // Log result to AI console
+    if (window.aiStrategyRunner) {
+        const resultType = profit > 0 ? 'success' : 'error'; // Green or Red log
+        // window.aiStrategyRunner.log(`Trade Result: ${profit > 0 ? 'WIN' : 'LOSS'} (Profit: $${profit.toFixed(2)})`, resultType);
+        // The main app likely logs this too, but having it in AI logs is good.
+    }
+
+    if (profit > 0) {
+        // WIN: Reset stake
+        window.aiTradingState.currentStake = baseStake;
+        window.aiTradingState.consecutiveLosses = 0;
+        if (window.aiStrategyRunner) {
+            window.aiStrategyRunner.log(`WIN: +$${profit.toFixed(2)}. Stake reset to $${baseStake}`, 'success');
+        }
+    } else {
+        // LOSS: Martingale
+        window.aiTradingState.consecutiveLosses++;
+        let nextStake = window.aiTradingState.currentStake * martingaleMultiplier;
+        nextStake = Math.round(nextStake * 100) / 100; // Round to 2 decimals
+        window.aiTradingState.currentStake = nextStake;
+
+        if (window.aiStrategyRunner) {
+            window.aiStrategyRunner.log(`LOSS: $${profit.toFixed(2)}. Martingale x${martingaleMultiplier} -> Next Stake: $${nextStake}`, 'warning');
+        }
+    }
+};
+
+// Reset state when strategy starts
+const originalStart = window.AIStrategyRunner ? window.AIStrategyRunner.prototype.start : null;
+// Actually better to hook via event listener or just reset in handleRunStrategy
+const originalHandleRun = handleRunStrategy;
+handleRunStrategy = function () {
+    // Reset state on start
+    const stakeInput = document.getElementById('ai-stake-input');
+    const baseStake = parseFloat(stakeInput?.value) || 0.35;
+    window.aiTradingState.currentStake = baseStake;
+    window.aiTradingState.consecutiveLosses = 0;
+    window.aiTradingState.totalProfit = 0;
+
+    if (window.aiStrategyRunner) window.aiStrategyRunner.log(`Starting with Base Stake: $${baseStake}`, 'info');
+
+    originalHandleRun();
 };

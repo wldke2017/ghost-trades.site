@@ -1448,15 +1448,36 @@
 
                 <div class="ai-input-group">
                     <textarea id="ai-prompt-input" class="ai-prompt-box"
-                        placeholder="e.g. Buy CALL if last digit is 7 and previous was 8. Stake 1.0."></textarea>
-                    <button id="ai-generate-btn" class="btn-primary">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-                            style="width:16px;margin-right:8px;">
-                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        Generate Code
-                    </button>
+                        placeholder="Describe your strategy... (e.g. 'Buy Call on Volatility 100 if the last digit is even')"></textarea>
+
+                    <div
+                        style="display: flex; gap: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                        <button id="ai-generate-btn" class="btn-primary">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                style="width:16px;margin-right:8px;">
+                                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Generate Code
+                        </button>
+
+                        <div
+                            style="display: flex; gap: 15px; align-items: center; background: rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                            <div style="display: flex; flex-direction: column;">
+                                <label for="ai-stake-input"
+                                    style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px;">STAKE
+                                    ($)</label>
+                                <input type="number" id="ai-stake-input" value="0.35" min="0.35" step="0.01"
+                                    style="width: 80px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: white; border-radius: 4px; padding: 4px;">
+                            </div>
+                            <div style="display: flex; flex-direction: column;">
+                                <label for="ai-martingale-input"
+                                    style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px;">MARTINGALE</label>
+                                <input type="number" id="ai-martingale-input" value="2.1" min="1.0" step="0.1"
+                                    style="width: 80px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: white; border-radius: 4px; padding: 4px;">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="ai-workspace">

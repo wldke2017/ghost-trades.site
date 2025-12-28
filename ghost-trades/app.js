@@ -595,8 +595,21 @@ function handleIncomingMessage(msg) {
             if (contract.is_expired) {
                 const passthrough = data.echo_req.passthrough;
 
-                // Check if it's a Ghost AI bot trade that we need to process
-                if (passthrough && passthrough.purpose === 'ghost_ai_trade' && passthrough.run_id === botState.runId) {
+                // Check if this is an AI Strategy trade (Result Handling)
+                if (passthrough && passthrough.purpose === 'ai_strategy_trade') {
+                    // Check contract result
+                    console.log(`🤖 AI Strategy Trade Result: ${contract.symbol} | Profit: ${contract.profit}`);
+
+                    // Call UI handler for Martingale/Stats
+                    if (typeof window.handleAIStrategyResult === 'function') {
+                        window.handleAIStrategyResult(contract);
+                    }
+
+                    sendAPIRequest({ "forget": contract.id });
+                }
+
+                // Check if this is a Ghost AI bot trade that we need to process
+                else if (passthrough && passthrough.purpose === 'ghost_ai_trade' && passthrough.run_id === botState.runId) {
 
                     // CRITICAL FIX: Improved contract cleanup logic
                     console.log(`🤖 Ghost AI Trade Result: ${contract.symbol} | Strategy: ${passthrough.strategy || 'S1'} | Profit: ${contract.profit} | Contract ID: ${contract.contract_id}`);
