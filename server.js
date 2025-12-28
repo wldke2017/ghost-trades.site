@@ -13,6 +13,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Health Check Endpoint for Render
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
+// ============ AI STRATEGY API (Shared by Ghost Trades & SecureEscrow) ============
+// Mount AI endpoint at root level with simplified auth
+const aiStrategyRouter = require('./escrow/routes/ai_strategy');
+app.use('/api/ai', aiStrategyRouter);
+
 // Serve landing page at root
 app.use('/', express.static(path.join(__dirname, 'landing')));
 
@@ -49,6 +54,7 @@ server.listen(PORT, () => {
 ║   📍 Landing Page:    http://localhost:${PORT}              ║
 ║   ⚡ Ghost Trades:    http://localhost:${PORT}/ghost-trades  ║
 ║   🔒 SecureEscrow:    http://localhost:${PORT}/escrow        ║
+║   🤖 AI Strategy:     http://localhost:${PORT}/api/ai        ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
     `);

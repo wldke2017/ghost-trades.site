@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeAIUI() {
+    // Get all DOM elements
     aiPromptInput = document.getElementById('ai-prompt-input');
     aiGenerateBtn = document.getElementById('ai-generate-btn');
     aiCodeEditor = document.getElementById('ai-code-editor');
@@ -30,40 +31,83 @@ function initializeAIUI() {
     aiSelectAllBtn = document.getElementById('ai-select-all-markets');
     aiClearMarketsBtn = document.getElementById('ai-clear-markets');
 
-    if (!aiGenerateBtn) return; // UI might not be loaded yet
+    // Log initialization status
+    console.log('🤖 AI Strategy UI Initialization:', {
+        promptInput: !!aiPromptInput,
+        generateBtn: !!aiGenerateBtn,
+        codeEditor: !!aiCodeEditor,
+        runBtn: !!aiRunBtn,
+        stopBtn: !!aiStopBtn,
+        logContainer: !!aiLogContainer,
+        statusIndicator: !!aiStatusIndicator,
+        marketCheckboxes: !!aiMarketCheckboxes,
+        selectAllBtn: !!aiSelectAllBtn,
+        clearMarketsBtn: !!aiClearMarketsBtn
+    });
 
-    // Event Listeners
-    aiGenerateBtn.addEventListener('click', handleGenerateStrategy);
-    aiRunBtn.addEventListener('click', handleRunStrategy);
-    aiStopBtn.addEventListener('click', handleStopStrategy);
+    // Add Event Listeners (with null checks)
+    if (aiGenerateBtn) {
+        aiGenerateBtn.addEventListener('click', handleGenerateStrategy);
+    } else {
+        console.warn('⚠️ AI Generate Button not found - AI Strategy UI may not be fully loaded');
+    }
 
-    if (aiSelectAllBtn) aiSelectAllBtn.addEventListener('click', () => toggleAllMarkets(true));
-    if (aiClearMarketsBtn) aiClearMarketsBtn.addEventListener('click', () => toggleAllMarkets(false));
+    if (aiRunBtn) {
+        aiRunBtn.addEventListener('click', handleRunStrategy);
+    }
 
-    // Initial State
+    if (aiStopBtn) {
+        aiStopBtn.addEventListener('click', handleStopStrategy);
+    }
+
+    if (aiSelectAllBtn) {
+        aiSelectAllBtn.addEventListener('click', () => toggleAllMarkets(true));
+    }
+
+    if (aiClearMarketsBtn) {
+        aiClearMarketsBtn.addEventListener('click', () => toggleAllMarkets(false));
+    }
+
+    // Set Initial State
     updateAIStatus('IDLE');
 
     // RACE CONDITION FIX: If markets already loaded in app.js, populate them now
     if (window.activeSymbols && window.activeSymbols.length > 0) {
+        console.log('🔄 AI UI: Active symbols already available, populating market selector...');
         if (typeof window.updateAIMarketSelector === 'function') {
             window.updateAIMarketSelector(window.activeSymbols);
         }
+    } else {
+        console.log('⏳ AI UI: Waiting for active symbols to load...');
     }
+
+    console.log('✅ AI Strategy UI Initialized Successfully');
 }
 
 // Global function to populate markets (Called from app.js when activeSymbols are ready)
 window.updateAIMarketSelector = function (activeSymbols) {
+    console.log('🔄 AI UI: updateAIMarketSelector called', { 
+        hasContainer: !!aiMarketCheckboxes, 
+        symbolCount: activeSymbols ? activeSymbols.length : 0 
+    });
+
     if (!aiMarketCheckboxes) {
-        console.warn('AI UI: Market checkboxes container not found');
-        return;
+        console.error('❌ AI UI: Market checkboxes container not found - retrying initialization...');
+        // Retry getting the element
+        aiMarketCheckboxes = document.getElementById('ai-market-checkboxes');
+        if (!aiMarketCheckboxes) {
+            console.error('❌ AI UI: Still cannot find market checkboxes container');
+            return;
+        }
     }
 
-    console.log(`AI UI: Received ${activeSymbols ? activeSymbols.length : 0} symbols for selector.`);
+    console.log(`✅ AI UI: Received ${activeSymbols ? activeSymbols.length : 0} symbols for selector.`);
 
     aiMarketCheckboxes.innerHTML = ''; // Clear existing
 
     if (!activeSymbols || activeSymbols.length === 0) {
         aiMarketCheckboxes.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem; padding: 5px;">No active symbols loaded.</span>';
+        console.warn('⚠️ AI UI: No active symbols available');
         return;
     }
 
@@ -79,8 +123,7 @@ window.updateAIMarketSelector = function (activeSymbols) {
         // Only include synthetic indices (and check for 'derived' which is sometimes used for new indices)
         // Allow 'synthetic_index' OR 'derived' just in case
         if (symbol.market !== 'synthetic_index' && symbol.submarket !== 'random_index') {
-            // console.log(`Skipping ${symbol.symbol} (${symbol.market}/${symbol.submarket})`);
-            // We can check submarket 'random_index' which covers Volatility/Crash/Boom usually
+            // Skip non-synthetic markets
             return;
         }
 
@@ -99,7 +142,7 @@ window.updateAIMarketSelector = function (activeSymbols) {
 
         const label = document.createElement('label');
         label.htmlFor = `ai-chk-${symbol.symbol}`;
-        label.textContent = symbol.displayName;
+        label.textContent = symbol.displayName || symbol.symbol;
         label.style.cursor = 'pointer';
 
         wrapper.appendChild(checkbox);
@@ -108,10 +151,11 @@ window.updateAIMarketSelector = function (activeSymbols) {
         count++;
     });
 
-    console.log(`AI UI: Populated ${count} market checkboxes.`);
+    console.log(`✅ AI UI: Successfully populated ${count} market checkboxes.`);
 
     if (count === 0) {
         aiMarketCheckboxes.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem; padding: 5px;">No synthetic markets found.</span>';
+        console.warn('⚠️ AI UI: No synthetic markets found in active symbols');
     }
 };
 
@@ -134,6 +178,7 @@ async function handleGenerateStrategy() {
         return;
     }
 
+    console.log('🤖 AI: Generating strategy for prompt:', prompt.substring(0, 100) + '...');
     updateAIStatus('GENERATING');
     aiGenerateBtn.disabled = true;
     aiGenerateBtn.textContent = 'Generating...';
@@ -141,6 +186,8 @@ async function handleGenerateStrategy() {
     try {
         // Get token from storage similar to auth.js/app.js
         const token = localStorage.getItem('deriv_token');
+        
+        console.log('🔗 AI: Sending request to:', AI_API_ENDPOINT);
 
         const response = await fetch(AI_API_ENDPOINT, {
             method: 'POST',
@@ -151,32 +198,45 @@ async function handleGenerateStrategy() {
             body: JSON.stringify({ prompt })
         });
 
+        console.log('📡 AI: Response status:', response.status, response.statusText);
+
         // Handle non-JSON responses (like 404 HTML from static hosts)
         const contentType = response.headers.get("content-type");
         let data;
         if (contentType && contentType.indexOf("application/json") !== -1) {
             data = await response.json();
+            console.log('✅ AI: Received JSON response');
         } else {
             const text = await response.text();
-            console.error('Non-JSON response received:', text.substring(0, 500)); // Log first 500 chars
-            throw new Error(`Backend Error (${response.status}): The server returned an invalid response. Ensure the Backend API is running and reachable.`);
+            console.error('❌ AI: Non-JSON response received:', text.substring(0, 500)); // Log first 500 chars
+            throw new Error(`Backend Error (${response.status}): The server returned an invalid response. Ensure the Backend API is running and reachable at ${AI_API_ENDPOINT}`);
         }
 
         if (!response.ok) {
             throw new Error(data.error || `Generation failed with status ${response.status}`);
         }
 
+        if (!data.code) {
+            throw new Error('AI response missing code field');
+        }
+
         aiCodeEditor.value = data.code;
+        console.log('✅ AI: Strategy code generated successfully');
         showToast('Strategy generated successfully!', 'success');
         updateAIStatus('READY');
 
         // Auto-compile to check for errors immediately
         if (window.aiStrategyRunner) {
-            window.aiStrategyRunner.compile(data.code);
+            const compiled = window.aiStrategyRunner.compile(data.code);
+            if (compiled) {
+                console.log('✅ AI: Strategy compiled successfully');
+            } else {
+                console.warn('⚠️ AI: Strategy compilation had issues - check logs');
+            }
         }
 
     } catch (error) {
-        console.error('AI Generation Error:', error);
+        console.error('❌ AI Generation Error:', error);
         showToast(error.message, 'error');
         updateAIStatus('ERROR');
         // Add log entry

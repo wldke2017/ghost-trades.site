@@ -55,13 +55,15 @@ if (last === 7 && prev === 8) {
 }
 `;
 
-router.post('/generate', authenticateToken, apiLimiter, async (req, res) => {
+router.post('/generate', apiLimiter, async (req, res) => {
     try {
         const { prompt } = req.body;
 
         if (!prompt || typeof prompt !== 'string' || prompt.length > 500) {
             return res.status(400).json({ error: 'Invalid prompt (max 500 chars)' });
         }
+
+        console.log('🤖 AI Strategy API: Received prompt request');
 
         if (!GEMINI_API_KEY) {
             // Mock response for testing/development if no key

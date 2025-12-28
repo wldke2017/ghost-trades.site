@@ -315,9 +315,21 @@ function handleIncomingMessage(msg) {
                 populateMarketSelector();
                 subscribeToAllVolatilities();
 
-                // Populate AI Market Selector
+                // Populate AI Market Selector (with retry mechanism)
+                console.log('🔄 Attempting to populate AI Market Selector...');
                 if (typeof window.updateAIMarketSelector === 'function') {
                     window.updateAIMarketSelector(activeSymbols);
+                } else {
+                    console.warn('⚠️ window.updateAIMarketSelector not yet defined, will retry in 500ms');
+                    // Retry after a short delay to ensure ai_ui.js is loaded
+                    setTimeout(() => {
+                        if (typeof window.updateAIMarketSelector === 'function') {
+                            console.log('🔄 Retrying AI Market Selector population...');
+                            window.updateAIMarketSelector(activeSymbols);
+                        } else {
+                            console.error('❌ AI Market Selector still not available after retry');
+                        }
+                    }, 500);
                 }
             } else {
                 console.error('❌ No active_symbols data received from Deriv API');
