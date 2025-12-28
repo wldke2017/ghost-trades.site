@@ -128,10 +128,19 @@ async function handleGenerateStrategy() {
             body: JSON.stringify({ prompt })
         });
 
-        const data = await response.json();
+        // Handle non-JSON responses (like 404 HTML from static hosts)
+        const contentType = response.headers.get("content-type");
+        let data;
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            console.error('Non-JSON response received:', text.substring(0, 500)); // Log first 500 chars
+            throw new Error(`Backend Error (${response.status}): The server returned an invalid response. Ensure the Backend API is running and reachable.`);
+        }
 
         if (!response.ok) {
-            throw new Error(data.error || 'Generation failed');
+            throw new Error(data.error || `Generation failed with status ${response.status}`);
         }
 
         aiCodeEditor.value = data.code;
