@@ -42,6 +42,13 @@ function initializeAIUI() {
 
     // Initial State
     updateAIStatus('IDLE');
+
+    // RACE CONDITION FIX: If markets already loaded in app.js, populate them now
+    if (window.activeSymbols && window.activeSymbols.length > 0) {
+        if (typeof window.updateAIMarketSelector === 'function') {
+            window.updateAIMarketSelector(window.activeSymbols);
+        }
+    }
 }
 
 // Global function to populate markets (Called from app.js when activeSymbols are ready)

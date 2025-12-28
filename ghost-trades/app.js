@@ -30,6 +30,7 @@ const OAUTH_CONFIG = {
 
 // --- Core State ---
 let activeSymbols = [];
+window.activeSymbols = activeSymbols; // Expose globally for other modules (ai_ui.js)
 let lastPrices = {};
 let currentContractId = null;
 
@@ -306,6 +307,7 @@ function handleIncomingMessage(msg) {
         case 'active_symbols':
             if (data.active_symbols) {
                 activeSymbols = data.active_symbols;
+                window.activeSymbols = activeSymbols; // Ensure global ref is updated
                 const count = activeSymbols.length;
                 symbolCountDisplay.textContent = `${count} markets`;
 
