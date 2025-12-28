@@ -157,7 +157,7 @@ window.updateAILogs = function (logEntry) {
 };
 
 // Global hook for Trade Execution (Interfaces with trading.js)
-window.executeAIStratTrade = function (type, stake, symbol) {
+window.executeAIStratTrade = function (type, stake, symbol, barrier = null) {
     // Validate inputs
     if (!type || !stake || !symbol) {
         console.error('Invalid trade parameters', { type, stake, symbol });
@@ -174,7 +174,7 @@ window.executeAIStratTrade = function (type, stake, symbol) {
         "parameters": {
             "amount": stake,
             "basis": "stake",
-            "contract_type": type, // 'CALL' or 'PUT'
+            "contract_type": type, // 'CALL', 'PUT', 'DIGITOVER', etc.
             "currency": "USD",
             "duration": duration,
             "duration_unit": duration_unit,
@@ -186,10 +186,17 @@ window.executeAIStratTrade = function (type, stake, symbol) {
         }
     };
 
+    // Add barrier if present (for Digit strategies)
+    if (barrier !== null && barrier !== undefined) {
+        purchaseRequest.parameters.barrier = String(barrier);
+    }
+
     if (typeof sendAPIRequest === 'function') {
         // Log intent
         if (window.aiStrategyRunner) {
-            window.aiStrategyRunner.log(`Placing trade: ${type} ${symbol} $${stake} (${duration}${duration_unit})`, 'info');
+            let logMsg = `Placing trade: ${type} ${symbol} $${stake} (${duration}${duration_unit})`;
+            if (barrier !== null) logMsg += ` [Barrier: ${barrier}]`;
+            window.aiStrategyRunner.log(logMsg, 'info');
         }
 
         sendAPIRequest(purchaseRequest).catch(error => {
