@@ -1,15 +1,62 @@
+# Dependencies
 node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables
 .env
-uploads/
-*.log
+.env.local
+.env.production
+.env.test
+
+# Logs
 logs/
-.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage/
+.nyc_output/
+
+# Uploads
+uploads/
+!uploads/.gitkeep
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.npm
-.eslintcache
-coverage/
-.nyc_output/
+.DS_Store
+
+# PM2
+.pm2/
+
+# Build
+dist/
+build/
+
+# Test
+*.test.js.snap
+
+# Temporary files
+tmp/
+temp/
+
+# Database
+*.sqlite
+*.sqlite3
+
+# OS
+Thumbs.db
+.DS_Store

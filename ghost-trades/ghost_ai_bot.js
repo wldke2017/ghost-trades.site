@@ -326,7 +326,7 @@ function calculateDigitPercentages(symbol) {
 }
 
 /**
- * Calculate digit distribution from full tick history (last 1000 digits)
+ * Calculate digit distribution from full tick history (last 100 digits)
  * @param {string} symbol - The symbol to calculate distribution for
  * @returns {object} Distribution analysis with most and least appearing digits
  */
@@ -434,6 +434,86 @@ let botTimerInterval = null;
 // Trade timing diagnostics - Track ticks after trade placement to detect delays
 let postTradeTickMonitoring = {}; // { symbol: { ticksToCapture: 2, capturedTicks: [], tradeTime: timestamp, last6Digits: [] } }
 
+// Live Contract Monitor - Track every tick for active contracts
+let liveContractMonitor = {}; // { contractId: { symbol, entryTick, ticks: [], startTime, elapsedMs, barrier, contractType } }
+
+function updateLiveContractMonitor(contractId, symbol, currentPrice) {
+    const lastDigit = parseInt(currentPrice.toString().slice(-1));
+    const now = Date.now();
+
+    if (liveContractMonitor[contractId]) {
+        const contract = liveContractMonitor[contractId];
+        contract.ticks.push({ digit: lastDigit, time: new Date().toLocaleTimeString(), price: currentPrice });
+        contract.elapsedMs = now - contract.startTime;
+
+        // Update the UI
+        const container = document.getElementById('live-contracts-container');
+        if (container) {
+            // Rebuild the display
+            const contractEntries = Object.entries(liveContractMonitor);
+            if (contractEntries.length === 0) {
+                container.innerHTML = '<div class="log-info">No active contracts</div>';
+            } else {
+                container.innerHTML = contractEntries.map(([id, data]) => {
+                    const ticksDisplay = data.ticks.slice(-10).map((t, i) => {
+                        const isEntry = i === 0;
+                        const color = isEntry ? '#00ff7f' : '#fff';
+                        const label = isEntry ? `[ENTRY: ${t.digit}]` : t.digit;
+                        return `<span style="color: ${color}; font-weight: ${isEntry ? 'bold' : 'normal'};">${label}</span>`;
+                    }).join(' → ');
+
+                    const elapsed = ((data.elapsedMs || 0) / 1000).toFixed(1);
+                    return `
+                        <div class="log-info" style="border-left: 3px solid #ff6b6b; padding-left: 10px; margin: 8px 0;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <strong>${data.symbol} - ${data.contractType} ${data.barrier}</strong>
+                                <span style="color: #888;">⏱️ ${elapsed}s</span>
+                            </div>
+                            <div style="font-size: 0.9em; font-family: 'Courier New', monospace;">
+                                ${ticksDisplay}
+                            </div>
+                            <div style="font-size: 0.85em; color: #666; margin-top: 2px;">
+                                Ticks: ${data.ticks.length} | ID: ${id.substring(0, 8)}...
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+    }
+}
+
+function addLiveContract(contractId, symbol, entryTick, barrier, contractType) {
+    liveContractMonitor[contractId] = {
+        symbol: symbol,
+        entryTick: entryTick,
+        ticks: [{ digit: entryTick, time: new Date().toLocaleTimeString(), price: 'Entry' }],
+        startTime: Date.now(),
+        elapsedMs: 0,
+        barrier: barrier,
+        contractType: contractType
+    };
+
+    // Force initial update
+    updateLiveContractMonitor(contractId, symbol, entryTick);
+
+    addBotLog(`🔴 Live Monitor: Tracking contract ${contractId.substring(0, 8)}... for ${symbol}`, 'info');
+}
+
+function removeLiveContract(contractId) {
+    if (liveContractMonitor[contractId]) {
+        const contract = liveContractMonitor[contractId];
+        addBotLog(`⚪ Live Monitor: Contract ${contractId.substring(0, 8)}... closed after ${contract.ticks.length} ticks`, 'info');
+        delete liveContractMonitor[contractId];
+
+        // Update UI
+        const container = document.getElementById('live-contracts-container');
+        if (container && Object.keys(liveContractMonitor).length === 0) {
+            container.innerHTML = '<div class="log-info">No active contracts</div>';
+        }
+    }
+}
+
 function handleBotTick(tick) {
     if (!isBotRunning) {
         return;
@@ -492,6 +572,14 @@ function handleBotTick(tick) {
             }
         }
     }
+
+    // 3c. Update live contract monitor for ALL active contracts on this symbol
+    Object.keys(window.activeContracts).forEach(contractId => {
+        const contractInfo = window.activeContracts[contractId];
+        if (contractInfo.symbol === symbol && liveContractMonitor[contractId]) {
+            updateLiveContractMonitor(contractId, symbol, price);
+        }
+    });
 
     // 4. Scan and place trades with atomic lock and dual cooldown to prevent simultaneous scanning
     // NOTE: We can now have multiple active trades simultaneously

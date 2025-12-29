@@ -1,0 +1,90 @@
+/**
+ * Application Constants
+ */
+
+module.exports = {
+  // Order Status
+  ORDER_STATUS: {
+    PENDING: 'PENDING',
+    CLAIMED: 'CLAIMED',
+    READY_FOR_RELEASE: 'READY_FOR_RELEASE',
+    COMPLETED: 'COMPLETED',
+    DISPUTED: 'DISPUTED',
+    CANCELLED: 'CANCELLED'
+  },
+
+  // Transaction Types
+  TRANSACTION_TYPES: {
+    DEPOSIT: 'DEPOSIT',
+    WITHDRAWAL: 'WITHDRAWAL',
+    ORDER_CREATED: 'ORDER_CREATED',
+    ORDER_CLAIMED: 'ORDER_CLAIMED',
+    ORDER_COMPLETED: 'ORDER_COMPLETED',
+    ORDER_CANCELLED: 'ORDER_CANCELLED',
+    DISPUTE_REFUND: 'DISPUTE_REFUND',
+    DISPUTE_FORFEIT: 'DISPUTE_FORFEIT',
+    COMMISSION: 'COMMISSION'
+  },
+
+  // User Roles
+  USER_ROLES: {
+    ADMIN: 'admin',
+    MIDDLEMAN: 'middleman'
+  },
+
+  // User Status
+  USER_STATUS: {
+    ACTIVE: 'active',
+    DISABLED: 'disabled',
+    BLOCKED: 'blocked'
+  },
+
+  // Transaction Request Status
+  REQUEST_STATUS: {
+    PENDING: 'pending',
+    APPROVED: 'approved',
+    REJECTED: 'rejected'
+  },
+
+  // Limits
+  LIMITS: {
+    MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
+    MIN_ORDER_AMOUNT: 1,
+    MAX_ORDER_AMOUNT: 1000000,
+    MIN_DEPOSIT_AMOUNT: 1,
+    MIN_WITHDRAWAL_AMOUNT: 1,
+    MAX_BULK_ORDERS: 100
+  },
+
+  // M-Pesa
+  MPESA: {
+    EXCHANGE_RATE: 129, // KES to USD
+    SANDBOX_URL: 'https://sandbox.safaricom.co.ke',
+    TRANSACTION_TYPE: 'CustomerPayBillOnline'
+  },
+
+  // Rate Limiting
+  RATE_LIMITS: {
+    API_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+    API_MAX_REQUESTS: 100,
+    AUTH_WINDOW_MS: 15 * 60 * 1000,
+    AUTH_MAX_REQUESTS: 5,
+    TRANSACTION_WINDOW_MS: 15 * 60 * 1000,
+    TRANSACTION_MAX_REQUESTS: 10,
+    UPLOAD_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+    UPLOAD_MAX_REQUESTS: 10
+  },
+
+  // Error Codes
+  ERROR_CODES: {
+    VALIDATION_ERROR: 'VALIDATION_ERROR',
+    AUTHENTICATION_ERROR: 'AUTHENTICATION_ERROR',
+    AUTHORIZATION_ERROR: 'AUTHORIZATION_ERROR',
+    NOT_FOUND: 'NOT_FOUND',
+    CONFLICT: 'CONFLICT',
+    INSUFFICIENT_FUNDS: 'INSUFFICIENT_FUNDS',
+    DATABASE_ERROR: 'DATABASE_ERROR',
+    EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR',
+    INTERNAL_ERROR: 'INTERNAL_ERROR'
+  }
+};

@@ -1,46 +1,113 @@
 # Liquidity-Based Escrow System
 
-A full-stack escrow application with liquidity-based collateral system.
+A production-ready, full-stack escrow application with liquidity-based collateral system, comprehensive security features, and M-Pesa integration.
 
-## Tech Stack
+## 🚀 Tech Stack
 - **Backend**: Node.js, Express.js
 - **Database**: PostgreSQL with Sequelize ORM
 - **Frontend**: Vanilla JavaScript, HTML, CSS
+- **Real-time**: Socket.io
+- **Security**: JWT, Helmet, Rate Limiting
+- **Testing**: Jest, Supertest
+- **Payment**: M-Pesa STK Push Integration
 
-## Setup Instructions
+## 📋 Quick Start
 
-### 1. Database Setup
-Make sure PostgreSQL is installed and running, then create the database:
-```sql
-CREATE DATABASE escrow_db;
-```
+### 1. Prerequisites
+- Node.js v18 or higher
+- PostgreSQL 12 or higher
+- npm or yarn
 
-Or run the schema file:
+### 2. Database Setup
 ```bash
-psql -U postgres -f schema.sql
+# Create database
+createdb escrow_db
+
+# Or using psql
+psql -U postgres -c "CREATE DATABASE escrow_db;"
 ```
 
-### 2. Configure Database Connection
-Update `db.js` with your PostgreSQL credentials:
-```javascript
-const sequelize = new Sequelize('escrow_db', 'your_username', 'your_password', {
-  host: 'localhost',
-  port: 5432,
-  dialect: 'postgres',
-});
+### 3. Environment Configuration
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit .env and set your values
+# IMPORTANT: Change JWT_SECRET, database credentials, and M-Pesa keys
 ```
 
-### 3. Install Dependencies
+### 4. Install Dependencies
 ```bash
 npm install
 ```
 
-### 4. Start the Server
+### 5. Run Tests (Optional)
 ```bash
+npm test
+```
+
+### 6. Start the Server
+```bash
+# Development mode (with auto-reload)
+npm run dev
+
+# Production mode
 npm start
 ```
 
 The application will be available at `http://localhost:3000`
+
+## 📚 Documentation
+
+- **[API Documentation](./API_DOCUMENTATION.md)** - Complete API reference
+- **[Security Policy](./SECURITY.md)** - Security best practices
+- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Production deployment instructions
+
+## 🧪 Testing
+
+Run the test suite:
+```bash
+# Run all tests with coverage
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with verbose output
+npm run test:verbose
+```
+
+## 🏗️ Project Structure
+
+```
+escrow/
+├── config/              # Configuration files
+│   └── constants.js     # Application constants
+├── middleware/          # Express middleware
+│   ├── auth.js         # Authentication & authorization
+│   ├── errorHandler.js # Error handling
+│   ├── validator.js    # Request validation
+│   └── rateLimiter.js  # Rate limiting
+├── models/             # Sequelize models
+│   ├── user.js
+│   ├── wallet.js
+│   ├── order.js
+│   └── transaction.js
+├── routes/             # API routes (to be refactored)
+├── services/           # Business logic layer
+│   ├── orderService.js
+│   └── walletService.js
+├── tests/              # Test files
+│   ├── setup.js
+│   └── services/
+├── utils/              # Utility functions
+│   ├── errors.js       # Custom error classes
+│   └── logger.js       # Winston logger
+├── public/             # Frontend files
+├── uploads/            # File uploads
+├── server.js           # Application entry point
+└── package.json
+```
 
 ## 🎯 New Workflow: Admin-Centric Platform
 

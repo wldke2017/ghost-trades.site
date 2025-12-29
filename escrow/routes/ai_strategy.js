@@ -19,7 +19,7 @@ Input 'data' structure:
 {
   symbol: string,          // e.g. 'R_100'
   tick: number,            // Current price
-  digits: number[],        // Array of last 1000 digits (last entry is current)
+  digits: number[],        // Array of last 100 digits (last entry is current)
   lastDigit: number,       // Last digit of current price
   percentages: object      // { 0: 10.2, 1: 9.5, ..., over2: 60.5, ... }
 }

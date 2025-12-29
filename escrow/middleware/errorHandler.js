@@ -1,4 +1,5 @@
 const logger = require('../utils/logger');
+const { AppError } = require('../utils/errors');
 
 // Centralized error handler middleware
 const errorHandler = (err, req, res, next) => {
@@ -11,6 +12,60 @@ const errorHandler = (err, req, res, next) => {
     ip: req.ip,
     userId: req.user?.id
   });
+
+  // Handle known operational errors
+  if (err instanceof AppError && err.isOperational) {
+    return res.status(err.statusCode).json({
+      success: false,
+      error: err.message,
+      ...(err.details && { details: err.details }),
+      timestamp: err.timestamp
+    });
+  }
+
+  // Handle Sequelize validation errors
+  if (err.name === 'SequelizeValidationError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      details: err.errors.map(e => ({
+        field: e.path,
+        message: e.message
+      }))
+    });
+  }
+
+  // Handle Sequelize unique constraint errors
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    return res.status(409).json({
+      success: false,
+      error: 'Resource already exists',
+      details: err.errors.map(e => e.message)
+    });
+  }
+
+  // Handle JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid token'
+    });
+  }
+
+  if (err.name === 'TokenExpiredError') {
+    return res.status(401).json({
+      success: false,
+      error: 'Token expired'
+    });
+  }
+
+  // Handle Multer errors
+  if (err.name === 'MulterError') {
+    return res.status(400).json({
+      success: false,
+      error: `File upload error: ${err.message}`
+    });
+  }
 
   // Default error status and message
   const statusCode = err.statusCode || err.status || 500;

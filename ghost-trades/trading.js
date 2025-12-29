@@ -82,8 +82,8 @@ function subscribeToAllVolatilities() {
         };
         marketFullTickDigits[symbol] = [];
 
-        // Fetch historical tick data for distribution analysis (1000 ticks immediately)
-        console.log(`📊 Fetching 1000 historical ticks for ${symbol}...`);
+        // Fetch historical tick data for distribution analysis (100 ticks immediately)
+        console.log(`📊 Fetching 100 historical ticks for ${symbol}...`);
         fetchTickHistory(symbol);
 
         if (!document.getElementById(`row-${symbol}`)) {
@@ -167,7 +167,7 @@ function fetchTickHistory(symbol) {
     const tickHistoryRequest = {
         "ticks_history": symbol,
         "end": "latest",
-        "count": 1000,
+        "count": 100,
         "style": "ticks",
         "subscribe": 0
     };
@@ -192,7 +192,7 @@ function handleDistributionMarketChange() {
 }
 
 /**
- * Refreshes the distribution data by fetching new 1000 ticks
+ * Refreshes the distribution data by fetching new 100 ticks
  */
 function refreshDistributionData() {
     const distributionMarketSelector = document.getElementById('distributionMarketSelector');
@@ -208,7 +208,7 @@ function refreshDistributionData() {
         content.style.display = 'none';
     }
 
-    // Fetch fresh 1000 ticks
+    // Fetch fresh 100 ticks
     console.log(`🔄 Refreshing distribution data for ${selectedSymbol}...`);
     fetchTickHistory(selectedSymbol);
 
@@ -494,7 +494,7 @@ function updateDigitAnalysisDisplay(symbol) {
 
     if (tickCountEl) {
         tickCountEl.textContent = `${distribution.totalTicks} ticks`;
-        tickCountEl.className = distribution.totalTicks >= 1000 ? 'summary-value' : 'summary-value warning';
+        tickCountEl.className = distribution.totalTicks >= 100 ? 'summary-value' : 'summary-value warning';
     }
 
     // Sort digits by frequency to determine ranking

@@ -340,7 +340,7 @@
                 <div class="digit-analysis">
                     <div
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h4 style="margin: 0;">Digit Distribution (Last 1000 Ticks)</h4>
+                        <h4 style="margin: 0;">Digit Distribution (Last 100 Ticks)</h4>
                         <div class="distribution-legend">
                             <div class="legend-item">
                                 <div class="legend-color most-frequent"></div>
@@ -792,6 +792,26 @@
                     <div class="collapsible-content collapsed" id="activity-log-ghost-ai">
                         <div id="bot-log-container" class="bot-log">
                             <div class="log-info">[--:--:--] Waiting for initialization...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Contract Monitor - NEW -->
+                <div class="bot-status" style="margin-top: 16px;">
+                    <h4 class="collapsible-header" onclick="toggleSection('live-contract-monitor')">
+                        <span>🔴 Live Contract Monitor</span>
+                        <svg class="collapse-arrow collapsed" id="arrow-live-contract-monitor" viewBox="0 0 24 24"
+                            fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </h4>
+                    <div class="collapsed-placeholder" id="placeholder-live-contract-monitor" style="display: block;">
+                        <img src="images/back.jpg" alt="Live Monitor Collapsed" class="collapsed-image">
+                    </div>
+                    <div class="collapsible-content collapsed" id="live-contract-monitor">
+                        <div id="live-contracts-container" class="bot-log" style="max-height: 300px;">
+                            <div class="log-info">No active contracts</div>
                         </div>
                     </div>
                 </div>

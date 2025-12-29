@@ -43,7 +43,7 @@ let botLoopInterval = null; // NEW: To hold the bot's running interval
 let marketTickHistory = {};
 // Stores percentage analysis for each digit (0-9) for each market
 let marketDigitPercentages = {};
-// Stores the last 1000 digits for distribution analysis
+// Stores the last 100 digits for distribution analysis
 let marketFullTickDigits = {};
 
 // --- GLOBAL TRADE LOCK MECHANISM ---
@@ -354,7 +354,7 @@ function handleIncomingMessage(msg) {
                 const symbol = data.echo_req.ticks_history;
                 const quotes = data.history.quotes || [];
                 const digits = quotes.map(quote => parseInt(quote.toString().slice(-1)));
-                marketFullTickDigits[symbol] = digits.slice(-1000); // Keep last 1000
+                marketFullTickDigits[symbol] = digits.slice(-100); // Keep last 100
 
                 // Log detailed information
                 console.log(`✅ Loaded ${digits.length} historical ticks for ${symbol} distribution analysis`);
@@ -399,11 +399,11 @@ function handleIncomingMessage(msg) {
                     }
                 }
 
-                // 2. Update Full Tick Digits for distribution analysis (keep last 1000)
+                // 2. Update Full Tick Digits for distribution analysis (keep last 100)
                 if (marketFullTickDigits[symbol]) {
                     const digit = parseInt(price.toString().slice(-1));
                     marketFullTickDigits[symbol].push(digit);
-                    if (marketFullTickDigits[symbol].length > 1000) {
+                    if (marketFullTickDigits[symbol].length > 100) {
                         marketFullTickDigits[symbol].shift();
                     }
 
@@ -478,6 +478,13 @@ function handleIncomingMessage(msg) {
                     console.log(`📊 Active contracts now:`, Object.keys(window.activeContracts));
 
                     addBotLog(`✅ ${strategyLabel} contract opened: ${contractInfo.contract_id} | ${passthrough.symbol} | Stake: $${passthrough.stake.toFixed(2)}`);
+
+                    // START LIVE CONTRACT MONITORING - Track every tick for this contract
+                    if (typeof addLiveContract === 'function') {
+                        const entryTick = contractInfo.entry_tick_display_value ? parseInt(contractInfo.entry_tick_display_value.slice(-1)) : '?';
+                        const contractType = (passthrough.barrier <= 4) ? 'OVER' : 'UNDER';
+                        addLiveContract(contractInfo.contract_id, passthrough.symbol, entryTick, passthrough.barrier, contractType);
+                    }
 
                     sendAPIRequest({
                         "proposal_open_contract": 1,
@@ -755,6 +762,11 @@ function handleIncomingMessage(msg) {
 
                     console.log(`🔍 Active contracts after cleanup:`, Object.keys(window.activeContracts));
                     console.log(`🔍 Active S1 symbols after cleanup:`, Array.from(window.activeS1Symbols));
+
+                    // STOP LIVE CONTRACT MONITORING - Remove from live tracker
+                    if (typeof removeLiveContract === 'function') {
+                        removeLiveContract(contractIdToRemove);
+                    }
 
                     addBotTradeHistory(contract, contract.profit);
 
