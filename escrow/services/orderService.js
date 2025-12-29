@@ -433,7 +433,7 @@ async function getOrders({ status, buyerId, middlemanId, limit = 20, offset = 0 
       where,
       limit,
       offset,
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']], // Fixed: Sequelize uses camelCase by default
       include: [
         { model: User, as: 'buyer', attributes: ['id', 'username'] },
         { model: User, as: 'middleman', attributes: ['id', 'username'] }

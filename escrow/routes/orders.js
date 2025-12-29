@@ -61,7 +61,7 @@ router.get('/my-active', authenticateToken, async (req, res, next) => {
         const uniqueOrders = Array.from(new Map(allOrders.map(item => [item.id, item])).values());
 
         // Sort by date desc
-        uniqueOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        uniqueOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         res.json(uniqueOrders);
     } catch (error) {
