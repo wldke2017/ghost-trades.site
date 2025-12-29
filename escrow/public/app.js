@@ -362,3 +362,13 @@ function setupEventListeners() {
         document.getElementById('withdraw-kes-preview').innerText = kes;
     });
 }
+
+// Update header username
+function updateUserDisplay() {
+    if (typeof window !== 'undefined' && window.currentUsername) {
+        const usernameEl = document.getElementById('header-username');
+        if (usernameEl) {
+            usernameEl.textContent = window.currentUsername;
+        }
+    }
+}

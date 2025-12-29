@@ -448,6 +448,8 @@ async function getOrders({ status, buyerId, middlemanId, limit = 20, offset = 0 
     };
   } catch (error) {
     logger.error('Error fetching orders:', error);
+    // Console log for immediate visibility in terminal if logger is silent
+    console.error('CRITICAL ORDER FETCH ERROR:', error);
     throw error;
   }
 }
