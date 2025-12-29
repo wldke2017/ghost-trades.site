@@ -2,7 +2,7 @@
 
 // --- Constants ---
 const API_BASE = '/escrow'; // Base path for API calls
-const EXCHANGE_RATE = 129; // Fixed exchange rate for demo
+// EXCHANGE_RATE is defined in auth.js
 
 // --- State ---
 let socket;
