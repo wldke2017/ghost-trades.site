@@ -467,7 +467,7 @@ function handleIncomingMessage(msg) {
 
                     // CRITICAL FIX: Track contract with actual contract_id from API
                     // This is the ONLY place we add to activeContracts for Ghost AI
-                    activeContracts[contractInfo.contract_id] = {
+                    window.activeContracts[contractInfo.contract_id] = {
                         symbol: passthrough.symbol,
                         strategy: strategy,
                         stake: passthrough.stake,
@@ -475,7 +475,7 @@ function handleIncomingMessage(msg) {
                     };
 
                     console.log(`✅ Ghost AI: Tracking contract ${contractInfo.contract_id} for ${passthrough.symbol} (${strategy})`);
-                    console.log(`📊 Active contracts now:`, Object.keys(activeContracts));
+                    console.log(`📊 Active contracts now:`, Object.keys(window.activeContracts));
 
                     addBotLog(`✅ ${strategyLabel} contract opened: ${contractInfo.contract_id} | ${passthrough.symbol} | Stake: $${passthrough.stake.toFixed(2)}`);
 
@@ -651,7 +651,7 @@ function handleIncomingMessage(msg) {
 
                     // CRITICAL FIX: Improved contract cleanup logic
                     console.log(`🤖 Ghost AI Trade Result: ${contract.symbol} | Strategy: ${passthrough.strategy || 'S1'} | Profit: ${contract.profit} | Contract ID: ${contract.contract_id}`);
-                    console.log(`🔍 Active contracts before cleanup:`, Object.keys(activeContracts));
+                    console.log(`🔍 Active contracts before cleanup:`, Object.keys(window.activeContracts));
 
                     // Add symbol and barrier info to the contract for history logging
                     contract.symbol = passthrough.symbol;
@@ -662,8 +662,8 @@ function handleIncomingMessage(msg) {
                     // Use contract.contract_id as primary, fallback to contract.id
                     const contractIdToRemove = contract.contract_id || contract.id;
 
-                    if (activeContracts[contractIdToRemove]) {
-                        const contractInfo = activeContracts[contractIdToRemove];
+                    if (window.activeContracts[contractIdToRemove]) {
+                        const contractInfo = window.activeContracts[contractIdToRemove];
 
                         console.log(`✅ Found and removing contract ${contractIdToRemove} from activeContracts`);
 
@@ -680,7 +680,7 @@ function handleIncomingMessage(msg) {
                         // Remove from S1 symbols tracking if it was an S1 trade
                         if (contractInfo.strategy === 'S1') {
                             console.log(`🔓 Removing ${contractInfo.symbol} from activeS1Symbols`);
-                            activeS1Symbols.delete(contractInfo.symbol);
+                            window.activeS1Symbols.delete(contractInfo.symbol);
                         }
 
                         // Decrement S2 counter if it was an S2 trade
@@ -689,20 +689,20 @@ function handleIncomingMessage(msg) {
                             console.log(`📉 S2 count decremented to ${botState.activeS2Count}`);
                         }
 
-                        delete activeContracts[contractIdToRemove];
+                        delete window.activeContracts[contractIdToRemove];
 
                         // Release trade lock for this symbol
                         releaseTradeLock(contract.symbol, 'ghost_ai');
                     } else {
                         // Contract not found - use fallback cleanup
                         console.error(`❌ Contract ${contractIdToRemove} NOT found in activeContracts!`);
-                        console.error(`Available contracts:`, Object.keys(activeContracts));
+                        console.error(`Available contracts:`, Object.keys(window.activeContracts));
 
                         // Fallback: Clean up by symbol AND strategy to prevent stuck state
                         let foundAndRemoved = false;
                         const targetStrategy = passthrough.strategy || 'S1';
 
-                        for (const [id, info] of Object.entries(activeContracts)) {
+                        for (const [id, info] of Object.entries(window.activeContracts)) {
                             if (info.symbol === contract.symbol && info.strategy === targetStrategy) {
                                 console.log(`🔧 Fallback cleanup: Removing contract ${id} for symbol ${contract.symbol} (${targetStrategy})`);
 
@@ -718,7 +718,7 @@ function handleIncomingMessage(msg) {
 
                                 if (info.strategy === 'S1') {
                                     console.log(`🔓 Removing ${info.symbol} from activeS1Symbols (fallback)`);
-                                    activeS1Symbols.delete(info.symbol);
+                                    window.activeS1Symbols.delete(info.symbol);
                                 }
 
                                 if (info.strategy === 'S2' && botState.activeS2Count > 0) {
@@ -726,7 +726,7 @@ function handleIncomingMessage(msg) {
                                     console.log(`📉 S2 count decremented to ${botState.activeS2Count} (fallback)`);
                                 }
 
-                                delete activeContracts[id];
+                                delete window.activeContracts[id];
                                 releaseTradeLock(contract.symbol, 'ghost_ai');
                                 foundAndRemoved = true;
                                 break;
@@ -748,13 +748,13 @@ function handleIncomingMessage(msg) {
                                 clearTradeSignature(contract.symbol, passthrough.barrier, stake, 'ghost_ai');
                             }
 
-                            activeS1Symbols.delete(contract.symbol);
+                            window.activeS1Symbols.delete(contract.symbol);
                             releaseTradeLock(contract.symbol, 'ghost_ai');
                         }
                     }
 
-                    console.log(`🔍 Active contracts after cleanup:`, Object.keys(activeContracts));
-                    console.log(`🔍 Active S1 symbols after cleanup:`, Array.from(activeS1Symbols));
+                    console.log(`🔍 Active contracts after cleanup:`, Object.keys(window.activeContracts));
+                    console.log(`🔍 Active S1 symbols after cleanup:`, Array.from(window.activeS1Symbols));
 
                     addBotTradeHistory(contract, contract.profit);
 

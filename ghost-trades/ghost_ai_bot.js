@@ -2,6 +2,15 @@
 // GHOST AI BOT FUNCTIONS
 // ===================================
 
+// CRITICAL: Global contract tracking variables (must be accessible from app.js)
+// These are used for contract lifecycle management and duplicate prevention
+if (typeof window.activeContracts === 'undefined') {
+    window.activeContracts = {}; // { contractId: { symbol, strategy: 'S1' or 'S2', stake, startTime } }
+}
+if (typeof window.activeS1Symbols === 'undefined') {
+    window.activeS1Symbols = new Set(); // Track symbols with active S1 trades to prevent duplicates
+}
+
 function addBotLog(message, type = 'info') {
     const logEntry = document.createElement('div');
     const timestamp = new Date().toLocaleTimeString();
@@ -86,8 +95,8 @@ async function startGhostAiBot() {
     botLogContainer.innerHTML = '';
 
     // Clear any stale contracts and locks from previous session
-    activeContracts = {};
-    activeS1Symbols.clear();
+    window.activeContracts = {}; // Reset global contract tracking
+    window.activeS1Symbols.clear(); // Reset global S1 symbol tracking
     expectedStakes = {}; // Clear expected stakes
     clearAllPendingStakes();
 
@@ -404,6 +413,7 @@ function updateBotStats() {
     }
 }
 
+
 // Performance optimization: Track last scan time and trade placement to avoid excessive scanning
 let lastScanTime = 0;
 const SCAN_COOLDOWN = 100; // Base cooldown between scans
@@ -411,17 +421,18 @@ let lastTradeTime = 0;
 const TRADE_COOLDOWN = 100; // No scans for 5 seconds after a trade is placed
 let isScanning = false; // Atomic scan lock to prevent simultaneous scans
 
-// Track active contracts per symbol to support multiple concurrent trades
-let activeContracts = {}; // { contractId: { symbol, strategy: 'S1' or 'S2', stake, startTime } }
-
-// Track which symbols have active S1 trades to avoid duplicates
-let activeS1Symbols = new Set();
+// Access global contract tracking (declared at top of file)
+const activeContracts = window.activeContracts;
+const activeS1Symbols = window.activeS1Symbols;
 
 // expectedStakes is now managed globally in utils.js
 
 // Bot timer variables
 let botStartTime = null;
 let botTimerInterval = null;
+
+// Trade timing diagnostics - Track ticks after trade placement to detect delays
+let postTradeTickMonitoring = {}; // { symbol: { ticksToCapture: 2, capturedTicks: [], tradeTime: timestamp, last6Digits: [] } }
 
 function handleBotTick(tick) {
     if (!isBotRunning) {
@@ -460,6 +471,26 @@ function handleBotTick(tick) {
     const now = Date.now();
     if (now - lastScanTime > 1000) {
         updateTechnicalIndicators();
+    }
+
+    // 3b. Monitor post-trade ticks for timing diagnostics
+    if (postTradeTickMonitoring[symbol]) {
+        const monitor = postTradeTickMonitoring[symbol];
+        if (monitor.capturedTicks.length < monitor.ticksToCapture) {
+            monitor.capturedTicks.push(lastDigit);
+
+            // When we've captured enough ticks, log the diagnostic info
+            if (monitor.capturedTicks.length === monitor.ticksToCapture) {
+                const delayMs = Date.now() - monitor.tradeTime;
+                addBotLog(`📊 TIMING DIAGNOSTIC for ${symbol}:`, 'info');
+                addBotLog(`   ├─ Last 6 digits when conditions met: [${monitor.last6Digits.join(', ')}]`, 'info');
+                addBotLog(`   ├─ Next 2 ticks after trade placed: [${monitor.capturedTicks.join(', ')}]`, 'info');
+                addBotLog(`   └─ Time to capture 2 ticks: ${delayMs}ms`, 'info');
+
+                // Clean up
+                delete postTradeTickMonitoring[symbol];
+            }
+        }
     }
 
     // 4. Scan and place trades with atomic lock and dual cooldown to prevent simultaneous scanning
@@ -764,6 +795,18 @@ function executeTradeWithTracking(marketData) {
     if (marketData.mode === 'S2') {
         botState.activeS2Count++;
     }
+
+    // DIAGNOSTIC: Capture last 6 digits when conditions are met and prepare to monitor next 2 ticks
+    const last6Digits = (marketTickHistory[marketData.symbol] || []).slice(-6);
+    postTradeTickMonitoring[marketData.symbol] = {
+        ticksToCapture: 2,
+        capturedTicks: [],
+        tradeTime: Date.now(),
+        last6Digits: last6Digits,
+        strategy: marketData.mode
+    };
+
+    addBotLog(`🔍 PRE-TRADE SNAPSHOT for ${marketData.symbol}: Last 6 digits = [${last6Digits.join(', ')}] | Will monitor next 2 ticks for timing analysis`, 'info');
 
     // Show comprehensive digit analysis before purchase
     showComprehensiveDigitAnalysis(marketData.symbol, marketData.prediction);
