@@ -560,7 +560,6 @@ function removeLiveContract(contractId) {
         container.innerHTML = '<div class="log-info">No active contracts</div>';
     }
 }
-}
 
 function handleBotTick(tick) {
     if (!isBotRunning) {
