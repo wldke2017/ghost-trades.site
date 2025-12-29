@@ -448,7 +448,14 @@ function updateLiveContractMonitor(contractId, symbol, currentPrice) {
 
     if (liveContractMonitor[contractId]) {
         const contract = liveContractMonitor[contractId];
-        contract.ticks.push({ digit: lastDigit, time: new Date().toLocaleTimeString(), price: currentPrice });
+
+        // STOP recording after 5 ticks
+        if (contract.postEntryCount >= 5) {
+            return;
+        }
+
+        contract.ticks.push({ digit: lastDigit, time: new Date().toLocaleTimeString(), price: currentPrice, type: 'post' });
+        contract.postEntryCount++;
         contract.elapsedMs = now - contract.startTime;
 
         // Update the UI
@@ -459,64 +466,100 @@ function updateLiveContractMonitor(contractId, symbol, currentPrice) {
             if (contractEntries.length === 0) {
                 container.innerHTML = '<div class="log-info">No active contracts</div>';
             } else {
-                container.innerHTML = contractEntries.map(([id, data]) => {
-                    const ticksDisplay = data.ticks.slice(-10).map((t, i) => {
-                        const isEntry = i === 0;
-                        const color = isEntry ? '#00ff7f' : '#fff';
-                        const label = isEntry ? `[ENTRY: ${t.digit}]` : t.digit;
-                        return `<span style="color: ${color}; font-weight: ${isEntry ? 'bold' : 'normal'};">${label}</span>`;
-                    }).join(' → ');
+                const legend = `
+                    <div style="font-size: 10px; color: #888; margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 4px;">
+                        <span>Key: <span style="color: #888;">History</span> → <span style="color: #00ff7f; font-weight: bold;">ENTRY</span> → <span style="color: #fff;">Result (5 Ticks)</span></span>
+                    </div>
+                `;
+
+                const entriesHtml = contractEntries.map(([id, data]) => {
+                    const ticksDisplay = data.ticks.map((t, i) => {
+                        let color = '#fff';
+                        let weight = 'normal';
+                        let border = '';
+
+                        if (t.type === 'pre') {
+                            color = '#888';
+                        } else if (t.type === 'entry') {
+                            color = '#00ff7f';
+                            weight = 'bold';
+                            border = 'border-bottom: 2px solid #00ff7f;';
+                        } else if (t.type === 'post') {
+                            color = '#fff';
+                        }
+
+                        return `<span style="color: ${color}; font-weight: ${weight}; ${border} padding: 0 2px;">${t.digit}</span>`;
+                    }).join('<span style="color: #444; font-size: 0.8em;">→</span>');
 
                     const elapsed = ((data.elapsedMs || 0) / 1000).toFixed(1);
+                    const statusText = data.postEntryCount >= 5 ? '✅ Complete' : '⏳ Monitoring...';
+
                     return `
-                        <div class="log-info" style="border-left: 3px solid #ff6b6b; padding-left: 10px; margin: 8px 0;">
+                        <div class="log-info" style="border-left: 3px solid #ff6b6b; padding-left: 10px; margin: 8px 0; background: rgba(255,107,107,0.05);">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                <strong>${data.symbol} - ${data.contractType} ${data.barrier}</strong>
-                                <span style="color: #888;">⏱️ ${elapsed}s</span>
+                                <strong>${data.symbol}</strong>
+                                <span style="font-size: 0.85em; background: #333; padding: 2px 6px; rounded: 4px;">${data.contractType} ${data.barrier}</span>
                             </div>
-                            <div style="font-size: 0.9em; font-family: 'Courier New', monospace;">
+                            <div style="font-size: 1.1em; font-family: 'Courier New', monospace; letter-spacing: 1px; overflow-x: auto; white-space: nowrap;">
                                 ${ticksDisplay}
                             </div>
-                            <div style="font-size: 0.85em; color: #666; margin-top: 2px;">
-                                Ticks: ${data.ticks.length} | ID: ${id.substring(0, 8)}...
+                            <div style="font-size: 0.8em; color: #888; margin-top: 4px; display: flex; justify-content: space-between;">
+                                <span>${statusText}</span>
+                                <span>${data.postEntryCount}/5 Ticks</span>
                             </div>
                         </div>
                     `;
                 }).join('');
+
+                container.innerHTML = legend + entriesHtml;
             }
         }
     }
 }
 
 function addLiveContract(contractId, symbol, entryTick, barrier, contractType) {
+    // 1. Get last 6 ticks from history as pre-entry context
+    const history = marketTickHistory[symbol] || [];
+    const preTicks = history.slice(-6).map(d => ({ digit: d, price: 'history', type: 'pre' }));
+
     liveContractMonitor[contractId] = {
         symbol: symbol,
         entryTick: entryTick,
-        ticks: [{ digit: entryTick, time: new Date().toLocaleTimeString(), price: 'Entry' }],
+        ticks: [
+            ...preTicks,
+            { digit: entryTick, time: new Date().toLocaleTimeString(), price: 'Entry', type: 'entry' }
+        ],
         startTime: Date.now(),
         elapsedMs: 0,
         barrier: barrier,
-        contractType: contractType
+        contractType: contractType,
+        postEntryCount: 0 // Initialize counter
     };
 
     // Force initial update
     updateLiveContractMonitor(contractId, symbol, entryTick);
 
-    addBotLog(`🔴 Live Monitor: Tracking contract ${contractId.substring(0, 8)}... for ${symbol}`, 'info');
+    addBotLog(`🔴 Live Monitor: Tracking ${symbol} (${contractType} ${barrier})`, 'info');
 }
 
 function removeLiveContract(contractId) {
     if (liveContractMonitor[contractId]) {
         const contract = liveContractMonitor[contractId];
-        addBotLog(`⚪ Live Monitor: Contract ${contractId.substring(0, 8)}... closed after ${contract.ticks.length} ticks`, 'info');
+        // Don't remove immediately if we want to mimic a log, 
+        // BUT the UI space is limited. 
+        // User asked to "act like tick history", but usually these disappear when the trade closes.
+        // Let's keep the standard behavior of removing it from the *Live* section when it closes,
+        // because the result goes to the Trade History table.
+        // The "Stop" refers to stopping the *recording* of ticks (which we handled directly in updateLiveContractMonitor).
+
+        addBotLog(`⚪ Live Monitor: Finished ${contract.symbol}`, 'info');
         delete liveContractMonitor[contractId];
 
         // Update UI
         const container = document.getElementById('live-contracts-container');
-        if (container && Object.keys(liveContractMonitor).length === 0) {
-            container.innerHTML = '<div class="log-info">No active contracts</div>';
-        }
+        container.innerHTML = '<div class="log-info">No active contracts</div>';
     }
+}
 }
 
 function handleBotTick(tick) {
