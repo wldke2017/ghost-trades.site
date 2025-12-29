@@ -768,7 +768,14 @@ function handleIncomingMessage(msg) {
                         removeLiveContract(contractIdToRemove);
                     }
 
-                    addBotTradeHistory(contract, contract.profit);
+                    // CRITICAL: Only add to history if not already processed (prevents duplicates)
+                    if (!window.processedContracts.has(contractIdToRemove)) {
+                        addBotTradeHistory(contract, contract.profit);
+                        window.processedContracts.add(contractIdToRemove);
+                        console.log(`✅ Added contract ${contractIdToRemove} to trade history`);
+                    } else {
+                        console.log(`⚠️ Skipped duplicate history entry for contract ${contractIdToRemove}`);
+                    }
 
                     sendAPIRequest({ "forget": contract.id }); // Unsubscribe
 

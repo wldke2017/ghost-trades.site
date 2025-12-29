@@ -10,6 +10,10 @@ if (typeof window.activeContracts === 'undefined') {
 if (typeof window.activeS1Symbols === 'undefined') {
     window.activeS1Symbols = new Set(); // Track symbols with active S1 trades to prevent duplicates
 }
+// CRITICAL: Track processed contracts to prevent duplicate history entries
+if (typeof window.processedContracts === 'undefined') {
+    window.processedContracts = new Set(); // Track contract IDs that have been added to history
+}
 
 function addBotLog(message, type = 'info') {
     const logEntry = document.createElement('div');
@@ -97,6 +101,7 @@ async function startGhostAiBot() {
     // Clear any stale contracts and locks from previous session
     window.activeContracts = {}; // Reset global contract tracking
     window.activeS1Symbols.clear(); // Reset global S1 symbol tracking
+    window.processedContracts.clear(); // Reset processed contracts tracking
     expectedStakes = {}; // Clear expected stakes
     clearAllPendingStakes();
 
