@@ -105,7 +105,7 @@ async function claimOrder(middlemanId, orderId) {
 
   try {
     const order = await Order.findByPk(orderId, { transaction });
-    
+
     if (!order) {
       throw new NotFoundError('Order');
     }
@@ -124,7 +124,7 @@ async function claimOrder(middlemanId, orderId) {
     }
 
     const orderAmount = parseFloat(order.amount);
-    
+
     if (parseFloat(wallet.available_balance) < orderAmount) {
       throw new InsufficientFundsError('Insufficient balance to secure this order');
     }
@@ -187,7 +187,7 @@ async function completeOrder(orderId, commissionRate = 0.05) {
 
   try {
     const order = await Order.findByPk(orderId, { transaction });
-    
+
     if (!order) {
       throw new NotFoundError('Order');
     }
@@ -296,7 +296,7 @@ async function disputeOrder(orderId) {
 
   try {
     const order = await Order.findByPk(orderId, { transaction });
-    
+
     if (!order) {
       throw new NotFoundError('Order');
     }
@@ -337,7 +337,7 @@ async function cancelOrder(orderId, cancelledBy) {
 
   try {
     const order = await Order.findByPk(orderId, { transaction });
-    
+
     if (!order) {
       throw new NotFoundError('Order');
     }
@@ -418,10 +418,69 @@ async function cancelOrder(orderId, cancelledBy) {
   }
 }
 
+
+/**
+ * Get orders with pagination and filtering
+ */
+async function getOrders({ status, buyerId, middlemanId, limit = 20, offset = 0 }) {
+  try {
+    const where = {};
+    if (status) where.status = status;
+    if (buyerId) where.buyer_id = buyerId;
+    if (middlemanId) where.middleman_id = middlemanId;
+
+    const { count, rows } = await Order.findAndCountAll({
+      where,
+      limit,
+      offset,
+      order: [['created_at', 'DESC']],
+      include: [
+        { model: User, as: 'buyer', attributes: ['id', 'username'] },
+        { model: User, as: 'middleman', attributes: ['id', 'username'] }
+      ]
+    });
+
+    return {
+      total: count,
+      orders: rows,
+      totalPages: Math.ceil(count / limit),
+      currentPage: Math.floor(offset / limit) + 1
+    };
+  } catch (error) {
+    logger.error('Error fetching orders:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get a single order by ID
+ */
+async function getOrderById(orderId) {
+  try {
+    const order = await Order.findByPk(orderId, {
+      include: [
+        { model: User, as: 'buyer', attributes: ['id', 'username', 'email'] },
+        { model: User, as: 'middleman', attributes: ['id', 'username', 'email'] }
+      ]
+    });
+
+    if (!order) {
+      throw new NotFoundError('Order');
+    }
+
+    return order;
+  } catch (error) {
+    logger.error(`Error fetching order #${orderId}:`, error);
+    throw error;
+  }
+}
+
 module.exports = {
   createOrder,
   claimOrder,
   completeOrder,
   disputeOrder,
-  cancelOrder
+  cancelOrder,
+  getOrders,
+  getOrderById
 };

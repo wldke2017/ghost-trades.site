@@ -166,7 +166,11 @@ sequelize.sync({ alter: true }).then(async () => {
 
 // Routes
 const aiStrategyRoutes = require('./routes/ai_strategy');
-app.use('/api/ai', aiStrategyRoutes); // Mounts to /api/ai/generate
+const orderRoutes = require('./routes/orders');
+app.use('/api/ai', aiStrategyRoutes);
+app.use('/orders', orderRoutes); // Mount at /orders (Client may prepend /escrow via proxy or auth.js)
+app.use('/escrow/orders', orderRoutes); // Explicit compatibility alias
+
 
 // ============ AUTHENTICATION ROUTES ============
 
