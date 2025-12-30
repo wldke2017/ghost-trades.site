@@ -1,5 +1,6 @@
 const sequelize = require('../db');
 const Order = require('../models/order');
+const User = require('../models/user');
 const Wallet = require('../models/wallet');
 const Transaction = require('../models/transaction');
 const ActivityLog = require('../models/activityLog');
