@@ -169,9 +169,6 @@ function showLoginForm() {
                                     <i class="ti ti-chevron-right text-lg"></i>
                                 </button>
                                 
-                                <button onclick="testLogin()" class="w-full py-4 text-gray-500 hover:text-white font-bold text-sm transition-colors mt-2">
-                                    Try with Demo Account
-                                </button>
                             </div>
 
                             <!-- REGISTER FORM -->
@@ -262,12 +259,6 @@ function switchAuthTab(tab) {
     }
 }
 
-// Test login function
-function testLogin() {
-    document.getElementById('login-username').value = 'middleman1';
-    document.getElementById('login-password').value = 'middleman123';
-    handleLogin();
-}
 
 // Handle login
 async function handleLogin() {
