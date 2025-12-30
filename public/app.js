@@ -659,13 +659,19 @@ function setupEventListeners() {
         document.getElementById('deposit-usd-preview').innerText = `$${usd}`;
     });
 
+    document.getElementById('agent-deposit-amount')?.addEventListener('input', e => {
+        const usd = (e.target.value / EXCHANGE_RATE).toFixed(2);
+        const previewEl = document.getElementById('agent-deposit-usd-preview');
+        if (previewEl) previewEl.innerText = `$${usd}`;
+        validateAgentDepositForm();
+    });
+
     document.getElementById('withdraw-amount').addEventListener('input', e => {
         const kes = (e.target.value * EXCHANGE_RATE).toFixed(0);
         document.getElementById('withdraw-kes-preview').innerText = kes;
     });
 
     // Agent Deposit Validation
-    document.getElementById('agent-deposit-amount')?.addEventListener('input', validateAgentDepositForm);
     document.getElementById('agent-mpesa-message')?.addEventListener('input', validateAgentDepositForm);
 }
 
