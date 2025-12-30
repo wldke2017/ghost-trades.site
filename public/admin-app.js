@@ -135,36 +135,54 @@ function toggleBulkSection() {
 }
 
 function generateRandomAmounts(count, total, min, max) {
-    if (min * count > total) return null; // Impossible minimum
-    if (max * count < total) return null; // Impossible maximum
+    if (min * count > total) return null;
+    if (max * count < total) return null;
 
-    let amounts = [];
-    let currentSum = 0;
+    // Start with a uniform distribution (average)
+    let avg = total / count;
+    let amounts = new Array(count).fill(avg);
 
-    // First pass: Fill with random raw numbers
-    for (let i = 0; i < count; i++) {
-        amounts.push(Math.random());
+    // Balancing Jitter: Randomly move value between elements
+    // The number of iterations determines how "un-uniform" the result is
+    const iterations = count * 20;
+    for (let i = 0; i < iterations; i++) {
+        // Pick two random buckets
+        const idx1 = Math.floor(Math.random() * count);
+        const idx2 = Math.floor(Math.random() * count);
+        if (idx1 === idx2) continue;
+
+        // Try to move a random amount from idx1 to idx2
+        const maxMove = Math.min(
+            amounts[idx1] - min, // How much we can take from idx1
+            max - amounts[idx2]  // How much we can add to idx2
+        );
+
+        if (maxMove > 0) {
+            const jitter = Math.random() * maxMove;
+            amounts[idx1] -= jitter;
+            amounts[idx2] += jitter;
+        }
     }
 
-    // Normalize to sum to Total
-    const sumRandom = amounts.reduce((a, b) => a + b, 0);
-    amounts = amounts.map(v => (v / sumRandom) * (total - (count * min))); // Distribute surplus above min
+    // Rounding and sum correction
+    amounts = amounts.map(v => Math.round(v * 100) / 100);
+    const currentSum = amounts.reduce((a, b) => a + b, 0);
+    let diff = Math.round((total - currentSum) * 100) / 100;
 
-    // Add min to each and round
-    amounts = amounts.map(v => Math.round((v + min) * 100) / 100);
+    // Distribute remaining cents one by one to avoid breaking bounds
+    let i = 0;
+    while (Math.abs(diff) > 0.001 && i < 1000) {
+        const step = diff > 0 ? 0.01 : -0.01;
+        const idx = Math.floor(Math.random() * count);
 
-    // Correction pass for rounding errors
-    let finalSum = amounts.reduce((a, b) => a + b, 0);
-    let diff = total - finalSum;
+        // Ensure adding/subtracting 0.01 doesn't break min/max
+        if (amounts[idx] + step >= min && amounts[idx] + step <= max) {
+            amounts[idx] = Math.round((amounts[idx] + step) * 100) / 100;
+            diff = Math.round((diff - step) * 100) / 100;
+        }
+        i++;
+    }
 
-    // Distribute diff to the first element (simplification, but works for rounding pennies)
-    amounts[0] += diff;
-
-    // Check bounds (simple rejection sampling approach: if failed, try flattening)
-    // For this simple implementation, we'll clamp and redistribute.
-    // Ideally, we'd loop this whole generation until valid.
-
-    // Let's rely on Preview for user to accept/retry for now.
     return amounts;
 }
 
@@ -181,6 +199,11 @@ function previewBulkOrders() {
 
     if (min * count > total) {
         showToast(`Impossible! Minimum ${min} * ${count} = ${min * count} > Total ${total}`, 'error');
+        return;
+    }
+
+    if (max * count < total) {
+        showToast(`Impossible! Maximum ${max} * ${count} = ${max * count} < Total ${total}`, 'error');
         return;
     }
 
