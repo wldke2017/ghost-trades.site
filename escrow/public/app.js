@@ -142,13 +142,17 @@ async function fetchTransactions() {
                 const isPositive = parseFloat(txn.amount) > 0;
                 const amountClass = isPositive ? 'text-green-500' : 'text-gray-300';
                 const sign = isPositive ? '+' : '';
+                
+                // Handle both createdAt and created_at for compatibility
+                const timestamp = txn.createdAt || txn.created_at;
+                const dateStr = timestamp ? new Date(timestamp).toLocaleDateString() : 'N/A';
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="p-4 font-medium text-gray-300">${txn.type}</td>
                     <td class="p-4 font-bold ${amountClass}">${sign}${formatCurrency(Math.abs(txn.amount))}</td>
                     <td class="p-4"><span class="px-2 py-1 rounded text-xs bg-gray-800 text-gray-400 capitalize">Completed</span></td>
-                    <td class="p-4 text-gray-500">${new Date(txn.createdAt).toLocaleDateString()}</td>
+                    <td class="p-4 text-gray-500">${dateStr}</td>
                 `;
                 tbody.appendChild(tr);
             });
