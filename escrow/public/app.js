@@ -127,31 +127,60 @@ async function fetchGlobalStats() {
 
 async function fetchTransactions() {
     try {
-        const response = await authenticatedFetch('/wallets/history/all?limit=5');
-        if (response.ok) {
-            const data = await response.json();
+        const [txnRes, reqRes] = await Promise.all([
+            authenticatedFetch('/wallets/history/all?limit=5'),
+            authenticatedFetch('/transaction-requests/my-requests')
+        ]);
+
+        if (txnRes.ok && reqRes.ok) {
+            const txnData = await txnRes.json();
+            const reqData = await reqRes.json();
+
             const tbody = document.getElementById('txn-history-body');
             tbody.innerHTML = '';
 
-            if (data.transactions.length === 0) {
+            // Get pending requests
+            const pending = reqData.filter(r => r.status === 'pending');
+
+            // Convert pending requests to a format similar to transactions for display
+            const pendingDisplay = pending.map(p => ({
+                id: `p-${p.id}`,
+                type: p.type.toUpperCase(),
+                amount: p.type === 'deposit' ? parseFloat(p.amount) : -parseFloat(p.amount),
+                status: 'pending',
+                created_at: p.createdAt
+            }));
+
+            // Merge and sort by date
+            const allItems = [
+                ...pendingDisplay,
+                ...txnData.transactions.map(t => ({ ...t, status: 'completed' }))
+            ].sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt))
+                .slice(0, 10); // Show up to 10 recent items
+
+            if (allItems.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No transactions yet</td></tr>';
                 return;
             }
 
-            data.transactions.forEach(txn => {
-                const isPositive = parseFloat(txn.amount) > 0;
+            allItems.forEach(item => {
+                const isPositive = parseFloat(item.amount) > 0;
                 const amountClass = isPositive ? 'text-green-500' : 'text-gray-300';
                 const sign = isPositive ? '+' : '';
+                const isPending = item.status === 'pending';
 
-                // Handle both createdAt and created_at for compatibility
-                const timestamp = txn.createdAt || txn.created_at;
+                const timestamp = item.created_at || item.createdAt;
                 const dateStr = timestamp ? new Date(timestamp).toLocaleDateString() : 'N/A';
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="p-4 font-medium text-gray-300">${txn.type}</td>
-                    <td class="p-4 font-bold ${amountClass}">${sign}${formatCurrency(Math.abs(txn.amount))}</td>
-                    <td class="p-4"><span class="px-2 py-1 rounded text-xs bg-gray-800 text-gray-400 capitalize">Completed</span></td>
+                    <td class="p-4 font-medium text-gray-300">${item.type}</td>
+                    <td class="p-4 font-bold ${amountClass}">${sign}${formatCurrency(Math.abs(item.amount))}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 rounded text-xs ${isPending ? 'bg-orange-500/10 text-orange-500' : 'bg-gray-800 text-gray-400'} capitalize">
+                            ${item.status}
+                        </span>
+                    </td>
                     <td class="p-4 text-gray-500">${dateStr}</td>
                 `;
                 tbody.appendChild(tr);

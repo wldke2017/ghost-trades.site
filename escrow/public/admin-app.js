@@ -700,7 +700,7 @@ async function reviewTransactionRequest(requestId, action) {
     if (adminNotes === null) return; // User cancelled
 
     try {
-        const response = await authenticatedFetch(`/admin/transaction-requests/${requestId}/review`, {
+        const response = await authenticatedFetch(`/transaction-requests/${requestId}/review`, {
             method: 'POST',
             body: JSON.stringify({ action, admin_notes: adminNotes })
         });
