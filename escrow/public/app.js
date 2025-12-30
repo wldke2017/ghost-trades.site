@@ -191,6 +191,92 @@ async function fetchTransactions() {
     }
 }
 
+async function showHistoryModal(type) {
+    const iconEl = document.getElementById('history-modal-icon');
+    const titleEl = document.getElementById('history-modal-title');
+    const tbody = document.getElementById('history-modal-body');
+
+    // Set UI based on type
+    if (type === 'deposit') {
+        if (iconEl) iconEl.className = 'ti ti-plus text-blue-400';
+        if (titleEl) titleEl.innerText = 'Deposit History';
+    } else {
+        if (iconEl) iconEl.className = 'ti ti-minus text-red-400';
+        if (titleEl) titleEl.innerText = 'Withdrawal History';
+    }
+
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500"><i class="ti ti-loader animate-spin text-2xl mb-2 block"></i> Loading history...</td></tr>';
+    openModal('history-modal');
+
+    try {
+        const [txnRes, reqRes] = await Promise.all([
+            authenticatedFetch(`/wallets/history/all?limit=100&type=${type.toUpperCase()}`),
+            authenticatedFetch('/transaction-requests/my-requests')
+        ]);
+
+        if (txnRes.ok && reqRes.ok) {
+            const txnData = await txnRes.json();
+            const reqData = await reqRes.json();
+
+            // Filter pending requests for this type
+            const pending = reqData.filter(r => r.status === 'pending' && r.type.toLowerCase() === type.toLowerCase());
+
+            const pendingDisplay = pending.map(p => ({
+                id: `p-${p.id}`,
+                type: p.type.toUpperCase(),
+                amount: p.type === 'deposit' ? parseFloat(p.amount) : -parseFloat(p.amount),
+                status: 'pending',
+                created_at: p.createdAt
+            }));
+
+            const allItems = [
+                ...pendingDisplay,
+                ...txnData.transactions.map(t => ({ ...t, status: 'completed' }))
+            ].sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+
+            if (allItems.length === 0) {
+                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="p-12 text-center text-gray-600">No ${type} history found</td></tr>`;
+                return;
+            }
+
+            if (tbody) {
+                tbody.innerHTML = '';
+                allItems.forEach(item => {
+                    const isPositive = parseFloat(item.amount) > 0;
+                    const amountClass = isPositive ? 'text-green-500' : 'text-gray-300';
+                    const sign = isPositive ? '+' : '';
+                    const isPending = item.status === 'pending';
+
+                    const timestamp = item.created_at || item.createdAt;
+                    const dateTimeStr = timestamp ? new Date(timestamp).toLocaleString() : 'N/A';
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors';
+                    tr.innerHTML = `
+                        <td class="p-4 font-medium text-gray-300">
+                            <div class="flex flex-col">
+                                <span>${item.type}</span>
+                                <span class="text-[10px] text-gray-600 font-mono">#${item.id}</span>
+                            </div>
+                        </td>
+                        <td class="p-4 font-bold ${amountClass}">${sign}${formatCurrency(Math.abs(item.amount))}</td>
+                        <td class="p-4 text-center">
+                            <span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${isPending ? 'bg-orange-500/10 text-orange-500' : 'bg-green-500/10 text-green-500'}">
+                                ${item.status}
+                            </span>
+                        </td>
+                        <td class="p-4 text-xs text-gray-500 text-right">${dateTimeStr}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching history:', error);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-red-400">Failed to load history</td></tr>';
+    }
+}
+
 // --- Order Management ---
 
 async function refreshOrders() {
