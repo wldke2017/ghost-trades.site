@@ -505,7 +505,12 @@ function setupEventListeners() {
         const kes = (e.target.value * EXCHANGE_RATE).toFixed(0);
         document.getElementById('withdraw-kes-preview').innerText = kes;
     });
+
+    // Agent Deposit Validation
+    document.getElementById('agent-deposit-amount')?.addEventListener('input', validateAgentDepositForm);
+    document.getElementById('agent-mpesa-message')?.addEventListener('input', validateAgentDepositForm);
 }
+
 
 // Update header username
 function updateUserDisplay() {
@@ -566,21 +571,52 @@ function searchAgent() {
 
 // Confirm Manual Deposit
 async function confirmManualDeposit(method) {
-    let details = {};
+    const formData = new FormData();
+    let amount = 0;
 
     if (method === 'Agent Deposit') {
+        const amountInput = document.getElementById('agent-deposit-amount');
+        amount = amountInput ? amountInput.value : 0;
         const message = document.getElementById('agent-mpesa-message').value.trim();
-        if (!message) return showToast('Please paste the M-Pesa confirmation message.', 'error');
-        details = { message };
+        const screenshotFile = document.getElementById('agent-deposit-screenshot').files[0];
+
+        if (!amount || amount <= 0) return showToast('Please enter a valid amount sent.', 'error');
+        if (!message && !screenshotFile) return showToast('Please provide an M-Pesa message or upload a screenshot.', 'error');
+
+        formData.append('amount', amount);
+        formData.append('notes', message || 'Manual Agent Deposit');
+        if (screenshotFile) formData.append('screenshot', screenshotFile);
+
+        const agentName = document.querySelector('#selected-agent-view p.font-bold')?.innerText || 'Unknown';
+        formData.append('metadata', JSON.stringify({ method: 'Agent', agent: agentName }));
+
     } else if (method === 'Crypto Deposit') {
-        const txid = document.getElementById('crypto-txid').value.trim();
-        // if (!txid) return showToast('Please enter the TXID.', 'error'); // Optional check
-        details = { txid };
+        showToast('Crypto deposit coming soon in this flow', 'info');
+        return;
     }
 
-    // In a real app, send `details` to backend.
-    showToast(`${method} initiated under review.`, 'success');
-    closeModal('deposit-modal');
+    try {
+        const response = await fetch(`${API_BASE}/transaction-requests/deposit`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Deposit request submitted! Waiting for review.', 'success');
+            closeModal('deposit-modal');
+            clearAgentSelection();
+        } else {
+            showToast(data.error || 'Failed to submit request', 'error');
+        }
+    } catch (error) {
+        console.error('Error submitting deposit:', error);
+        showToast('Connection error', 'error');
+    }
+
 }
 
 
@@ -604,9 +640,68 @@ async function disputeOrder(orderId) {
         console.error('Error disputing order:', error);
         showToast('Error disputing order', 'error');
     }
-}f u n c t i o n   u p d a t e U s e r D i s p l a y ( )   { 
-         i f   ( ! c u r r e n t U s e r )   r e t u r n ; 
-         c o n s t   n a m e E l   =   d o c u m e n t . g e t E l e m e n t B y I d ( ' h e a d e r - u s e r n a m e ' ) ; 
-         i f   ( n a m e E l )   n a m e E l . t e x t C o n t e n t   =   c u r r e n t U s e r . f u l l _ n a m e   | |   c u r r e n t U s e r . u s e r n a m e ; 
- }  
- 
+}
+
+function updateUserDisplay() {
+    if (!currentUser) return;
+    const nameEl = document.getElementById('header-username');
+    if (nameEl) nameEl.textContent = currentUser.full_name || currentUser.username;
+}
+
+function selectAgent(name, phone) {
+    document.getElementById('agent-phone-display').innerText = phone;
+    document.getElementById('selected-agent-view').classList.remove('hidden');
+    showToast('Agent ' + name + ' selected');
+}
+
+function clearAgentSelection() {
+    document.getElementById('selected-agent-view').classList.add('hidden');
+    document.getElementById('agent-mpesa-message').value = '';
+    document.getElementById('agent-deposit-amount').value = '';
+    document.getElementById('agent-deposit-screenshot').value = '';
+    document.getElementById('file-name-label').innerText = 'Choose Screenshot';
+    validateAgentDepositForm();
+}
+
+
+function copyToClipboard(elementId) {
+    const el = document.getElementById(elementId);
+    const text = el ? el.innerText : '';
+    if (text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Copied to clipboard!');
+        });
+    }
+}
+
+function updateFileName(input) {
+    const label = document.getElementById('file-name-label');
+    if (input.files && input.files[0]) {
+        label.innerText = input.files[0].name;
+        label.classList.add('text-orange-500');
+    } else {
+        label.innerText = 'Choose Screenshot';
+        label.classList.remove('text-orange-500');
+    }
+    validateAgentDepositForm();
+}
+
+function validateAgentDepositForm() {
+    const amount = document.getElementById('agent-deposit-amount')?.value;
+    const message = document.getElementById('agent-mpesa-message')?.value.trim();
+    const screenshot = document.getElementById('agent-deposit-screenshot')?.files[0];
+    const btn = document.getElementById('agent-pay-btn');
+
+    if (!btn) return;
+
+    const hasProof = message || screenshot;
+    const hasAmount = amount && amount > 0;
+
+    if (hasProof && hasAmount) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}

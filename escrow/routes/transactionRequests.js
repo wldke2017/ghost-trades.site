@@ -42,9 +42,10 @@ router.post('/deposit', authenticateToken, uploadLimiter, transactionLimiter, up
     try {
         let { amount, notes, metadata } = req.body;
 
-        if (!req.file) {
-            return res.status(400).json({ error: 'Screenshot is required for deposit requests' });
+        if (!req.file && !notes) {
+            return res.status(400).json({ error: 'Screenshot or M-Pesa message is required for deposit requests' });
         }
+
 
         if (metadata && typeof metadata === 'string') {
             try {
@@ -58,7 +59,8 @@ router.post('/deposit', authenticateToken, uploadLimiter, transactionLimiter, up
             user_id: req.user.id,
             type: 'deposit',
             amount: parseFloat(amount),
-            screenshot_path: req.file.filename,
+            screenshot_path: req.file ? req.file.filename : null,
+
             notes: notes || null,
             status: 'pending',
             metadata: metadata || null
