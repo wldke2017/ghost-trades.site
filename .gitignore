@@ -1,23 +1,62 @@
+# Dependencies
 node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables
 .env
-*.log
+.env.local
+.env.production
+.env.test
+
+# Logs
 logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage/
+.nyc_output/
+
+# Uploads
 uploads/
-.DS_Store
+!uploads/.gitkeep
+
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
-.vscode/
-.idea/
+.DS_Store
+
+# PM2
+.pm2/
+
+# Build
 dist/
 build/
-coverage/
-.nyc_output/
-*.sqlite
-*.db
-.cache/
-temp/
+
+# Test
+*.test.js.snap
+
+# Temporary files
 tmp/
-ghost-trades-monorepo/
-ngrok.exe
-ngrok-v3-stable-windows-amd64.zip
+temp/
+
+# Database
+*.sqlite
+*.sqlite3
+
+# OS
+Thumbs.db
+.DS_Store

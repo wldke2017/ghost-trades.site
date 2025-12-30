@@ -1,7 +1,7 @@
 // SecureEscrow User Dashboard Logic
 
 // --- Constants ---
-const API_BASE = '/escrow'; // Base path for API calls
+const API_BASE = ''; // Base path for API calls
 // EXCHANGE_RATE is defined in auth.js
 
 // --- State ---

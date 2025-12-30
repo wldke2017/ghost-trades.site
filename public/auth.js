@@ -412,11 +412,7 @@ async function authenticatedFetch(url, options = {}) {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Prepend /escrow prefix if url starts with / (and not already prefixed)
-    const prefix = '/escrow';
-    const finalUrl = (url.startsWith('/') && !url.startsWith(prefix))
-        ? `${prefix}${url}`
-        : url;
+    const finalUrl = url;
 
     const response = await fetch(finalUrl, {
         ...options,
