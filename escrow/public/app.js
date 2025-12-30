@@ -142,7 +142,7 @@ async function fetchTransactions() {
                 const isPositive = parseFloat(txn.amount) > 0;
                 const amountClass = isPositive ? 'text-green-500' : 'text-gray-300';
                 const sign = isPositive ? '+' : '';
-                
+
                 // Handle both createdAt and created_at for compatibility
                 const timestamp = txn.createdAt || txn.created_at;
                 const dateStr = timestamp ? new Date(timestamp).toLocaleDateString() : 'N/A';
@@ -369,13 +369,28 @@ function openSettingsModal() {
     }
     openModal('settings-modal');
 }
-function openDepositModal() { openModal('deposit-modal'); }
+function openDepositModal() {
+    if (currentUser && currentUser.mpesa_number) {
+        const phoneInput = document.getElementById('deposit-phone');
+        if (phoneInput) phoneInput.value = currentUser.mpesa_number;
+    }
+    openModal('deposit-modal');
+}
+
 function openWithdrawModal() {
     // Calculate USD preview immediately
     const bal = document.getElementById('balance-available')?.innerText || '$0.00';
     document.getElementById('withdraw-available-balance').innerText = bal;
+
+    // Pre-fill phone number if available
+    if (currentUser && currentUser.mpesa_number) {
+        const phoneInput = document.getElementById('withdraw-phone');
+        if (phoneInput) phoneInput.value = currentUser.mpesa_number;
+    }
+
     openModal('withdraw-modal');
 }
+
 
 // Deposit Logic
 async function initiateDeposit() {
