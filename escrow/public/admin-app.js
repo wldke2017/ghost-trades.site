@@ -21,7 +21,7 @@ function checkAdminAuthentication() {
     const userData = localStorage.getItem('userData');
 
     if (!authToken || !userData) {
-        window.location.href = '/index.html';
+        window.location.href = 'index.html';
         return;
     }
 
@@ -32,7 +32,7 @@ function checkAdminAuthentication() {
         if (user.role !== 'admin') {
             showToast('Unauthorized access. Redirecting...', 'error');
             setTimeout(() => {
-                window.location.href = '/index.html';
+                window.location.href = 'index.html';
             }, 1500);
             return;
         }
@@ -45,7 +45,7 @@ function checkAdminAuthentication() {
         updateAdminDashboard();
     } catch (error) {
         console.error('Error parsing user data:', error);
-        window.location.href = '/index.html';
+        window.location.href = 'index.html';
     }
 }
 
@@ -895,62 +895,7 @@ function logout() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
     showToast('Logged out successfully', 'info');
-    window.location.href = '/escrow/index.html';
-}
-
-// User Management Actions
-async function updateUserStatus(userId, status) {
-    const statusText = status === 'active' ? 'activate' : status === 'disabled' ? 'disable' : 'block';
-    showConfirmDialog(
-        `Update User Status`,
-        `Are you sure you want to ${statusText} this user?`,
-        async () => {
-            try {
-                const response = await authenticatedFetch(`/admin/users/${userId}/status`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ status })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to update user status');
-                }
-
-                const result = await response.json();
-                showToast(result.message, 'success');
-                updateAdminDashboard();
-            } catch (error) {
-                console.error('Error updating user status:', error);
-                showToast('Failed to update user status: ' + error.message, 'error');
-            }
-        }
-    );
-}
-
-async function deleteUser(userId, username) {
-    showConfirmDialog(
-        `Delete User`,
-        `Are you sure you want to permanently delete user "${username}"? This action cannot be undone.`,
-        async () => {
-            try {
-                const response = await authenticatedFetch(`/admin/users/${userId}`, {
-                    method: 'DELETE'
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to delete user');
-                }
-
-                const result = await response.json();
-                showToast(result.message, 'success');
-                updateAdminDashboard();
-            } catch (error) {
-                console.error('Error deleting user:', error);
-                showToast('Failed to delete user: ' + error.message, 'error');
-            }
-        }
-    );
+    window.location.href = 'index.html';
 }
 
 // Order Details Modal (reuse from app.js)
@@ -1150,7 +1095,7 @@ async function submitBulkOrder(event) {
         `Create ${count} orders totaling ${total.toFixed(2)} with amounts between ${min.toFixed(2)} and ${max.toFixed(2)}?`,
         async () => {
             try {
-                const response = await authenticatedFetch('/admin/orders/bulk', {
+                const response = await authenticatedFetch('/orders/bulk', {
                     method: 'POST',
                     body: JSON.stringify({
                         count,

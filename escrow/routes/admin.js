@@ -79,6 +79,21 @@ router.get('/overview', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+// Get Transaction Requests (Admin)
+router.get('/transaction-requests', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { status = 'pending' } = req.query;
+        const requests = await TransactionRequest.findAll({
+            where: { status },
+            include: [{ model: User, as: 'user', attributes: ['id', 'username', 'email'] }],
+            order: [['createdAt', 'DESC']]
+        });
+        res.json(requests);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Manual Wallet Management
 router.post('/wallets/:user_id/deposit', authenticateToken, isAdmin, validate('walletTransaction'), async (req, res) => {
     const transaction = await sequelize.transaction();
@@ -114,8 +129,44 @@ router.post('/wallets/:user_id/deposit', authenticateToken, isAdmin, validate('w
     }
 });
 
+router.post('/wallets/:user_id/withdraw', authenticateToken, isAdmin, validate('walletTransaction'), async (req, res) => {
+    const transaction = await sequelize.transaction();
+    try {
+        const { amount } = req.body;
+        const userId = req.params.user_id;
+
+        const wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
+        if (!wallet || parseFloat(wallet.available_balance) < parseFloat(amount)) {
+            throw new Error('Insufficient available balance');
+        }
+
+        const balanceBefore = parseFloat(wallet.available_balance);
+        wallet.available_balance = balanceBefore - parseFloat(amount);
+        await wallet.save({ transaction });
+
+        await Transaction.create({
+            user_id: userId,
+            type: 'WITHDRAWAL',
+            amount: -parseFloat(amount),
+            balance_before: balanceBefore,
+            balance_after: wallet.available_balance,
+            description: 'Manual admin withdrawal'
+        }, { transaction });
+
+        await transaction.commit();
+
+        const io = req.app.get('socketio');
+        if (io) io.emit('walletUpdated', { user_id: userId, available_balance: wallet.available_balance });
+
+        res.json({ message: 'Withdrawal successful', wallet });
+    } catch (error) {
+        if (transaction) await transaction.rollback();
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // User Management
-router.patch('/users/:id/status', authenticateToken, isAdmin, validate('updateUserStatus'), async (req, res) => {
+router.put('/users/:id/status', authenticateToken, isAdmin, validate('updateUserStatus'), async (req, res) => {
     try {
         const { status } = req.body;
         const user = await User.findByPk(req.params.id);
@@ -125,6 +176,19 @@ router.patch('/users/:id/status', authenticateToken, isAdmin, validate('updateUs
         user.status = status;
         await user.save();
         res.json({ message: `User status updated to ${status}`, user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.delete('/users/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot delete self' });
+
+        await user.destroy();
+        res.json({ message: 'User deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

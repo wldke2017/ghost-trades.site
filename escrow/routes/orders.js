@@ -14,8 +14,10 @@ router.get('/', authenticateToken, async (req, res, next) => {
 
         let filters = {
             status: status,
-            limit: parseInt(limit) || 20,
-            offset: parseInt(offset) || 0
+            buyerId: req.query.buyerId,
+            middlemanId: req.query.middlemanId,
+            limit: parseInt(req.query.limit) || 20,
+            offset: parseInt(req.query.offset) || 0
         };
 
         // If basic user (not admin), what should they see?

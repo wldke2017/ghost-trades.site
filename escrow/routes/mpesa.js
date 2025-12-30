@@ -9,6 +9,7 @@ const Transaction = require('../models/transaction');
 const { Op } = require('sequelize');
 const Wallet = require('../models/wallet');
 const sequelize = require('../db');
+const logger = require('../utils/logger');
 
 // M-Pesa Configuration
 const MPESA_CONFIG = {
@@ -110,10 +111,13 @@ router.post('/stkpush', authenticateToken, transactionLimiter, async (req, res) 
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('M-Pesa STK Push error:', data);
+            logger.error('M-Pesa STK Push failed', {
+                status: response.status,
+                error: data.errorMessage || 'Unknown Error'
+            });
             return res.status(response.status).json({
                 error: 'M-Pesa payment initiation failed',
-                details: data
+                details: process.env.NODE_ENV === 'development' ? data : undefined
             });
         }
 
@@ -147,7 +151,10 @@ router.post('/stkpush', authenticateToken, transactionLimiter, async (req, res) 
 router.post('/callback', async (req, res) => {
     try {
         const callbackData = req.body;
-        console.log('M-Pesa Callback received:', JSON.stringify(callbackData, null, 2));
+        logger.info('M-Pesa Callback received', {
+            CheckoutRequestID: callbackData?.Body?.stkCallback?.CheckoutRequestID,
+            ResultCode: callbackData?.Body?.stkCallback?.ResultCode
+        });
 
         const { Body } = callbackData;
         if (!Body || !Body.stkCallback) {

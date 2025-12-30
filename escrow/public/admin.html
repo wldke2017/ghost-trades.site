@@ -5,36 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Command Center - SecureEscrow</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont/tabler-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
-                        },
-                        success: '#10b981',
-                        warning: '#f59e0b',
-                        danger: '#ef4444',
-                    }
-                }
-            }
-        }
-    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -118,7 +93,7 @@
                     </div>
 
                     <!-- Back to User Dashboard -->
-                    <button onclick="window.location.href='/escrow/index.html'"
+                    <button onclick="window.location.href='index.html'"
                         class="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md">
                         <i class="ti ti-arrow-left"></i>
                         <span>User Dashboard</span>
@@ -169,7 +144,7 @@
                         <i class="ti ti-moon hidden dark:inline"></i>
                         <span>Theme</span>
                     </button>
-                    <button onclick="window.location.href='/escrow/index.html'"
+                    <button onclick="window.location.href='index.html'"
                         class="flex items-center justify-center space-x-2 p-3 rounded-lg bg-blue-900/50 text-blue-300 font-medium border border-blue-800">
                         <i class="ti ti-arrow-left"></i>
                         <span>User View</span>

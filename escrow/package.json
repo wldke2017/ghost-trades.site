@@ -13,7 +13,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,json,md}\"",
     "db:migrate": "node scripts/migrate.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "build:css": "npx tailwindcss -i ./public/tailwind-input.css -o ./public/tailwind.css --minify"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -35,14 +36,17 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
+    "autoprefixer": "^10.4.23",
     "cross-env": "^7.0.3",
     "eslint": "^8.56.0",
     "jest": "^29.7.0",
     "node-fetch": "^2.7.0",
     "nodemon": "^3.0.2",
+    "postcss": "^8.5.6",
     "prettier": "^3.1.1",
     "socket.io-client": "^4.8.1",
-    "supertest": "^6.3.3"
+    "supertest": "^6.3.3",
+    "tailwindcss": "^3.4.19"
   },
   "keywords": [
     "escrow",

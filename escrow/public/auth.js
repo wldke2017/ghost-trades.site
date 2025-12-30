@@ -64,7 +64,7 @@ function showLoginForm() {
                 <div class="hidden md:flex w-1/2 relative overflow-hidden bg-gray-900 p-12 flex-col justify-between">
                     <!-- Background Image with Overlay -->
                     <div class="absolute inset-0 z-0">
-                        <img src="/images/hero-image.png" alt="Secure Escrow" class="w-full h-full object-cover scale-110">
+                        <img src="images/hero-image.png" alt="Secure Escrow" class="w-full h-full object-cover scale-110">
                         <div class="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/60 to-transparent"></div>
                     </div>
                     
@@ -117,7 +117,7 @@ function showLoginForm() {
                 <div class="w-full md:w-1/2 bg-gray-800 flex flex-col relative">
                     <!-- Mobile Hero (Visible only on mobile) -->
                     <div class="md:hidden h-40 relative overflow-hidden">
-                         <img src="/images/hero-image.png" alt="Secure Escrow" class="w-full h-full object-cover">
+                         <img src="images/hero-image.png" alt="Secure Escrow" class="w-full h-full object-cover">
                          <div class="absolute inset-0 bg-gradient-to-t from-gray-800 to-transparent"></div>
                     </div>
 
@@ -280,7 +280,7 @@ async function handleLogin() {
     }
 
     try {
-        const response = await fetch('/escrow/auth/login', {
+        const response = await fetch('auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
@@ -308,7 +308,7 @@ async function handleLogin() {
 
             // Redirect based on role
             if (data.user.role === 'admin') {
-                window.location.href = '/escrow/admin.html';
+                window.location.href = 'admin.html';
             } else {
                 if (typeof updateDashboard === 'function') {
                     updateDashboard();
@@ -345,7 +345,7 @@ async function handleRegister() {
     }
 
     try {
-        const response = await fetch('/escrow/auth/register', {
+        const response = await fetch('auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -376,7 +376,7 @@ async function handleRegister() {
 
             // Redirect based on role
             if (data.user.role === 'admin') {
-                window.location.href = '/escrow/admin.html';
+                window.location.href = 'admin.html';
             } else {
                 if (typeof updateDashboard === 'function') {
                     updateDashboard();

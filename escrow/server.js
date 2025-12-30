@@ -71,17 +71,18 @@ app.use((req, res, next) => {
 });
 
 // Database Sync & Seeding
-sequelize.sync({ alter: true }).then(async () => {
-  console.log('Database synced');
+const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
+sequelize.sync(syncOptions).then(async () => {
+  logger.info(`Database synced (Options: ${JSON.stringify(syncOptions)})`);
   try {
     const adminExists = await User.findOne({ where: { role: 'admin' } });
     if (!adminExists) {
       const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin083';
       await User.create({ username: 'Admin', password: adminPassword, role: 'admin' });
-      console.log('Admin user created');
+      logger.info('Admin user created');
     }
   } catch (error) {
-    console.error('Error seeding users:', error.message);
+    logger.error('Error seeding users:', error.message);
   }
 });
 

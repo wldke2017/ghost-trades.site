@@ -35,7 +35,39 @@ async function updateDashboard() {
     }
 }
 
-// ... existing fetchUserInfo, fetchWalletBalance, fetchTransactions ...
+// --- Data Fetching ---
+
+async function fetchUserInfo() {
+    try {
+        const response = await authenticatedFetch('/auth/me');
+        if (response.ok) {
+            const user = await response.json();
+            currentUser = user;
+            localStorage.setItem('userData', JSON.stringify(user));
+            window.currentUserId = user.id;
+            window.currentUsername = user.username;
+            updateUserDisplay();
+        }
+    } catch (error) {
+        console.error('Error fetching user info:', error);
+    }
+}
+
+async function fetchWalletBalance() {
+    try {
+        const response = await authenticatedFetch('/wallets/me');
+        if (response.ok) {
+            const wallet = await response.json();
+            const availEl = document.getElementById('balance-available');
+            const lockedEl = document.getElementById('balance-locked');
+
+            if (availEl) availEl.textContent = formatCurrency(wallet.available_balance);
+            if (lockedEl) lockedEl.textContent = formatCurrency(wallet.locked_balance);
+        }
+    } catch (error) {
+        console.error('Error fetching wallet balance:', error);
+    }
+}
 
 // NEW: Fetch User Stats (Total Commission, My Completed Orders)
 async function fetchCompletedStates() {
@@ -94,7 +126,7 @@ async function fetchGlobalStats() {
 
 async function fetchTransactions() {
     try {
-        const response = await authenticatedFetch('/transactions?limit=5');
+        const response = await authenticatedFetch('/wallets/history/all?limit=5');
         if (response.ok) {
             const data = await response.json();
             const tbody = document.getElementById('txn-history-body');
