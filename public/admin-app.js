@@ -139,55 +139,77 @@ function toggleBulkSection() {
 }
 
 function generateRandomAmounts(count, total, min, max) {
-    if (min * count > total) return null;
-    if (max * count < total) return null;
+    if (min * count > total || max * count < total) return null;
 
-    // Start with a uniform distribution (average)
-    let avg = total / count;
-    let amounts = new Array(count).fill(avg);
+    let amounts = [];
 
-    // Balancing Jitter: Randomly move value between elements
-    // The number of iterations determines how "un-uniform" the result is
-    const iterations = count * 20;
+    // 1. Coverage: Ensure we hit every "whole dollar" segment if possible
+    const floorMin = Math.floor(min);
+    const floorMax = Math.floor(max);
+    const segments = [];
+    for (let i = floorMin; i <= floorMax; i++) {
+        segments.push(i);
+    }
+
+    // Shuffle segments to assign them to random order slots
+    const shuffledSegments = [...segments].sort(() => Math.random() - 0.5);
+
+    // Pick unique segment values for the first few orders
+    for (let i = 0; i < Math.min(count - 1, shuffledSegments.length); i++) {
+        const seg = shuffledSegments[i];
+        const sMin = Math.max(min, seg);
+        const sMax = Math.min(max, seg + 0.99);
+        // Random value in this segment's range
+        amounts.push(sMin + (Math.random() * (sMax - sMin)));
+    }
+
+    // 2. Fill the rest with random values in full range
+    while (amounts.length < count) {
+        amounts.push(min + Math.random() * (max - min));
+    }
+
+    // 3. Balancing & Jitter: Reach target sum while maintaining uniqueness
+    // We iterate to spread the values and hit the sum
+    const iterations = count * 50;
     for (let i = 0; i < iterations; i++) {
-        // Pick two random buckets
         const idx1 = Math.floor(Math.random() * count);
         const idx2 = Math.floor(Math.random() * count);
         if (idx1 === idx2) continue;
 
-        // Try to move a random amount from idx1 to idx2
-        const maxMove = Math.min(
-            amounts[idx1] - min, // How much we can take from idx1
-            max - amounts[idx2]  // How much we can add to idx2
-        );
-
+        const maxMove = Math.min(amounts[idx1] - min, max - amounts[idx2]);
         if (maxMove > 0) {
-            const jitter = Math.random() * maxMove;
+            const jitter = Math.random() * maxMove * 0.4;
             amounts[idx1] -= jitter;
             amounts[idx2] += jitter;
         }
     }
 
-    // Rounding and sum correction
+    // 4. Force rounding and exact sum correction
     amounts = amounts.map(v => Math.round(v * 100) / 100);
-    const currentSum = amounts.reduce((a, b) => a + b, 0);
+    // Ensure all are within bounds after rounding
+    amounts = amounts.map(v => Math.max(min, Math.min(max, v)));
+
+    let currentSum = amounts.reduce((a, b) => a + b, 0);
     let diff = Math.round((total - currentSum) * 100) / 100;
 
-    // Distribute remaining cents one by one to avoid breaking bounds
-    let i = 0;
-    while (Math.abs(diff) > 0.001 && i < 1000) {
+    // Distribute remaining cents while maintaining uniqueness
+    let safety = 0;
+    while (Math.abs(diff) > 0.001 && safety < 2000) {
         const step = diff > 0 ? 0.01 : -0.01;
         const idx = Math.floor(Math.random() * count);
 
-        // Ensure adding/subtracting 0.01 doesn't break min/max
-        if (amounts[idx] + step >= min && amounts[idx] + step <= max) {
-            amounts[idx] = Math.round((amounts[idx] + step) * 100) / 100;
+        const candidate = Math.round((amounts[idx] + step) * 100) / 100;
+
+        // Uniqueness check: Is this candidate value already in the list?
+        if (candidate >= min && candidate <= max && !amounts.includes(candidate)) {
+            amounts[idx] = candidate;
             diff = Math.round((diff - step) * 100) / 100;
         }
-        i++;
+        safety++;
     }
 
-    return amounts;
+    // Final shuffle to not have the "coverage" orders always at the start
+    return amounts.sort(() => Math.random() - 0.5);
 }
 
 function previewBulkOrders() {
@@ -1051,128 +1073,6 @@ async function resolveDispute(orderId, winner) {
     );
 }
 
-// Bulk Order Functions
-function showBulkOrderModal() {
-    document.getElementById('bulk-order-modal').classList.remove('hidden');
-    // Reset form
-    document.getElementById('bulk-order-form').reset();
-    updateBulkPreview();
-}
-
-function closeBulkOrderModal() {
-    document.getElementById('bulk-order-modal').classList.add('hidden');
-}
-
-function updateBulkPreview() {
-    const count = parseInt(document.getElementById('bulk-order-count').value) || 0;
-    const total = parseFloat(document.getElementById('bulk-total-amount').value) || 0;
-    const min = parseFloat(document.getElementById('bulk-min-amount').value) || 0;
-    const max = parseFloat(document.getElementById('bulk-max-amount').value) || 0;
-
-    const previewDiv = document.getElementById('bulk-preview');
-
-    if (count === 0 || total === 0 || min === 0 || max === 0) {
-        previewDiv.innerHTML = '<p>Enter values above to see preview...</p>';
-        return;
-    }
-
-    if (min > max) {
-        previewDiv.innerHTML = '<p class="text-red-400">Min amount cannot be greater than max amount</p>';
-        return;
-    }
-
-    if (count * min > total) {
-        previewDiv.innerHTML = '<p class="text-red-400">Total amount too low for minimum requirements</p>';
-        return;
-    }
-
-    if (count * max < total) {
-        previewDiv.innerHTML = '<p class="text-red-400">Total amount too high for maximum limits</p>';
-        return;
-    }
-
-    // Generate sample distribution
-    const amounts = generateRandomAmounts(count, total, min, max);
-    const avg = total / count;
-
-    previewDiv.innerHTML = `
-        <p><strong>${count}</strong> orders totaling <strong>${total.toFixed(2)}</strong></p>
-        <p>Range: <strong>${min.toFixed(2)}</strong> - <strong>${max.toFixed(2)}</strong></p>
-        <p>Average: <strong>${avg.toFixed(2)}</strong> per order</p>
-        <p class="mt-2 text-xs">Sample distribution: ${amounts.slice(0, 5).map(a => `${a.toFixed(2)}`).join(', ')}${amounts.length > 5 ? '...' : ''}</p>
-    `;
-}
-
-function generateRandomAmounts(count, total, min, max) {
-    // Generate random amounts that sum to total
-    const amounts = [];
-
-    // For all but the last order, generate random amounts
-    for (let i = 0; i < count - 1; i++) {
-        const remainingOrders = count - i - 1;
-        const remainingTotal = total - amounts.reduce((sum, a) => sum + a, 0);
-        const maxForThis = Math.min(max, remainingTotal - (remainingOrders * min));
-        const minForThis = Math.max(min, remainingTotal - (remainingOrders * max));
-
-        const randomAmount = Math.random() * (maxForThis - minForThis) + minForThis;
-        amounts.push(Math.round(randomAmount * 100) / 100); // Round to 2 decimal places
-    }
-
-    // Last amount is what's remaining to reach the total
-    const remaining = total - amounts.reduce((sum, a) => sum + a, 0);
-    amounts.push(Math.round(remaining * 100) / 100);
-
-    return amounts;
-}
-
-async function submitBulkOrder(event) {
-    event.preventDefault();
-
-    const count = parseInt(document.getElementById('bulk-order-count').value);
-    const total = parseFloat(document.getElementById('bulk-total-amount').value);
-    const min = parseFloat(document.getElementById('bulk-min-amount').value);
-    const max = parseFloat(document.getElementById('bulk-max-amount').value);
-    const description = document.getElementById('bulk-description').value || 'Bulk order batch';
-
-    // Validation
-    if (count * min > total || count * max < total) {
-        showToast('Invalid amount distribution', 'error');
-        return;
-    }
-
-    showConfirmDialog(
-        'Create Bulk Orders',
-        `Create ${count} orders totaling ${total.toFixed(2)} with amounts between ${min.toFixed(2)} and ${max.toFixed(2)}?`,
-        async () => {
-            try {
-                const response = await authenticatedFetch('/orders/bulk', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        count,
-                        totalAmount: total,
-                        minAmount: min,
-                        maxAmount: max,
-                        description
-                    })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Bulk order creation failed');
-                }
-
-                const result = await response.json();
-                showToast(`Successfully created ${result.created} bulk orders!`, 'success');
-
-                closeBulkOrderModal();
-                updateAdminDashboard();
-            } catch (error) {
-                console.error('Bulk order error:', error);
-                showToast('Failed to create bulk orders: ' + error.message, 'error');
-            }
-        }
-    );
-}
 
 // Add event listeners for live preview
 document.addEventListener('DOMContentLoaded', () => {
