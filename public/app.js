@@ -128,7 +128,7 @@ async function fetchGlobalStats() {
 async function fetchTransactions() {
     try {
         const [txnRes, reqRes] = await Promise.all([
-            authenticatedFetch('/wallets/history/all?limit=5'),
+            authenticatedFetch('/wallets/history/all?limit=100'),
             authenticatedFetch('/transaction-requests/my-requests')
         ]);
 
@@ -156,7 +156,7 @@ async function fetchTransactions() {
                 ...pendingDisplay,
                 ...txnData.transactions.map(t => ({ ...t, status: 'completed' }))
             ].sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt))
-                .slice(0, 10); // Show up to 10 recent items
+                .slice(0, 100); // Show up to 100 recent items
 
             if (allItems.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No transactions yet</td></tr>';
