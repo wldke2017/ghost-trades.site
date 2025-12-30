@@ -6,7 +6,7 @@ const API_BASE = '/escrow'; // Base path for API calls
 
 // --- State ---
 let socket;
-let currentUser = JSON.parse(localStorage.getItem('userData')) || null;
+currentUser = JSON.parse(localStorage.getItem('userData')) || null;
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
