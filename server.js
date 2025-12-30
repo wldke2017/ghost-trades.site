@@ -16,7 +16,15 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 const server = http.createServer(app);
-let io = { emit: () => { } };
+const socketIo = require('socket.io');
+
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
 const setupSocket = (socketIoInstance) => {
   io = socketIoInstance;
@@ -36,6 +44,8 @@ const setupSocket = (socketIoInstance) => {
     });
   });
 };
+
+setupSocket(io);
 
 const PORT = process.env.PORT || 3000;
 

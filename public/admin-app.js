@@ -1138,35 +1138,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Helper function to make authenticated requests
-async function authenticatedFetch(url, options = {}) {
-    const token = localStorage.getItem('authToken');
-    const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers,
-    };
-
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    // Prepend /escrow prefix if url starts with / (and not already prefixed)
-    const prefix = '/escrow';
-    const finalUrl = (url.startsWith('/') && !url.startsWith(prefix))
-        ? `${prefix}${url}`
-        : url;
-
-    const response = await fetch(finalUrl, {
-        ...options,
-        headers,
-    });
-
-    // If unauthorized, logout and redirect
-    if (response.status === 401 || response.status === 403) {
-        logout();
-    }
-
-    return response;
-}
 
 // User Management Functions
 async function updateUserStatus(userId, status) {
