@@ -205,7 +205,10 @@ async function fetchActiveOrders() {
                 let actionBtn = '';
 
                 if (order.status === 'CLAIMED') {
-                    actionBtn = `<button onclick="markReady(${order.id})" class="text-xs font-bold text-blue-400 hover:text-white border border-blue-500/30 px-3 py-1 rounded-lg hover:bg-blue-500 transition-colors">Mark Ready</button>`;
+                    actionBtn = `<div class="flex flex-col gap-2">
+                            <button onclick="markReady(${order.id})" class="text-xs font-bold text-blue-400 hover:text-white border border-blue-500/30 px-3 py-1 rounded-lg hover:bg-blue-500 transition-colors">Mark Ready</button>
+                            <button onclick="disputeOrder(${order.id})" class="text-xs font-bold text-red-400 hover:text-white border border-red-500/30 px-3 py-1 rounded-lg hover:bg-red-500 transition-colors">Dispute</button>
+                        </div>`;
                 } else if (order.status === 'READY_FOR_RELEASE') {
                     actionBtn = `<span class="text-xs font-bold text-yellow-500 animate-pulse">Waiting for Buyer</span>`;
                 }
@@ -370,5 +373,85 @@ function updateUserDisplay() {
         if (usernameEl) {
             usernameEl.textContent = window.currentUsername;
         }
+    }
+}
+
+// Deposit Tab Switching
+function switchDepositTab(tab) {
+    // Hide all
+    document.getElementById('deposit-mpesa-content').classList.add('hidden');
+    document.getElementById('deposit-agent-content').classList.add('hidden');
+    document.getElementById('deposit-crypto-content').classList.add('hidden');
+
+    // Reset styles
+    ['mpesa', 'agent', 'crypto'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        el.classList.remove('text-green-500', 'border-b-2', 'border-green-500', 'text-blue-500', 'border-blue-500', 'text-gray-500');
+        el.classList.add('text-gray-500');
+        el.style.borderBottom = 'none';
+    });
+
+    // Show selected
+    document.getElementById(`deposit-${tab}-content`).classList.remove('hidden');
+
+    const activeBtn = document.getElementById(`tab-${tab}`);
+    activeBtn.classList.remove('text-gray-500');
+
+    if (tab === 'mpesa') {
+        activeBtn.classList.add('text-green-500', 'border-b-2', 'border-green-500');
+    } else if (tab === 'crypto') {
+        activeBtn.classList.add('text-blue-500', 'border-b-2', 'border-blue-500');
+    } else {
+        activeBtn.classList.add('text-orange-500', 'border-b-2', 'border-orange-500');
+    }
+}
+
+// Agent Search Mock
+function searchAgent() {
+    const input = document.getElementById('agent-search-input').value.toLowerCase();
+    const resultArea = document.getElementById('agent-result');
+    const actionArea = document.getElementById('agent-action-area');
+
+    if (input.includes('allan') || input.includes('kariba')) {
+        resultArea.classList.remove('hidden');
+        actionArea.classList.remove('hidden');
+        showToast('Agent Found: ALLAN KARIBA');
+    } else {
+        resultArea.classList.add('hidden');
+        actionArea.classList.add('hidden');
+        showToast('Agent not found. Try "Allan"', 'error');
+    }
+}
+
+// Confirm Manual Deposit
+async function confirmManualDeposit(method) {
+    // In a real app, this would send a request to backend to create a pending "Manual Deposit" transaction.
+    // For now, we mock success as per "normal send money process".
+    const amount = 'Manual';
+
+    showToast(`${method} initiated. Waiting for admin verification.`);
+    closeModal('deposit-modal');
+}
+
+
+// Dispute Order
+async function disputeOrder(orderId) {
+    if (!confirm('Are you sure you want to dispute this order?')) return;
+
+    try {
+        const response = await authenticatedFetch(`/orders/${orderId}/dispute`, {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            showToast('Order disputed successfully', 'success');
+            fetchActiveOrders(); // Refresh list
+        } else {
+            const data = await response.json();
+            showToast(data.message || 'Failed to dispute order', 'error');
+        }
+    } catch (error) {
+        console.error('Error disputing order:', error);
+        showToast('Error disputing order', 'error');
     }
 }

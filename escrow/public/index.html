@@ -172,7 +172,8 @@
                 <div class="relative z-10">
                     <h2 class="text-3xl font-black text-white mb-2">Earnings Dashboard</h2>
                     <p class="text-gray-400 mb-8 max-w-lg">Track your performance and manage your liquidity. You earn
-                        <span class="text-orange-500 font-bold">5% commission</span> on every completed order.</p>
+                        <span class="text-orange-500 font-bold">5% commission</span> on every completed order.
+                    </p>
 
                     <div class="grid grid-cols-3 gap-4">
                         <div class="bg-gray-800/50 rounded-2xl p-4 border border-gray-700/50">
@@ -403,42 +404,141 @@
                     <i class="ti ti-x text-2xl"></i>
                 </button>
             </div>
-            <div class="p-8 space-y-6">
-                <!-- Method Selection -->
-                <div class="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center space-x-3">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/M-PESA_LOGO-01.svg/1200px-M-PESA_LOGO-01.svg.png"
-                        alt="M-Pesa" class="h-8 object-contain bg-white rounded px-1">
+
+            <!-- Deposit Tabs -->
+            <div class="flex overflow-x-auto border-b border-gray-700">
+                <button onclick="switchDepositTab('mpesa')" id="tab-mpesa"
+                    class="flex-1 py-3 px-4 text-sm font-bold text-green-500 border-b-2 border-green-500 transition-all whitespace-nowrap">M-Pesa
+                    Express</button>
+                <button onclick="switchDepositTab('agent')" id="tab-agent"
+                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Agent</button>
+                <button onclick="switchDepositTab('crypto')" id="tab-crypto"
+                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Crypto</button>
+            </div>
+
+            <div class="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+
+                <!-- M-PESA EXPRESS TAB -->
+                <div id="deposit-mpesa-content" class="space-y-6">
+                    <div class="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center space-x-3">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/M-PESA_LOGO-01.svg/1200px-M-PESA_LOGO-01.svg.png"
+                            alt="M-Pesa" class="h-8 object-contain bg-white rounded px-1">
+                        <div>
+                            <p class="font-bold text-white">M-Pesa Express</p>
+                            <p class="text-xs text-green-400">Instant • Zero Fees</p>
+                        </div>
+                    </div>
+
                     <div>
-                        <p class="font-bold text-white">M-Pesa Express</p>
-                        <p class="text-xs text-green-400">Instant • Zero Fees</p>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (KES)</label>
+                        <input type="number" id="deposit-amount" placeholder="e.g. 1000"
+                            class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-4 text-xl font-mono text-white focus:outline-none focus:border-green-500 transition-colors">
+                        <div class="flex justify-between mt-2">
+                            <p class="text-xs text-gray-500">Min: 10 KES</p>
+                            <p class="text-xs text-gray-400 font-bold">≈ <span id="deposit-usd-preview">$0.00</span> USD
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+                        <input type="text" id="deposit-phone" placeholder="254..."
+                            class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors">
+                    </div>
+
+                    <div id="deposit-status"
+                        class="hidden p-3 bg-gray-900 rounded-lg text-center text-sm font-medium animate-pulse">
+                        Initiating STK Push... Check your phone.
+                    </div>
+
+                    <button onclick="initiateDeposit()"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-green-600/20">
+                        Pay Now
+                    </button>
+                </div>
+
+                <!-- AGENT TAB -->
+                <div id="deposit-agent-content" class="hidden space-y-6">
+                    <div class="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+                        <p class="text-sm text-orange-200">Search for a verified agent to send money manually via
+                            M-Pesa.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Search Agent</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="agent-search-input" placeholder="Enter name or ID (e.g. Allan)"
+                                class="flex-1 bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors">
+                            <button onclick="searchAgent()"
+                                class="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-white font-bold transition-colors">
+                                <i class="ti ti-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="agent-result" class="hidden bg-gray-900 p-4 rounded-xl border border-gray-700">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div
+                                class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
+                                <i class="ti ti-user-check text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-white text-lg">ALLAN KARIBA</p>
+                                <p class="text-xs text-gray-400">Verified Agent • ID: AGT-8821</p>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 p-3 rounded-lg space-y-2">
+                            <p class="text-xs text-gray-500 font-bold uppercase">Send Money To:</p>
+                            <p class="font-mono text-xl text-yellow-400 tracking-wider">0711 223 344</p>
+                            <p class="text-xs text-gray-400">Use standard M-Pesa "Send Money" to this number.</p>
+                        </div>
+                    </div>
+
+                    <div id="agent-action-area" class="hidden">
+                        <button onclick="confirmManualDeposit('Agent Deposit')"
+                            class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-orange-600/20">
+                            I have paid
+                        </button>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (KES)</label>
-                    <input type="number" id="deposit-amount" placeholder="e.g. 1000"
-                        class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-4 text-xl font-mono text-white focus:outline-none focus:border-green-500 transition-colors">
-                    <div class="flex justify-between mt-2">
-                        <p class="text-xs text-gray-500">Min: 10 KES</p>
-                        <p class="text-xs text-gray-400 font-bold">≈ <span id="deposit-usd-preview">$0.00</span> USD</p>
+                <!-- CRYPTO TAB -->
+                <div id="deposit-crypto-content" class="hidden space-y-6">
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center space-x-3">
+                        <i class="ti ti-currency-bitcoin text-2xl text-blue-400"></i>
+                        <div>
+                            <p class="font-bold text-white">Deposit Crypto</p>
+                            <p class="text-xs text-blue-300">USDT (TRC20) Only</p>
+                        </div>
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
-                    <input type="text" id="deposit-phone" placeholder="254..."
-                        class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors">
-                </div>
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-700 text-center space-y-4">
+                        <div class="bg-white p-2 inline-block rounded-lg">
+                            <!-- Placeholder QR -->
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=TWeFakeAddress123456789"
+                                alt="QR Code" class="w-32 h-32">
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-bold uppercase mb-1">Wallet Address (TRC20)</p>
+                            <div class="flex items-center justify-center space-x-2 bg-gray-800 p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition"
+                                onclick="navigator.clipboard.writeText('TWeFakeAddress123456789'); showToast('Address Copied')">
+                                <span class="font-mono text-xs text-gray-300 break-all">TWeFakeAddress123456789</span>
+                                <i class="ti ti-copy text-gray-500"></i>
+                            </div>
+                        </div>
+                    </div>
 
-                <div id="deposit-status"
-                    class="hidden p-3 bg-gray-900 rounded-lg text-center text-sm font-medium animate-pulse">
-                    Initiating STK Push... Check your phone.
-                </div>
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase">Transaction Hash (TXID)</label>
+                        <input type="text" id="crypto-txid" placeholder="Enter TXID..."
+                            class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
+                    </div>
 
-                <button onclick="initiateDeposit()"
-                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-green-600/20">
-                    Pay Now
-                </button>
+                    <button onclick="confirmManualDeposit('Crypto Deposit')"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-600/20">
+                        I have paid
+                    </button>
+                </div>
             </div>
         </div>
     </div>

@@ -69,6 +69,16 @@ router.get('/my-active', authenticateToken, async (req, res, next) => {
     }
 });
 
+// Dispute an order
+router.post('/:id/dispute', authenticateToken, async (req, res, next) => {
+    try {
+        const result = await orderService.disputeOrder(req.params.id);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+});
+
 // Get order details
 router.get('/:id', authenticateToken, async (req, res, next) => {
     try {
