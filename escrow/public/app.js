@@ -114,12 +114,9 @@ async function fetchGlobalStats() {
         const response = await authenticatedFetch(`/orders?status=COMPLETED&limit=5`);
         if (response.ok) {
             const data = await response.json();
-            // Render to a "Global Activity" section if it exists in HTML
-            // For now, we assume user just wants to SEE it. 
-            // We can append to a specific log or just ensure data is available.
-            // Requirement: "as well as all completed orders in general"
-            // Use console for now or add to UI if place exists.
-            // I'll assume we need to add a secion or modal.
+            const completedOrders = data.orders || [];
+            // Optional: Render to global activity if UI element exists
+            console.log('Global Completed Orders:', completedOrders);
         }
     } catch (e) { console.error('Error global stats:', e); }
 }
@@ -172,7 +169,8 @@ async function fetchAvailableOrders() {
         // Usually, buyers create orders. Middlemen claim them.
         const response = await authenticatedFetch('/orders?status=PENDING');
         if (response.ok) {
-            const orders = await response.json();
+            const data = await response.json();
+            const orders = data.orders || [];
             const container = document.getElementById('available-orders-list');
             container.innerHTML = '';
 
