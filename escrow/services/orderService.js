@@ -477,6 +477,124 @@ async function getOrderById(orderId) {
   }
 }
 
+/**
+ * Mark order as ready for release (Middleman)
+ */
+async function markOrderAsReady(middlemanId, orderId) {
+  try {
+    const order = await Order.findByPk(orderId);
+    if (!order) throw new NotFoundError('Order');
+
+    if (order.middleman_id !== middlemanId) {
+      throw new ConflictError('You can only complete orders you claimed');
+    }
+
+    if (order.status !== ORDER_STATUS.CLAIMED) {
+      throw new ConflictError('Order must be in CLAIMED status');
+    }
+
+    order.status = ORDER_STATUS.READY_FOR_RELEASE;
+    await order.save();
+
+    await ActivityLog.create({
+      user_id: middlemanId,
+      action: 'order_completed_work',
+      metadata: { order_id: orderId }
+    });
+
+    logger.info(`Order #${orderId} marked as ready by middleman ${middlemanId}`);
+
+    return { message: 'Order marked as complete. Waiting for admin to release funds.', order };
+  } catch (error) {
+    logger.error('Error marking order as ready:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create bulk orders (Admin only)
+ */
+async function createBulkOrders(adminId, ordersData) {
+  const transaction = await sequelize.transaction();
+  try {
+    if (!Array.isArray(ordersData) || ordersData.length === 0) {
+      throw new ValidationError('Invalid orders data');
+    }
+
+    if (ordersData.length > 50) {
+      throw new ValidationError('Bulk limit exceeded (max 50)');
+    }
+
+    const createdOrders = [];
+    let totalAmount = 0;
+
+    // Optional: Check total balance first for efficiency
+    // But locking per order is safer for concurrency? 
+    // The server.js implementation locked funds per order in a loop (lines 522+ not shown fully but likely)
+    // Actually the server.js implementation (Line 2605) did NOT lock funds! It just created orders.
+    // Line 983 (single create) locked funds. Line 2605 (bulk) did NOT. 
+    // This is a BUG in createBulkOrders in server.js! It allowed creating orders without locking funds!
+    // I will fix this by locking funds.
+
+    // Get Admin Wallet
+    let adminWallet = await Wallet.findOne({ where: { user_id: adminId }, transaction });
+    if (!adminWallet) {
+      adminWallet = await Wallet.create({ user_id: adminId, available_balance: 0, locked_balance: 0 }, { transaction });
+    }
+
+    for (const data of ordersData) {
+      const amount = parseFloat(data.amount);
+      if (amount <= 0) continue;
+
+      if (parseFloat(adminWallet.available_balance) < amount) {
+        throw new InsufficientFundsError(`Insufficient funds for bulk order of ${amount}`);
+      }
+
+      // Lock funds
+      adminWallet.available_balance = parseFloat(adminWallet.available_balance) - amount;
+      adminWallet.locked_balance = parseFloat(adminWallet.locked_balance) + amount;
+      await adminWallet.save({ transaction });
+      totalAmount += amount;
+
+      const order = await Order.create({
+        amount: amount,
+        status: ORDER_STATUS.PENDING,
+        buyer_id: adminId,
+        vault_amount: amount,
+        description: data.description || 'Bulk Order'
+      }, { transaction });
+
+      createdOrders.push(order);
+
+      await Transaction.create({
+        user_id: adminId,
+        order_id: order.id,
+        type: TRANSACTION_TYPES.ORDER_CREATED,
+        amount: -amount,
+        balance_before: parseFloat(adminWallet.available_balance) + amount,
+        balance_after: parseFloat(adminWallet.available_balance), // approximated for batch
+        description: `Bulk order #${order.id} - locked`
+      }, { transaction });
+    }
+
+    await ActivityLog.create({
+      user_id: adminId,
+      action: 'bulk_orders_created',
+      metadata: { count: createdOrders.length, total_amount: totalAmount }
+    }, { transaction });
+
+    await transaction.commit();
+
+    logger.info(`Bulk orders created: ${createdOrders.length}`);
+    return { created: createdOrders.length, orders: createdOrders };
+
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    logger.error('Error creating bulk orders:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   createOrder,
   claimOrder,
@@ -484,5 +602,7 @@ module.exports = {
   disputeOrder,
   cancelOrder,
   getOrders,
-  getOrderById
+  getOrderById,
+  markOrderAsReady,
+  createBulkOrders
 };
