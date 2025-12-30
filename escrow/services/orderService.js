@@ -331,6 +331,157 @@ async function disputeOrder(orderId) {
 }
 
 /**
+ * Resolve a disputed order (Admin only)
+ */
+async function resolveDispute(orderId, winner) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const order = await Order.findByPk(orderId, { transaction });
+
+    if (!order) {
+      throw new NotFoundError('Order');
+    }
+
+    if (order.status !== ORDER_STATUS.DISPUTED) {
+      throw new ConflictError('Only disputed orders can be resolved');
+    }
+
+    if (!order.middleman_id) {
+      throw new ValidationError('Order has no middleman assigned');
+    }
+
+    const orderAmount = parseFloat(order.amount);
+    const commissionRate = parseFloat(process.env.COMMISSION_RATE || 0.05);
+    const commission = orderAmount * commissionRate;
+
+    // Get wallets
+    const buyerWallet = await Wallet.findOne({
+      where: { user_id: order.buyer_id },
+      transaction
+    });
+
+    const middlemanWallet = await Wallet.findOne({
+      where: { user_id: order.middleman_id },
+      transaction
+    });
+
+    if (!buyerWallet || !middlemanWallet) {
+      throw new NotFoundError('Wallet');
+    }
+
+    if (winner === 'middleman') {
+      // Award middleman: Return collateral + commission from buyer's locked funds
+      const middlemanBalanceBefore = parseFloat(middlemanWallet.available_balance);
+      const buyerBalanceBefore = parseFloat(buyerWallet.available_balance);
+
+      // Unlock and return middleman's collateral + commission
+      middlemanWallet.locked_balance = parseFloat(middlemanWallet.locked_balance) - orderAmount;
+      middlemanWallet.available_balance = middlemanBalanceBefore + orderAmount + commission;
+
+      // Deduct commission from buyer's locked funds
+      buyerWallet.locked_balance = parseFloat(buyerWallet.locked_balance) - orderAmount;
+      buyerWallet.available_balance = buyerBalanceBefore - commission;
+
+      await middlemanWallet.save({ transaction });
+      await buyerWallet.save({ transaction });
+
+      // Record transactions
+      await Transaction.create({
+        user_id: order.middleman_id,
+        order_id: orderId,
+        type: TRANSACTION_TYPES.ORDER_COMPLETED,
+        amount: orderAmount + commission,
+        balance_before: middlemanBalanceBefore,
+        balance_after: middlemanWallet.available_balance,
+        description: `Dispute resolved in favor of middleman - Order #${orderId} - Collateral ${orderAmount.toFixed(2)} + Commission ${commission.toFixed(2)}`
+      }, { transaction });
+
+      await Transaction.create({
+        user_id: order.buyer_id,
+        order_id: orderId,
+        type: TRANSACTION_TYPES.COMMISSION_PAID,
+        amount: -commission,
+        balance_before: buyerBalanceBefore,
+        balance_after: buyerWallet.available_balance,
+        description: `Dispute resolved - Commission paid to middleman for Order #${orderId}`
+      }, { transaction });
+
+    } else if (winner === 'buyer') {
+      // Award buyer: Return buyer's locked funds, middleman forfeits collateral
+      const middlemanBalanceBefore = parseFloat(middlemanWallet.available_balance);
+      const buyerBalanceBefore = parseFloat(buyerWallet.available_balance);
+
+      // Forfeit middleman's collateral (remove from locked, don't return to available)
+      middlemanWallet.locked_balance = parseFloat(middlemanWallet.locked_balance) - orderAmount;
+
+      // Return buyer's locked funds
+      buyerWallet.locked_balance = parseFloat(buyerWallet.locked_balance) - orderAmount;
+      buyerWallet.available_balance = buyerBalanceBefore + orderAmount;
+
+      await middlemanWallet.save({ transaction });
+      await buyerWallet.save({ transaction });
+
+      // Record transactions
+      await Transaction.create({
+        user_id: order.middleman_id,
+        order_id: orderId,
+        type: TRANSACTION_TYPES.DISPUTE_FORFEIT,
+        amount: -orderAmount,
+        balance_before: middlemanBalanceBefore,
+        balance_after: middlemanWallet.available_balance,
+        description: `Dispute resolved in favor of buyer - Collateral ${orderAmount.toFixed(2)} forfeited for Order #${orderId}`
+      }, { transaction });
+
+      await Transaction.create({
+        user_id: order.buyer_id,
+        order_id: orderId,
+        type: TRANSACTION_TYPES.DISPUTE_REFUND,
+        amount: orderAmount,
+        balance_before: buyerBalanceBefore,
+        balance_after: buyerWallet.available_balance,
+        description: `Dispute resolved - Funds ${orderAmount.toFixed(2)} refunded for Order #${orderId}`
+      }, { transaction });
+
+    } else {
+      throw new ValidationError('Winner must be either "middleman" or "buyer"');
+    }
+
+    // Update order status
+    order.status = ORDER_STATUS.COMPLETED;
+    await order.save({ transaction });
+
+    // Log activity
+    await ActivityLog.create({
+      user_id: order.buyer_id,
+      action: 'dispute_resolved',
+      metadata: { order_id: orderId, winner }
+    }, { transaction });
+
+    await transaction.commit();
+
+    logger.info(`Dispute resolved for order #${orderId} in favor of ${winner}`);
+
+    return {
+      message: `Dispute resolved in favor of ${winner}`,
+      order,
+      buyerWallet: {
+        available_balance: buyerWallet.available_balance,
+        locked_balance: buyerWallet.locked_balance
+      },
+      middlemanWallet: {
+        available_balance: middlemanWallet.available_balance,
+        locked_balance: middlemanWallet.locked_balance
+      }
+    };
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Error resolving dispute:', error);
+    throw error;
+  }
+}
+
+/**
  * Cancel an order
  */
 async function cancelOrder(orderId, cancelledBy) {
@@ -601,6 +752,7 @@ module.exports = {
   claimOrder,
   completeOrder,
   disputeOrder,
+  resolveDispute,
   cancelOrder,
   getOrders,
   getOrderById,

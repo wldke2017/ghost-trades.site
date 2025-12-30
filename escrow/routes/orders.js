@@ -264,6 +264,33 @@ router.post('/:id/dispute', authenticateToken, async (req, res, next) => {
     }
 });
 
+// Resolve Dispute (Admin only)
+router.post('/:id/resolve', authenticateToken, isAdmin, validate('resolveDispute'), async (req, res, next) => {
+    try {
+        const { winner } = req.body;
+        const result = await orderService.resolveDispute(req.params.id, winner);
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('orderCompleted', result.order);
+            io.emit('walletUpdated', {
+                user_id: result.order.middleman_id,
+                available_balance: result.middlemanWallet.available_balance,
+                locked_balance: result.middlemanWallet.locked_balance
+            });
+            io.emit('walletUpdated', {
+                user_id: result.order.buyer_id,
+                available_balance: result.buyerWallet.available_balance,
+                locked_balance: result.buyerWallet.locked_balance
+            });
+        }
+
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+});
+
 // Cancel Order
 router.post('/:id/cancel', authenticateToken, isAdmin, async (req, res, next) => {
     try {
