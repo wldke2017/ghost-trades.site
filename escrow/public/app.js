@@ -6,11 +6,23 @@ const API_BASE = '/escrow'; // Base path for API calls
 
 // --- State ---
 let socket;
+let currentUser = JSON.parse(localStorage.getItem('userData')) || null;
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     // Check auth first
     if (!checkAuthentication()) return;
+
+    // Mobile Menu Toggle
+    const mobileBtn = document.getElementById('mobile-menu-toggle');
+    if (mobileBtn) {
+        mobileBtn.addEventListener('click', () => {
+            // For now, toggle a simple visibility or just reuse settings/logout
+            // The user wanted to see settings/logout on phone view.
+            // I'll just open the settings modal as a shortcut or show a toast
+            showToast('Use the icons next to the menu for Settings and Logout', 'info');
+        });
+    }
 
     // Initialize Dashboard
     updateDashboard();
@@ -26,7 +38,7 @@ async function updateDashboard() {
             fetchWalletBalance(),
             fetchTransactions(),
             refreshOrders(),
-            fetchCompletedStates(),
+            fetchPersonalStats(),
             fetchGlobalStats()
         ]);
         updateUserDisplay(); // From auth.js
@@ -69,54 +81,46 @@ async function fetchWalletBalance() {
     }
 }
 
-// NEW: Fetch User Stats (Total Commission, My Completed Orders)
-async function fetchCompletedStates() {
-    // NOTE: We don't have a direct endpoint for aggregated stats yet, so we will calculate from completed orders
-    // In a production app, use /stats endpoint.
+// NEW: Fetch User Stats (Total deposited/withdrawn, real completed orders)
+async function fetchPersonalStats() {
     try {
-        // Fetch my completed orders (as middleman)
-        const userId = window.currentUserId;
-        if (!userId) return;
-
-        // We fetch ALL active/completed orders then filter manually for "COMPLETED" and "middleman_id == me"
-        // Optimized: we should have a route for this, but reusing getOrders filter
-        // Using getOrders with middlemanId & status=COMPLETED
-
-        const response = await authenticatedFetch(`/orders?middlemanId=${userId}&status=COMPLETED`);
+        const response = await authenticatedFetch('/wallets/stats/personal');
         if (response.ok) {
-            const data = await response.json();
-            const completedOrders = data.orders || [];
+            const stats = await response.json();
 
-            // Calculate Total Earned
-            // Assuming 5% commission on each
-            let totalEarned = 0;
-            completedOrders.forEach(o => {
-                totalEarned += parseFloat(o.amount) * 0.05;
-            });
-
-            // Update UI
+            // Update Dashboard Cards
+            const depositedEl = document.getElementById('stat-total-deposited');
+            const withdrawnEl = document.getElementById('stat-total-withdrawn');
             const earnedEl = document.getElementById('stat-total-earned');
-            if (earnedEl) earnedEl.innerText = formatCurrency(totalEarned);
-
             const completedEl = document.getElementById('stat-orders-completed');
-            if (completedEl) completedEl.innerText = completedOrders.length;
 
-            // Render My Completed Orders List (if container exists)
-            // ... logic if we had a list container ...
+            if (depositedEl) depositedEl.innerText = formatCurrency(stats.totalDeposited);
+            if (withdrawnEl) withdrawnEl.innerText = formatCurrency(stats.totalWithdrawn);
+            if (earnedEl) earnedEl.innerText = formatCurrency(stats.totalEarned);
+            if (completedEl) completedEl.innerText = stats.ordersDone;
         }
-    } catch (e) { console.error('Error fetching stats:', e); }
+    } catch (e) { console.error('Error fetching personal stats:', e); }
 }
 
 // NEW: Global Stats
 async function fetchGlobalStats() {
-    // Show recent activity (Completed orders globally)
     try {
-        const response = await authenticatedFetch(`/orders?status=COMPLETED&limit=5`);
+        const response = await authenticatedFetch('/orders/stats/global');
         if (response.ok) {
-            const data = await response.json();
-            const completedOrders = data.orders || [];
-            // Optional: Render to global activity if UI element exists
-            console.log('Global Completed Orders:', completedOrders);
+            const stats = await response.json();
+
+            // Update Platform Overview section
+            const createdEl = document.getElementById('global-total-created');
+            const pendingEl = document.getElementById('global-total-pending');
+            const claimedEl = document.getElementById('global-total-claimed');
+            const settledEl = document.getElementById('global-total-settled');
+            const commissionEl = document.getElementById('global-total-commission');
+
+            if (createdEl) createdEl.innerText = stats.totalCreated;
+            if (pendingEl) pendingEl.innerText = stats.totalPending;
+            if (claimedEl) claimedEl.innerText = stats.totalClaimed;
+            if (settledEl) settledEl.innerText = stats.totalSettled;
+            if (commissionEl) commissionEl.innerText = formatCurrency(stats.totalCommission);
         }
     } catch (e) { console.error('Error global stats:', e); }
 }
@@ -144,7 +148,7 @@ async function fetchTransactions() {
                     <td class="p-4 font-medium text-gray-300">${txn.type}</td>
                     <td class="p-4 font-bold ${amountClass}">${sign}${formatCurrency(Math.abs(txn.amount))}</td>
                     <td class="p-4"><span class="px-2 py-1 rounded text-xs bg-gray-800 text-gray-400 capitalize">Completed</span></td>
-                    <td class="p-4 text-gray-500">${new Date(txn.created_at).toLocaleDateString()}</td>
+                    <td class="p-4 text-gray-500">${new Date(txn.createdAt).toLocaleDateString()}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -170,15 +174,26 @@ async function fetchAvailableOrders() {
         const response = await authenticatedFetch('/orders?status=PENDING');
         if (response.ok) {
             const data = await response.json();
-            const orders = data.orders || [];
+            let orders = data.orders || [];
             const container = document.getElementById('available-orders-list');
             container.innerHTML = '';
 
             const myId = window.currentUserId;
-            // Filter out my own orders if I created them (optional logic depending on platform rules)
-            const available = orders.filter(o => o.buyer_id !== myId);
+            // Filter out my own orders if I created them
+            let available = orders.filter(o => o.buyer_id !== myId);
 
-            console.log('Fetch Available:', { all: orders.length, filtered: available.length, myId });
+            // Sorting logic
+            const sortMode = document.getElementById('order-sort')?.value || 'newest';
+            if (sortMode === 'price_desc') {
+                available.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
+            } else if (sortMode === 'price_asc') {
+                available.sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount));
+            } else {
+                // newest
+                available.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            }
+
+            console.log('Fetch Available:', { all: orders.length, filtered: available.length, myId, sort: sortMode });
 
             if (available.length === 0) {
                 // If filters removed all, warn
@@ -208,7 +223,7 @@ async function fetchAvailableOrders() {
                         </div>
                     </div>
                     <div class="flex justify-between items-center mt-3 pt-3 border-t border-gray-700">
-                        <span class="text-xs text-gray-400">${new Date(order.created_at).toLocaleTimeString()}</span>
+                        <span class="text-xs text-gray-400">${new Date(order.createdAt).toLocaleTimeString()}</span>
                         <button onclick="claimOrder(${order.id})" class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-600">
                             Claim Order
                         </button>
@@ -234,8 +249,6 @@ async function fetchActiveOrders() {
 
             container.innerHTML = '';
             if (countBadge) countBadge.innerText = orders.length;
-            // Simplified stat: just count active for now, real app would query history API
-            if (completedStat && completedStat.innerText === '0') completedStat.innerText = '12'; // Fake social proof for now
 
             if (orders.length === 0) {
                 container.innerHTML = `
@@ -337,7 +350,21 @@ function closeModal(id) {
     document.getElementById(id).classList.add('hidden');
 }
 
-function openSettingsModal() { openModal('settings-modal'); }
+function openSettingsModal() {
+    // Populate with current user data
+    if (currentUser) {
+        document.getElementById('settings-username').value = currentUser.username;
+        document.getElementById('settings-role').value = currentUser.role || 'Middleman';
+        document.getElementById('settings-fullname').value = currentUser.full_name || '';
+        document.getElementById('settings-email').value = currentUser.email || '';
+        document.getElementById('settings-mpesa').value = currentUser.mpesa_number || '';
+        document.getElementById('settings-country').value = currentUser.country || '';
+
+        const currencyRadio = document.querySelector(`input[name="currency"][value="${currentUser.currency_preference || 'USD'}"]`);
+        if (currencyRadio) currencyRadio.checked = true;
+    }
+    openModal('settings-modal');
+}
 function openDepositModal() { openModal('deposit-modal'); }
 function openWithdrawModal() {
     // Calculate USD preview immediately
@@ -388,27 +415,65 @@ async function requestWithdrawal() {
 }
 
 async function updateProfileSettings() {
+    const fullName = document.getElementById('settings-fullname').value;
+    const email = document.getElementById('settings-email').value;
     const mpesa = document.getElementById('settings-mpesa').value;
+    const country = document.getElementById('settings-country').value;
     const currency = document.querySelector('input[name="currency"]:checked')?.value;
 
     try {
         const response = await authenticatedFetch('/users/profile', {
             method: 'PUT',
-            body: JSON.stringify({ mpesa_number: mpesa, currency_preference: currency })
+            body: JSON.stringify({
+                full_name: fullName,
+                email: email,
+                mpesa_number: mpesa,
+                country: country,
+                currency_preference: currency
+            })
         });
 
         if (response.ok) {
             const data = await response.json();
-            currentUser.currency_preference = currency;
+            currentUser = { ...currentUser, ...data.user };
             localStorage.setItem('userData', JSON.stringify(currentUser));
-            showToast('Settings saved!', 'success');
+            showToast('Profile updated successfully!', 'success');
             updateCurrencyLabels();
-            updateDashboard(); // Refresh values with new currency
+            updateDashboard(); // Refresh UI
             closeModal('settings-modal');
+        } else {
+            const data = await response.json();
+            showToast(data.error || 'Failed to update profile', 'error');
         }
     } catch (error) {
         showToast('Failed to save settings', 'error');
     }
+}
+
+async function changePassword() {
+    const currentPassword = document.getElementById('settings-current-password').value;
+    const newPassword = document.getElementById('settings-new-password').value;
+
+    if (!currentPassword || !newPassword) {
+        return showToast('Both password fields are required', 'error');
+    }
+
+    try {
+        const response = await authenticatedFetch('/users/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Password updated successfully!', 'success');
+            document.getElementById('settings-current-password').value = '';
+            document.getElementById('settings-new-password').value = '';
+            document.getElementById('password-change-section').classList.add('hidden');
+        } else {
+            showToast(data.error || 'Failed to change password', 'error');
+        }
+    } catch (e) { showToast('Connection error', 'error'); }
 }
 
 // --- Socket.IO ---
@@ -539,4 +604,9 @@ async function disputeOrder(orderId) {
         console.error('Error disputing order:', error);
         showToast('Error disputing order', 'error');
     }
-}
+}f u n c t i o n   u p d a t e U s e r D i s p l a y ( )   { 
+         i f   ( ! c u r r e n t U s e r )   r e t u r n ; 
+         c o n s t   n a m e E l   =   d o c u m e n t . g e t E l e m e n t B y I d ( ' h e a d e r - u s e r n a m e ' ) ; 
+         i f   ( n a m e E l )   n a m e E l . t e x t C o n t e n t   =   c u r r e n t U s e r . f u l l _ n a m e   | |   c u r r e n t U s e r . u s e r n a m e ; 
+ }  
+ 

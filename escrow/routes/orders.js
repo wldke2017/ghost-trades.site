@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderService = require('../services/orderService');
+const Order = require('../models/order');
 const { authenticateToken, isAdmin, isMiddleman } = require('../middleware/auth');
 const { validate } = require('../middleware/validator');
 const logger = require('../utils/logger');
@@ -28,6 +29,30 @@ router.get('/', authenticateToken, async (req, res, next) => {
 
         const result = await orderService.getOrders(filters);
         res.json(result);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Get global stats (Total orders, claimed, settled, etc)
+router.get('/stats/global', authenticateToken, async (req, res, next) => {
+    try {
+        const totalCreated = await Order.count();
+        const totalPending = await Order.count({ where: { status: 'PENDING' } });
+        const totalClaimed = await Order.count({ where: { status: 'CLAIMED' } });
+        const totalSettled = await Order.count({ where: { status: 'COMPLETED' } });
+
+        // Total commission (5% of all COMPLETED orders)
+        const completedOrders = await Order.findAll({ where: { status: 'COMPLETED' } });
+        const totalCommission = completedOrders.reduce((sum, o) => sum + (parseFloat(o.amount) * 0.05), 0);
+
+        res.json({
+            totalCreated,
+            totalPending,
+            totalClaimed,
+            totalSettled,
+            totalCommission: totalCommission.toFixed(2)
+        });
     } catch (error) {
         next(error);
     }
