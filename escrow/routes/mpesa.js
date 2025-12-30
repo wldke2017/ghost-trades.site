@@ -67,7 +67,8 @@ function generateMpesaPassword() {
 // Initiate STK Push
 router.post('/stkpush', authenticateToken, transactionLimiter, async (req, res) => {
     try {
-        const { amount, phoneNumber } = req.body;
+        let { amount, phoneNumber } = req.body;
+        if (phoneNumber) phoneNumber = phoneNumber.trim();
 
         if (!amount || parseFloat(amount) <= 0) {
             return res.status(400).json({ error: 'Amount must be greater than 0' });

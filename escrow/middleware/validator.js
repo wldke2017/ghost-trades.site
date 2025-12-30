@@ -67,6 +67,12 @@ const schemas = {
       .positive()
       .max(1000000)
       .required(),
+    phone: Joi.string()
+      .regex(/^254[0-9]{9}$/)
+      .optional()
+      .messages({
+        'string.pattern.base': 'Invalid M-Pesa phone number format (254XXXXXXXXX)'
+      }),
     notes: Joi.string()
       .max(500)
       .allow('', null),

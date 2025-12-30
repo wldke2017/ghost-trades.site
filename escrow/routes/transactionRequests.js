@@ -89,7 +89,8 @@ router.post('/deposit', authenticateToken, uploadLimiter, transactionLimiter, up
 // Create withdrawal request
 router.post('/withdrawal', authenticateToken, transactionLimiter, validate('transactionRequest'), async (req, res) => {
     try {
-        const { amount, phone, notes } = req.body;
+        let { amount, phone, notes } = req.body;
+        if (phone) phone = phone.trim();
 
         if (!phone || !/^254[0-9]{9}$/.test(phone)) {
             return res.status(400).json({ error: 'Valid M-Pesa phone number (254XXXXXXXXX) is required' });

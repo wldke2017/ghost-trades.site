@@ -395,7 +395,7 @@ function openWithdrawModal() {
 // Deposit Logic
 async function initiateDeposit() {
     const amount = document.getElementById('deposit-amount').value;
-    const phone = document.getElementById('deposit-phone').value;
+    const phone = document.getElementById('deposit-phone').value.trim();
 
     if (!amount || !phone) return showToast('Please enter amount and phone', 'error');
 
@@ -428,7 +428,7 @@ async function initiateDeposit() {
 // Withdraw Logic
 async function requestWithdrawal() {
     const amount = document.getElementById('withdraw-amount').value;
-    const phone = document.getElementById('withdraw-phone').value;
+    const phone = document.getElementById('withdraw-phone').value.trim();
     const notes = document.getElementById('withdraw-notes')?.value || '';
 
     if (!amount || amount <= 0) return showToast('Please enter a valid amount', 'error');
@@ -642,7 +642,7 @@ async function confirmManualDeposit(method) {
         const response = await fetch(`${API_BASE}/transaction-requests/deposit`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
             },
             body: formData
         });
