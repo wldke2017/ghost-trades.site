@@ -77,7 +77,11 @@ function initializeSocket() {
 
     socket.on('newTransactionRequest', (data) => {
         console.log('New transaction request:', data);
-        showToast(`New ${data.type} request from ${data.username} for $${parseFloat(data.amount).toFixed(2)}`, 'info');
+        const amount = parseFloat(data.amount);
+        const isKes = data.metadata && data.metadata.currency === 'KES';
+        const displayAmount = isKes ? `Ksh ${amount.toFixed(2)}` : formatCurrency(amount);
+
+        showToast(`New ${data.type} request from ${data.username} for ${displayAmount}`, 'info');
         loadTransactionRequests();
     });
 
@@ -665,7 +669,30 @@ async function loadTransactionRequests() {
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">${parseFloat(req.amount).toFixed(2)}</p>
+                            ${(() => {
+                    const isKes = req.metadata && req.metadata.currency === 'KES';
+                    const amount = parseFloat(req.amount);
+                    const adminPref = getUserCurrency();
+
+                    if (isKes) {
+                        const usdVal = (amount / EXCHANGE_RATE).toFixed(2);
+                        const kesVal = amount.toFixed(2);
+
+                        if (adminPref === 'KES') {
+                            return `
+                                            <p class="text-3xl font-bold text-gray-900 dark:text-white">Ksh ${kesVal}</p>
+                                            <p class="text-sm text-gray-500 font-medium">≈ $${usdVal} USD</p>
+                                        `;
+                        } else {
+                            return `
+                                            <p class="text-3xl font-bold text-gray-900 dark:text-white">$${usdVal}</p>
+                                            <p class="text-sm text-gray-500 font-medium">≈ Ksh ${kesVal} KES</p>
+                                        `;
+                        }
+                    } else {
+                        return `<p class="text-3xl font-bold text-gray-900 dark:text-white">${formatCurrency(amount)}</p>`;
+                    }
+                })()}
                         </div>
                     </div>
                     

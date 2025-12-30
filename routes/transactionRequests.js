@@ -12,6 +12,8 @@ const Transaction = require('../models/transaction');
 const User = require('../models/user');
 const ActivityLog = require('../models/activityLog');
 const sequelize = require('../db');
+const { MPESA } = require('../config/constants');
+const EXCHANGE_RATE = MPESA.EXCHANGE_RATE;
 
 // Multer config for screenshots
 const uploadsDir = path.join(__dirname, '../uploads');
@@ -73,7 +75,8 @@ router.post('/deposit', authenticateToken, uploadLimiter, transactionLimiter, up
                 type: 'deposit',
                 user_id: req.user.id,
                 username: req.user.username,
-                amount: transactionRequest.amount
+                amount: transactionRequest.amount,
+                metadata: transactionRequest.metadata
             });
         }
 
@@ -119,7 +122,7 @@ router.post('/withdrawal', authenticateToken, transactionLimiter, validate('tran
                 user_id: req.user.id,
                 username: req.user.username,
                 amount: transactionRequest.amount,
-                phone: phone
+                metadata: transactionRequest.metadata
             });
         }
 
@@ -165,13 +168,34 @@ router.post('/:id/review', authenticateToken, isAdmin, validate('reviewTransacti
             }
 
             const balanceBefore = parseFloat(wallet.available_balance);
+            let creditAmount = parseFloat(transactionRequest.amount);
+
+            // Handle currency conversion if metadata indicates KES
+            if (transactionRequest.type === 'deposit' &&
+                transactionRequest.metadata &&
+                transactionRequest.metadata.currency === 'KES') {
+
+                const kesAmount = creditAmount;
+                creditAmount = parseFloat((kesAmount / EXCHANGE_RATE).toFixed(2));
+
+                // Update metadata with conversion details
+                transactionRequest.metadata = {
+                    ...transactionRequest.metadata,
+                    original_amount: kesAmount,
+                    original_currency: 'KES',
+                    exchange_rate: EXCHANGE_RATE,
+                    converted_to_usd: creditAmount
+                };
+                transactionRequest.changed('metadata', true);
+            }
+
             if (transactionRequest.type === 'deposit') {
-                wallet.available_balance = balanceBefore + parseFloat(transactionRequest.amount);
+                wallet.available_balance = balanceBefore + creditAmount;
             } else {
-                if (balanceBefore < parseFloat(transactionRequest.amount)) {
+                if (balanceBefore < creditAmount) {
                     throw new Error('Insufficient balance for withdrawal');
                 }
-                wallet.available_balance = balanceBefore - parseFloat(transactionRequest.amount);
+                wallet.available_balance = balanceBefore - creditAmount;
             }
 
             await wallet.save({ transaction });
@@ -179,7 +203,7 @@ router.post('/:id/review', authenticateToken, isAdmin, validate('reviewTransacti
             await Transaction.create({
                 user_id: transactionRequest.user_id,
                 type: transactionRequest.type.toUpperCase(),
-                amount: transactionRequest.type === 'deposit' ? parseFloat(transactionRequest.amount) : -parseFloat(transactionRequest.amount),
+                amount: transactionRequest.type === 'deposit' ? creditAmount : -creditAmount,
                 balance_before: balanceBefore,
                 balance_after: wallet.available_balance,
                 description: `${transactionRequest.type === 'deposit' ? 'Deposit' : 'Withdrawal'} approved by admin`

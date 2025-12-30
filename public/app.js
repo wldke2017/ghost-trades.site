@@ -752,7 +752,7 @@ async function confirmManualDeposit(method) {
         if (screenshotFile) formData.append('screenshot', screenshotFile);
 
         const agentName = document.querySelector('#selected-agent-view p.font-bold')?.innerText || 'Unknown';
-        formData.append('metadata', JSON.stringify({ method: 'Agent', agent: agentName }));
+        formData.append('metadata', JSON.stringify({ method: 'Agent', agent: agentName, currency: 'KES' }));
 
     } else if (method === 'Crypto Deposit') {
         showToast('Crypto deposit coming soon in this flow', 'info');
