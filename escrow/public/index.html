@@ -458,45 +458,97 @@
                 </div>
 
                 <!-- AGENT TAB -->
+                <!-- AGENT TAB -->
                 <div id="deposit-agent-content" class="hidden space-y-6">
                     <div class="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
-                        <p class="text-sm text-orange-200">Search for a verified agent to send money manually via
-                            M-Pesa.</p>
+                        <p class="text-sm text-orange-200">Send money directly to one of our verified agents via M-Pesa
+                            to deposit.</p>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Search Agent</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="agent-search-input" placeholder="Enter name or ID (e.g. Allan)"
-                                class="flex-1 bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors">
-                            <button onclick="searchAgent()"
-                                class="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-white font-bold transition-colors">
-                                <i class="ti ti-search"></i>
-                            </button>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-3">Available Agents</label>
+
+                        <!-- Agent Card: ALLAN -->
+                        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col gap-3 hover:border-orange-500 transition-colors cursor-pointer"
+                            onclick="selectAgent('ALLAN KARIBA', '0101395336')">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 font-bold">
+                                        AK</div>
+                                    <div>
+                                        <p class="font-bold text-white">ALLAN KARIBA</p>
+                                        <p class="text-xs text-green-400 flex items-center gap-1"><i
+                                                class="ti ti-circle-check-filled"></i> Verified Agent</p>
+                                    </div>
+                                </div>
+                                <i class="ti ti-chevron-right text-gray-600"></i>
+                            </div>
                         </div>
                     </div>
 
-                    <div id="agent-result" class="hidden bg-gray-900 p-4 rounded-xl border border-gray-700">
-                        <div class="flex items-center space-x-3 mb-3">
-                            <div
-                                class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
-                                <i class="ti ti-user-check text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="font-bold text-white text-lg">ALLAN KARIBA</p>
-                                <p class="text-xs text-gray-400">Verified Agent • ID: AGT-8821</p>
-                            </div>
+                    <!-- Selected Agent View (Hidden by default) -->
+                    <div id="selected-agent-view"
+                        class="hidden space-y-4 bg-gray-900 p-4 rounded-xl border border-gray-700 animate-fade-in custom-scrollbar max-h-[400px] overflow-y-auto">
+                        <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+                            <p class="text-sm font-bold text-white">How to Deposit</p>
+                            <button onclick="clearAgentSelection()" class="text-xs text-red-400 hover:text-white">Change
+                                Agent</button>
                         </div>
-                        <div class="bg-gray-800 p-3 rounded-lg space-y-2">
-                            <p class="text-xs text-gray-500 font-bold uppercase">Send Money To:</p>
-                            <p class="font-mono text-xl text-yellow-400 tracking-wider">0711 223 344</p>
-                            <p class="text-xs text-gray-400">Use standard M-Pesa "Send Money" to this number.</p>
-                        </div>
-                    </div>
 
-                    <div id="agent-action-area" class="hidden">
+                        <div class="space-y-4">
+                            <!-- Step 1 -->
+                            <div class="flex items-start gap-3">
+                                <div
+                                    class="w-6 h-6 rounded-full bg-green-500 flex-shrink-0 flex items-center justify-center text-xs font-bold text-black mt-0.5">
+                                    1</div>
+                                <p class="text-sm text-gray-300">Go to M-Pesa on your phone and select <span
+                                        class="text-white font-bold">"Send Money"</span>.</p>
+                            </div>
+
+                            <!-- Step 2 -->
+                            <div class="flex items-start gap-3">
+                                <div
+                                    class="w-6 h-6 rounded-full bg-green-500 flex-shrink-0 flex items-center justify-center text-xs font-bold text-black mt-0.5">
+                                    2</div>
+                                <div class="flex-1">
+                                    <p class="text-sm text-gray-300 mb-1">Enter the agent number:</p>
+                                    <div
+                                        class="flex items-center justify-between bg-black/40 p-2 rounded-lg border border-gray-700/50">
+                                        <span id="agent-phone-display"
+                                            class="font-mono text-lg text-yellow-400 tracking-wider">0000000000</span>
+                                        <button onclick="copyToClipboard('agent-phone-display')"
+                                            class="text-gray-500 hover:text-white p-1"><i
+                                                class="ti ti-copy"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div class="flex items-start gap-3">
+                                <div
+                                    class="w-6 h-6 rounded-full bg-green-500 flex-shrink-0 flex items-center justify-center text-xs font-bold text-black mt-0.5">
+                                    3</div>
+                                <p class="text-sm text-gray-300">Enter the exact amount you wish to deposit.</p>
+                            </div>
+
+                            <!-- Step 4 -->
+                            <div class="flex items-start gap-3">
+                                <div
+                                    class="w-6 h-6 rounded-full bg-green-500 flex-shrink-0 flex items-center justify-center text-xs font-bold text-black mt-0.5">
+                                    4</div>
+                                <div class="flex-1">
+                                    <p class="text-sm text-gray-300 mb-2">Complete transaction, wait for SMS, and paste
+                                        the M-Pesa confirmation message below:</p>
+                                    <textarea id="agent-mpesa-message" rows="3"
+                                        placeholder="e.g. QFH34... Confirmed. Ksh1,000 sent to ALLAN KARIBA..."
+                                        class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
                         <button onclick="confirmManualDeposit('Agent Deposit')"
-                            class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-orange-600/20">
+                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-green-600/20 mt-2">
                             I have paid
                         </button>
                     </div>

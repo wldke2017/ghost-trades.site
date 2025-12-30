@@ -443,11 +443,20 @@ function searchAgent() {
 
 // Confirm Manual Deposit
 async function confirmManualDeposit(method) {
-    // In a real app, this would send a request to backend to create a pending "Manual Deposit" transaction.
-    // For now, we mock success as per "normal send money process".
-    const amount = 'Manual';
+    let details = {};
 
-    showToast(`${method} initiated. Waiting for admin verification.`);
+    if (method === 'Agent Deposit') {
+        const message = document.getElementById('agent-mpesa-message').value.trim();
+        if (!message) return showToast('Please paste the M-Pesa confirmation message.', 'error');
+        details = { message };
+    } else if (method === 'Crypto Deposit') {
+        const txid = document.getElementById('crypto-txid').value.trim();
+        // if (!txid) return showToast('Please enter the TXID.', 'error'); // Optional check
+        details = { txid };
+    }
+
+    // In a real app, send `details` to backend.
+    showToast(`${method} initiated under review.`, 'success');
     closeModal('deposit-modal');
 }
 
