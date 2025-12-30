@@ -18,7 +18,7 @@ const app = express();
 const server = http.createServer(app);
 const socketIo = require('socket.io');
 
-const io = socketIo(server, {
+let io = socketIo(server, {
   cors: {
     origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
     methods: ["GET", "POST"],
