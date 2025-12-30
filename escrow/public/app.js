@@ -299,6 +299,34 @@ async function claimOrder(orderId) {
     }
 }
 
+async function markReady(orderId) {
+    if (!confirm('Mark this order as ready for release?')) return;
+    try {
+        const response = await authenticatedFetch(`/orders/${orderId}/complete`, { method: 'POST' });
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Order marked as ready!', 'success');
+            refreshOrders();
+        } else {
+            showToast(data.error || 'Action failed', 'error');
+        }
+    } catch (e) { showToast('Connection error', 'error'); }
+}
+
+async function disputeOrder(orderId) {
+    if (!confirm('Are you sure you want to dispute this order? This will hold funds for admin review.')) return;
+    try {
+        const response = await authenticatedFetch(`/orders/${orderId}/dispute`, { method: 'POST' });
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Dispute opened successfully', 'warning');
+            refreshOrders();
+        } else {
+            showToast(data.error || 'Failed to open dispute', 'error');
+        }
+    } catch (e) { showToast('Connection error', 'error'); }
+}
+
 // --- UI Actions ---
 
 function openModal(id) {

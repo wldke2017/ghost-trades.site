@@ -199,8 +199,8 @@ router.post('/:id/dispute', authenticateToken, async (req, res, next) => {
         // We should add the check here.
 
         const order = await orderService.getOrderById(req.params.id);
-        if (req.user.role !== 'admin' && order.buyer_id !== req.user.id) {
-            return res.status(403).json({ error: 'Forbidden: Only the order creator or admin can dispute orders' });
+        if (req.user.role !== 'admin' && order.buyer_id !== req.user.id && order.middleman_id !== req.user.id) {
+            return res.status(403).json({ error: 'Forbidden: Only the parties involved or admin can dispute orders' });
         }
 
         const result = await orderService.disputeOrder(req.params.id);
