@@ -413,10 +413,34 @@ async function initiateDeposit() {
 // Withdraw Logic
 async function requestWithdrawal() {
     const amount = document.getElementById('withdraw-amount').value;
-    // ... implement withdrawal call ...
-    showToast('Withdrawal feature currently in maintenance mode.', 'info');
-    closeModal('withdraw-modal');
+    const phone = document.getElementById('withdraw-phone').value;
+    const notes = document.getElementById('withdraw-notes')?.value || '';
+
+    if (!amount || amount <= 0) return showToast('Please enter a valid amount', 'error');
+    if (!phone || !/^254[0-9]{9}$/.test(phone)) {
+        return showToast('Valid M-Pesa phone number (254XXXXXXXXX) is required', 'error');
+    }
+
+    try {
+        const response = await authenticatedFetch('/transaction-requests/withdrawal', {
+            method: 'POST',
+            body: JSON.stringify({ amount, phone, notes })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Withdrawal request submitted! Waiting for approval.', 'success');
+            closeModal('withdraw-modal');
+            if (typeof updateDashboard === 'function') updateDashboard();
+        } else {
+            showToast(data.error || 'Failed to submit withdrawal request', 'error');
+        }
+    } catch (error) {
+        console.error('Error requesting withdrawal:', error);
+        showToast('Connection error', 'error');
+    }
 }
+
 
 async function updateProfileSettings() {
     const fullName = document.getElementById('settings-fullname').value;
