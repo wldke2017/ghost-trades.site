@@ -41,13 +41,6 @@ router.post('/register', authLimiter, validate('register'), async (req, res) => 
             country
         }, { transaction: authTransaction });
 
-        // Create Wallet for new user
-        await Wallet.create({
-            user_id: newUser.id,
-            available_balance: 0,
-            locked_balance: 0
-        }, { transaction: authTransaction });
-
         await authTransaction.commit();
 
         // Generate JWT token
