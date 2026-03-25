@@ -82,8 +82,34 @@ app.use((req, res, next) => {
 
 // Database Sync & Seeding
 const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
+
+// Helper to safely add a column if it doesn't already exist
+const addColumnIfMissing = async (table, column, definition) => {
+  try {
+    await sequelize.query(
+      `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS ${column} ${definition};`
+    );
+  } catch (err) {
+    logger.warn(`addColumnIfMissing ${table}.${column}: ${err.message}`);
+  }
+};
+
 sequelize.sync(syncOptions).then(async () => {
   logger.info(`Database synced (Options: ${JSON.stringify(syncOptions)})`);
+
+  // Ensure all columns added in the OTP auth feature exist in the database
+  await addColumnIfMissing('users', 'is_verified',       'BOOLEAN NOT NULL DEFAULT FALSE');
+  await addColumnIfMissing('users', 'otp_code',          'VARCHAR(255)');
+  await addColumnIfMissing('users', 'otp_expires_at',    'TIMESTAMP WITH TIME ZONE');
+  await addColumnIfMissing('users', 'full_name',         'VARCHAR(255)');
+  await addColumnIfMissing('users', 'email',             'VARCHAR(255)');
+  await addColumnIfMissing('users', 'phone_number',      'VARCHAR(255)');
+  await addColumnIfMissing('users', 'country',           'VARCHAR(255)');
+  await addColumnIfMissing('users', 'avatar_path',       'VARCHAR(255)');
+  await addColumnIfMissing('users', 'mpesa_number',      'VARCHAR(255)');
+  await addColumnIfMissing('users', 'currency_preference', "VARCHAR(255) DEFAULT 'USD'");
+  logger.info('Schema column check complete.');
+
   try {
     const adminExists = await User.findOne({ where: { role: 'admin' } });
     if (!adminExists) {
