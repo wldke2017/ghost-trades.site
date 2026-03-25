@@ -2,19 +2,13 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // Validate JWT_SECRET exists and is strong enough
-const JWT_SECRET = process.env.JWT_SECRET;
+let JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   console.warn('WARNING: JWT_SECRET is missing or too short! Using fallback for stability.');
   console.warn('Please set a strong JWT_SECRET in your .env file for production.');
   // Fallback to prevent crash during deployment debugging
-  module.exports = {
-    authenticateToken,
-    isAdmin,
-    isMiddleman,
-    JWT_SECRET: process.env.JWT_SECRET || 'temporary_fallback_secret_must_be_32_chars_long'
-  };
-  return;
+  JWT_SECRET = 'temporary_fallback_secret_must_be_32_chars_long';
 }
 
 // Middleware to verify JWT token
