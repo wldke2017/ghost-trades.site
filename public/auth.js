@@ -163,7 +163,13 @@ function showLoginForm() {
                                         <input type="password" id="login-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-gray-900 transition-all" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" onkeypress="if(event.key==='Enter') handleLogin()">
                                     </div>
                                 </div>
-                                
+
+                                <!-- Inline login error -->
+                                <div id="login-error" class="hidden flex items-center space-x-2 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium px-4 py-3 rounded-xl">
+                                    <i class="ti ti-alert-circle text-base"></i>
+                                    <span id="login-error-message">Invalid username or password.</span>
+                                </div>
+
                                 <button onclick="handleLogin()" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white font-black py-5 rounded-2xl transition-all duration-300 shadow-[0_10px_30px_rgba(249,115,22,0.15)] hover:shadow-[0_10px_40px_rgba(249,115,22,0.25)] flex items-center justify-center space-x-3 transform active:scale-[0.98] mt-4">
                                     <span>ACCESS DASHBOARD</span>
                                     <i class="ti ti-chevron-right text-lg"></i>
@@ -267,9 +273,14 @@ async function handleLogin() {
     const password = document.getElementById('login-password').value;
 
     if (!username || !password) {
-        showToast('Please enter username and password', 'error');
+        showToast('Please enter your username and password', 'error');
         return;
     }
+
+    // Clear any previous inline error
+    const loginErrorBox = document.getElementById('login-error');
+    const loginErrorMsg = document.getElementById('login-error-message');
+    if (loginErrorBox) loginErrorBox.classList.add('hidden');
 
     try {
         const response = await fetch('/auth/login', {
@@ -307,7 +318,13 @@ async function handleLogin() {
                 }
             }
         } else {
-            showToast(data.error || 'Login failed', 'error');
+            // Show inline error under the fields
+            if (loginErrorBox && loginErrorMsg) {
+                loginErrorMsg.textContent = data.error || 'Invalid username or password. Please try again.';
+                loginErrorBox.classList.remove('hidden');
+            } else {
+                showToast(data.error || 'Login failed', 'error');
+            }
         }
     } catch (error) {
         console.error('Login error:', error);
