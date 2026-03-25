@@ -6,6 +6,8 @@
  */
 
 const sequelize = require('../db');
+const User = require('../models/user');
+const Wallet = require('../models/wallet');
 const logger = require('../utils/logger');
 
 async function runMigrations() {
