@@ -22,7 +22,13 @@ const schemas = {
       }),
     role: Joi.string()
       .valid('middleman')
-      .required()
+      .required(),
+    full_name: Joi.string().max(100).allow('', null),
+    email: Joi.string().email({ tlds: { allow: false } }).required().messages({
+      'string.email': 'Please provide a valid email address'
+    }),
+    phone_number: Joi.string().max(20).allow('', null),
+    country: Joi.string().max(100).allow('', null)
   }),
 
   // User login
