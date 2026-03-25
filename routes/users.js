@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/user');
 const { authenticateToken } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimiter');
+const { generateOTP, sendOTPEmail } = require('../utils/email');
 const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
@@ -71,24 +73,52 @@ router.put('/profile', authenticateToken, async (req, res) => {
     }
 });
 
-// Change Password
-router.post('/change-password', authenticateToken, async (req, res) => {
+// Request Password Change OTP
+router.post('/change-password/request', authenticateToken, authLimiter, async (req, res) => {
     try {
-        const { currentPassword, newPassword } = req.body;
+        const { currentPassword } = req.body;
+        if (!currentPassword) return res.status(400).json({ error: 'Current password is required' });
 
-        if (!currentPassword || !newPassword) {
-            return res.status(400).json({ error: 'Current and new passwords are required' });
+        const user = await User.findByPk(req.user.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const isValid = await user.validatePassword(currentPassword);
+        if (!isValid) return res.status(401).json({ error: 'Incorrect current password' });
+        if (!user.email) return res.status(400).json({ error: 'No email associated with account' });
+
+        const otpCode = generateOTP();
+        user.otp_code = otpCode;
+        user.otp_expires_at = new Date(Date.now() + 15 * 60 * 1000);
+        await user.save();
+
+        sendOTPEmail(user.email, user.full_name, otpCode, 'Password Change Verification');
+        res.json({ message: 'OTP sent to your email', requires_otp: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Verify OTP and Change Password
+router.post('/change-password/verify', authenticateToken, authLimiter, async (req, res) => {
+    try {
+        const { currentPassword, newPassword, otp_code } = req.body;
+        if (!currentPassword || !newPassword || !otp_code) {
+            return res.status(400).json({ error: 'All fields are required' });
         }
 
         const user = await User.findByPk(req.user.id);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         const isValid = await user.validatePassword(currentPassword);
-        if (!isValid) {
-            return res.status(401).json({ error: 'Incorrect current password' });
+        if (!isValid) return res.status(401).json({ error: 'Incorrect current password' });
+
+        if (user.otp_code !== otp_code || user.otp_expires_at < new Date()) {
+            return res.status(400).json({ error: 'Invalid or expired OTP code' });
         }
 
         user.password = newPassword;
+        user.otp_code = null;
+        user.otp_expires_at = null;
         await user.save();
 
         res.json({ message: 'Password changed successfully' });

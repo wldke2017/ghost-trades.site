@@ -608,25 +608,59 @@ async function updateProfileSettings() {
     }
 }
 
-async function changePassword() {
+async function requestPasswordChangeOTP() {
     const currentPassword = document.getElementById('settings-current-password').value;
     const newPassword = document.getElementById('settings-new-password').value;
 
     if (!currentPassword || !newPassword) {
         return showToast('Both password fields are required', 'error');
     }
+    if (newPassword.length < 6) {
+        return showToast('New password must be at least 6 characters', 'error');
+    }
 
     try {
-        const response = await authenticatedFetch('/users/change-password', {
+        const response = await authenticatedFetch('/users/change-password/request', {
             method: 'POST',
-            body: JSON.stringify({ currentPassword, newPassword })
+            body: JSON.stringify({ currentPassword })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Verification code sent to your email!', 'success');
+            // Show step 2
+            document.getElementById('pw-step-1').classList.add('hidden');
+            document.getElementById('pw-step-2').classList.remove('hidden');
+        } else {
+            showToast(data.error || 'Failed to send code', 'error');
+        }
+    } catch (e) { showToast('Connection error', 'error'); }
+}
+
+async function verifyPasswordChangeOTP() {
+    const currentPassword = document.getElementById('settings-current-password').value;
+    const newPassword = document.getElementById('settings-new-password').value;
+    const otp_code = document.getElementById('settings-otp-code').value;
+
+    if (!otp_code || otp_code.length < 6) {
+        return showToast('Please enter the 6-digit verification code', 'error');
+    }
+
+    try {
+        const response = await authenticatedFetch('/users/change-password/verify', {
+            method: 'POST',
+            body: JSON.stringify({ currentPassword, newPassword, otp_code })
         });
 
         const data = await response.json();
         if (response.ok) {
             showToast('Password updated successfully!', 'success');
+            // Reset UI
             document.getElementById('settings-current-password').value = '';
             document.getElementById('settings-new-password').value = '';
+            document.getElementById('settings-otp-code').value = '';
+            document.getElementById('pw-step-2').classList.add('hidden');
+            document.getElementById('pw-step-1').classList.remove('hidden');
             document.getElementById('password-change-section').classList.add('hidden');
         } else {
             showToast(data.error || 'Failed to change password', 'error');

@@ -151,7 +151,7 @@ function showLoginForm() {
                                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-orange-500 transition-colors">
                                             <i class="ti ti-user-circle text-xl"></i>
                                         </div>
-                                        <input type="text" id="login-username" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-gray-900 transition-all" placeholder="Enter your username">
+                                        <input type="text" id="login-username" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-gray-900 transition-all" placeholder="Username or Email">
                                     </div>
                                 </div>
                                 <div class="space-y-2">
@@ -348,6 +348,13 @@ async function handleLogin() {
                 }
             }
         } else {
+            // Check if verification is required
+            if (data.requires_verification) {
+                showToast(data.error || data.message || 'Please verify your email', 'info');
+                showOTPVerificationForm(data.email);
+                return;
+            }
+
             // Show inline error under the fields
             if (loginErrorBox && loginErrorMsg) {
                 loginErrorMsg.textContent = data.error || 'Invalid username or password. Please try again.';
@@ -406,6 +413,12 @@ async function handleRegister() {
         const data = await response.json();
 
         if (response.ok) {
+            if (data.requires_verification) {
+                showToast(data.message || 'Please verify your email', 'info');
+                showOTPVerificationForm(data.email);
+                return;
+            }
+
             localStorage.setItem('authToken', data.token);
             localStorage.setItem('userData', JSON.stringify(data.user));
 
@@ -503,6 +516,100 @@ function parseCurrencyString(str) {
     if (!str) return 0;
     return parseFloat(str.replace(/[^0-9.-]+/g, ""));
 }
+
+window.showOTPVerificationForm = function(email) {
+    const authContainer = document.getElementById('auth-container');
+    if (!authContainer) return;
+
+    authContainer.innerHTML = `
+        <div class="bg-gray-800 rounded-[2rem] shadow-2xl overflow-hidden flex max-w-4xl w-full mx-4 relative border border-gray-700/50 animate-fade-in p-8">
+            <div class="flex-1 flex flex-col justify-center relative z-10 w-full">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
+                        <i class="ti ti-mail-opened text-3xl text-orange-500 transform -rotate-3"></i>
+                    </div>
+                    <h2 class="text-3xl font-black text-white mb-2 tracking-tight">Verify Your Email</h2>
+                    <p class="text-gray-400 font-medium">We sent a 6-digit code to <br><span class="text-orange-400 font-bold">${email}</span></p>
+                </div>
+                
+                <div class="space-y-6 max-w-sm mx-auto w-full">
+                    <div class="space-y-2 text-center">
+                        <label class="block text-xs font-black text-gray-500 uppercase tracking-widest">Enter Verification Code</label>
+                        <input type="text" id="otp-code" maxlength="6" class="w-full text-center text-3xl tracking-[0.5em] font-mono bg-gray-900/50 border border-gray-700/50 rounded-2xl py-4 text-white focus:outline-none focus:border-orange-500/50 focus:bg-gray-900 transition-all" placeholder="------" onkeypress="if(event.key==='Enter') handleOTPVerification('${email}')">
+                    </div>
+                    
+                    <button onclick="handleOTPVerification('${email}')" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white font-black py-4 rounded-2xl transition-all duration-300 shadow-[0_10px_30px_rgba(249,115,22,0.15)] flex items-center justify-center space-x-3 transform active:scale-[0.98]">
+                        <span>Verify Email</span>
+                        <i class="ti ti-check text-lg"></i>
+                    </button>
+                    
+                    <div class="text-center pt-2 border-t border-gray-700/50">
+                        <button onclick="resendOTP('${email}')" class="text-sm font-bold text-gray-400 hover:text-white transition-colors">
+                            Didn't receive the code? Resend
+                        </button>
+                        <br>
+                        <button onclick="location.reload()" class="text-xs text-gray-500 hover:text-gray-400 mt-4">
+                            Back to Login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+window.handleOTPVerification = async function(email) {
+    const otp_code = document.getElementById('otp-code').value;
+    if (!otp_code || otp_code.length < 6) {
+        showToast('Please enter the 6-digit code', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otp_code })
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('userData', JSON.stringify(data.user));
+            authToken = data.token;
+            currentUser = data.user;
+            window.currentUserId = data.user.id;
+            window.currentUserRole = data.user.role;
+            window.currentUsername = data.user.username;
+
+            showToast('Email verified successfully!', 'success');
+            hideLoginForm();
+            if (typeof updateDashboard === 'function') updateDashboard();
+        } else {
+            showToast(data.error || 'Verification failed', 'error');
+        }
+    } catch (e) {
+        showToast('Connection error', 'error');
+    }
+};
+
+window.resendOTP = async function(email) {
+    try {
+        const response = await fetch('/auth/resend-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await response.json();
+        if (response.ok) {
+            showToast(data.message || 'OTP resent successfully', 'success');
+        } else {
+            showToast(data.error || 'Failed to resend OTP', 'error');
+        }
+    } catch (e) {
+        showToast('Connection error', 'error');
+    }
+};
 
 /**
  * Syncs all UI elements with the 'currency-label' class to the current preference.

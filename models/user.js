@@ -55,8 +55,20 @@ const User = sequelize.define('User', {
   currency_preference: {
     type: DataTypes.ENUM('USD', 'KES'),
     defaultValue: 'USD',
-    allowNull: false,
+    allowNull: true,
   },
+  is_verified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  otp_code: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  otp_expires_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  }
 }, {
   tableName: 'users',
   timestamps: true,

@@ -429,20 +429,41 @@
                         Change Password
                     </button>
                     <div id="password-change-section" class="hidden mt-4 space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Current Password</label>
-                            <input type="password" id="settings-current-password"
-                                class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-orange-500 outline-none">
+                        <!-- Step 1: Enter passwords -->
+                        <div id="pw-step-1">
+                            <div class="mb-3">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Current Password</label>
+                                <input type="password" id="settings-current-password"
+                                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-orange-500 outline-none">
+                            </div>
+                            <div class="mb-3">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">New Password</label>
+                                <input type="password" id="settings-new-password"
+                                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-orange-500 outline-none">
+                            </div>
+                            <button onclick="requestPasswordChangeOTP()"
+                                class="w-full py-3 bg-gray-700 text-white rounded-xl font-bold hover:bg-gray-600 transition-colors">
+                                Send Verification Code
+                            </button>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">New Password</label>
-                            <input type="password" id="settings-new-password"
-                                class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-orange-500 outline-none">
+                        <!-- Step 2: Enter OTP -->
+                        <div id="pw-step-2" class="hidden space-y-3">
+                            <p class="text-xs text-gray-400 text-center">A 6-digit verification code was sent to your email.</p>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Verification Code</label>
+                                <input type="text" id="settings-otp-code" maxlength="6"
+                                    class="w-full text-center text-2xl tracking-[0.4em] font-mono bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-orange-500 outline-none"
+                                    placeholder="------">
+                            </div>
+                            <button onclick="verifyPasswordChangeOTP()"
+                                class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition-colors">
+                                Confirm & Update Password
+                            </button>
+                            <button onclick="document.getElementById('pw-step-2').classList.add('hidden'); document.getElementById('pw-step-1').classList.remove('hidden');"
+                                class="w-full py-2 text-xs text-gray-500 hover:text-gray-400">
+                                ← Back
+                            </button>
                         </div>
-                        <button onclick="changePassword()"
-                            class="w-full py-3 bg-gray-700 text-white rounded-xl font-bold hover:bg-gray-600 transition-colors">
-                            Update Password
-                        </button>
                     </div>
                 </div>
 
