@@ -201,6 +201,7 @@ function showLoginForm() {
                                     <div class="space-y-1">
                                         <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Password</label>
                                         <input type="password" id="register-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                        <p class="text-[10px] text-gray-500 ml-1 mt-1">Min. 6 characters</p>
                                     </div>
                                     <div class="space-y-1">
                                         <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Confirm</label>
@@ -327,6 +328,11 @@ async function handleRegister() {
 
     if (!username || !password || !email) {
         showToast('Please fill in all required fields (Username, Email, Password)', 'error');
+        return;
+    }
+
+    if (password.length < 6) {
+        showToast('Password must be at least 6 characters long', 'error');
         return;
     }
 
