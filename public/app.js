@@ -343,7 +343,7 @@ async function fetchAvailableOrders() {
                     </div>
                     <div class="flex justify-between items-center mt-3 pt-3 border-t border-gray-700">
                         <span class="text-xs text-gray-400">${new Date(order.createdAt).toLocaleTimeString()}</span>
-                        <button onclick="claimOrder(${order.id})" class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-600">
+                        <button onclick="claimOrder(${order.id})" class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold transition-opacity hover:bg-orange-600">
                             Claim Order
                         </button>
                     </div>

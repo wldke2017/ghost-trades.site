@@ -160,7 +160,10 @@ function showLoginForm() {
                                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-orange-500 transition-colors">
                                             <i class="ti ti-lock-square text-xl"></i>
                                         </div>
-                                        <input type="password" id="login-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-gray-900 transition-all" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" onkeypress="if(event.key==='Enter') handleLogin()">
+                                        <input type="password" id="login-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-2xl pl-12 pr-12 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-gray-900 transition-all" placeholder="••••••••" onkeypress="if(event.key==='Enter') handleLogin()">
+                                        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-500 cursor-pointer transition-colors" onclick="togglePasswordVisibility('login-password', this)">
+                                            <i class="ti ti-eye text-xl"></i>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -206,12 +209,22 @@ function showLoginForm() {
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="space-y-1">
                                         <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Password</label>
-                                        <input type="password" id="register-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                        <div class="relative">
+                                            <input type="password" id="register-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 pr-10 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-500 cursor-pointer transition-colors" onclick="togglePasswordVisibility('register-password', this)">
+                                                <i class="ti ti-eye text-lg"></i>
+                                            </div>
+                                        </div>
                                         <p class="text-[10px] text-gray-500 ml-1 mt-1">Min. 6 characters</p>
                                     </div>
                                     <div class="space-y-1">
                                         <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Confirm</label>
-                                        <input type="password" id="register-confirm-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                        <div class="relative">
+                                            <input type="password" id="register-confirm-password" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 pr-10 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-500 cursor-pointer transition-colors" onclick="togglePasswordVisibility('register-confirm-password', this)">
+                                                <i class="ti ti-eye text-lg"></i>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -242,6 +255,23 @@ function hideLoginForm() {
         authContainer.remove();
     }
 }
+
+// Function to toggle password visibility
+window.togglePasswordVisibility = function(inputId, iconContainer) {
+    const input = document.getElementById(inputId);
+    const icon = iconContainer.querySelector('i');
+    if (input && icon) {
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('ti-eye');
+            icon.classList.add('ti-eye-off');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('ti-eye-off');
+            icon.classList.add('ti-eye');
+        }
+    }
+};
 
 // Switch between login and register tabs
 function switchAuthTab(tab) {
