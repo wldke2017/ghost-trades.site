@@ -1,6 +1,12 @@
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
+const dns = require('dns');
 require('dotenv').config();
+
+// Force IPv4 globally for this module to bypass IPv6 ENETUNREACH errors on Render
+if (typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+}
 
 // Create transporter
 const transporter = nodemailer.createTransport({
