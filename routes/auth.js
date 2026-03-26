@@ -5,13 +5,14 @@ const { Op } = require('sequelize');
 const User = require('../models/user');
 const Wallet = require('../models/wallet');
 const sequelize = require('../db');
+const logger = require('../utils/logger');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 const { validate } = require('../middleware/validator');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { generateOTP, sendOTPEmail } = require('../utils/email');
 
 // Register new user
-router.post('/register', authLimiter, validate('register'), async (req, res) => {
+router.post('/register', authLimiter, validate('register'), async (req, res, next) => {
     let authTransaction;
     try {
         const { username, password, role, full_name, email, phone_number, country } = req.body;
@@ -19,10 +20,12 @@ router.post('/register', authLimiter, validate('register'), async (req, res) => 
 
         // Prevent registration as admin
         if (role === 'admin') {
+            if (authTransaction) await authTransaction.rollback();
             return res.status(403).json({ error: 'Cannot register as admin. Only middleman accounts can be created.' });
         }
 
         if (!role || role !== 'middleman') {
+            if (authTransaction) await authTransaction.rollback();
             return res.status(400).json({ error: 'Invalid role. Only "middleman" role is allowed for registration.' });
         }
 
@@ -67,12 +70,12 @@ router.post('/register', authLimiter, validate('register'), async (req, res) => 
         });
     } catch (error) {
         if (authTransaction) await authTransaction.rollback();
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
 // Login user
-router.post('/login', authLimiter, validate('login'), async (req, res) => {
+router.post('/login', authLimiter, validate('login'), async (req, res, next) => {
     try {
         const { username, password } = req.body;
         // Find user by username or email
@@ -126,12 +129,12 @@ router.post('/login', authLimiter, validate('login'), async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
 // Get current user info (protected)
-router.get('/me', authenticateToken, async (req, res) => {
+router.get('/me', authenticateToken, async (req, res, next) => {
     try {
         const user = await User.findByPk(req.user.id, {
             attributes: ['id', 'username', 'role', 'createdAt', 'avatar_path', 'mpesa_number', 'currency_preference', 'full_name', 'email', 'phone_number', 'country']
@@ -143,12 +146,12 @@ router.get('/me', authenticateToken, async (req, res) => {
 
         res.json(user);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
 // Verify OTP
-router.post('/verify-otp', authLimiter, async (req, res) => {
+router.post('/verify-otp', authLimiter, async (req, res, next) => {
     try {
         const { email, otp_code } = req.body;
         if (!email || !otp_code) return res.status(400).json({ error: 'Email and OTP code are required' });
@@ -177,12 +180,12 @@ router.post('/verify-otp', authLimiter, async (req, res) => {
             user: { id: user.id, username: user.username, role: user.role }
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
 // Resend OTP
-router.post('/resend-otp', authLimiter, async (req, res) => {
+router.post('/resend-otp', authLimiter, async (req, res, next) => {
     try {
         const { email } = req.body;
         if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -206,13 +209,12 @@ router.post('/resend-otp', authLimiter, async (req, res) => {
             res.status(500).json({ error: 'Failed to send verification email. Please contact support.' });
         }
     } catch (error) {
-        logger.error(`[AUTH] Resend OTP error for ${req.body.email}:`, error);
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
 // Diagnostic route to test SMTP settings directly
-router.post('/test-email', async (req, res) => {
+router.post('/test-email', async (req, res, next) => {
     try {
         const { email } = req.body;
         if (!email) return res.status(400).json({ error: 'Target email is required' });
@@ -226,8 +228,7 @@ router.post('/test-email', async (req, res) => {
             res.status(500).json({ error: 'SMTP server rejected the email. Check logs for details.' });
         }
     } catch (error) {
-        logger.error('[DIAGNOSTIC] Test email crash:', error);
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 

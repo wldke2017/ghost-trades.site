@@ -11,6 +11,8 @@ const transporter = nodemailer.createTransport({
         user: (process.env.SMTP_USER || '').trim(),
         pass: (process.env.SMTP_PASS || '').trim(),
     },
+    // Force IPv4 as some hosting environments (like Render) have issues with IPv6 to Gmail
+    family: 4, 
     // Add timeouts to prevent hanging in production
     connectionTimeout: 10000, // 10 seconds
     greetingTimeout: 10000,
