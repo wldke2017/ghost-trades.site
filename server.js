@@ -15,6 +15,9 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
+
+// Trust proxy - Required for express-rate-limit on Render/proxies
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const socketIo = require('socket.io');
 
