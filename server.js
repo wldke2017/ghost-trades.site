@@ -124,6 +124,10 @@ sequelize.sync(syncOptions).then(async () => {
         is_verified: true 
       });
       logger.info('Admin user created (Verified)');
+    } else if (!adminExists.is_verified) {
+      adminExists.is_verified = true;
+      await adminExists.save();
+      logger.info('Existing Admin user marked as Verified');
     }
   } catch (error) {
     logger.error('Error seeding users:', error.message);
