@@ -16,6 +16,10 @@ services:
         generateValue: true
       - key: ADMIN_DEFAULT_PASSWORD
         sync: false
+      - key: RENDER_EXTERNAL_URL
+        placeholder: "https://your-app-name.onrender.com"
+      - key: BREVO_API_KEY
+        placeholder: "your_brevo_api_key_here"
 
 databases:
   - name: escrow-db

@@ -19,7 +19,8 @@ async function seedDatabase() {
       defaults: {
         username: 'Admin',
         password: process.env.ADMIN_DEFAULT_PASSWORD || 'Admin083',
-        role: 'admin'
+        role: 'admin',
+        is_verified: true
       }
     });
 
@@ -35,7 +36,8 @@ async function seedDatabase() {
       defaults: {
         username: 'middleman1',
         password: 'middleman123',
-        role: 'middleman'
+        role: 'middleman',
+        is_verified: true
       }
     });
 
