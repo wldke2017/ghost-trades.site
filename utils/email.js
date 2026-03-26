@@ -5,18 +5,20 @@ require('dotenv').config();
 // Create transporter
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: process.env.SMTP_SECURE !== 'false', // default to true for 465
     auth: {
         user: (process.env.SMTP_USER || '').trim(),
         pass: (process.env.SMTP_PASS || '').trim(),
     },
+    // Use pooling for better performance on rapid requests
+    pool: true,
     // Force IPv4 as some hosting environments (like Render) have issues with IPv6 to Gmail
     family: 4, 
     // Add timeouts to prevent hanging in production
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+    connectionTimeout: 20000, // Increased to 20 seconds
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
 });
 
 /**
