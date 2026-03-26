@@ -1,70 +1,57 @@
-const dns = require('dns');
-const nodemailer = require('nodemailer');
+const fetch = require('node-fetch');
 const logger = require('./logger');
 require('dotenv').config();
 
-// Create transporter
-const transporter = nodemailer.createTransport({
-    // DIRECT IPv4: Known Google SMTP IP for maximum reliability
-    host: '64.233.184.108', 
-    port: 587, // Try Port 587 (STARTTLS)
-    secure: false, // Must be false for 587
-    tls: {
-       // Allow unauthorized for diagnostics if needed, but keep servername for security
-       servername: 'smtp.gmail.com',
-       rejectUnauthorized: false 
-    },
-    auth: {
-        user: (process.env.SMTP_USER || '').trim(),
-        pass: (process.env.SMTP_PASS || '').trim(),
-    },
-    // Use pooling for better performance on rapid requests
-    pool: true,
-    // Add timeouts to prevent hanging in production
-    connectionTimeout: 20000, // 20 seconds
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
-});
-
-// Run a connection check on startup and log the result
-transporter.verify((error, success) => {
-    if (error) {
-        logger.error('[EMAIL] Startup SMTP Verify Failed:', error);
-    } else {
-        logger.info('[EMAIL] Startup SMTP Verify Successful: Server is ready to take our messages');
-    }
-});
+// DEFINITIVE SOLUTION: Use Brevo (Sendinblue) Web API v3
+// This bypasses all SMTP blocks from cloud providers like Render
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 /**
- * Send an email using the configured transporter
- * @param {string} to - Recipient email string
+ * Send an email using the Brevo Web API
+ * @param {string} to - Recipient email
  * @param {string} subject - Email subject
- * @param {string} html - HTML content of the email
+ * @param {string} html - HTML content
  */
 async function sendEmail(to, subject, html) {
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        logger.warn(`[EMAIL] SMTP credentials not configured. Skipping email to: ${to}`);
+    if (!BREVO_API_KEY) {
+        logger.warn(`[EMAIL] Brevo API Key not configured. Skipping email to: ${to}`);
         return false;
     }
 
     try {
-        const mailOptions = {
-            from: `"SecureEscrow" <${process.env.SMTP_USER}>`,
-            to,
-            subject,
-            html,
-        };
+        logger.info(`[EMAIL] Attempting to send email via Brevo Web API to: ${to}`);
+        
+        const response = await fetch(BREVO_API_URL, {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': BREVO_API_KEY,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: { 
+                  name: 'SecureEscrow', 
+                  email: process.env.SMTP_USER || 'luckymutisya83@gmail.com' 
+                },
+                to: [{ email: to }],
+                subject: subject,
+                htmlContent: html
+            })
+        });
 
-        logger.info(`[EMAIL] Attempting to send email to: ${to} (Subject: ${subject})`);
-        const info = await transporter.sendMail(mailOptions);
-        logger.info(`[EMAIL] Sent successfully: ${info.messageId} → ${to}`);
-        return true;
+        const data = await response.json();
+
+        if (response.ok) {
+            logger.info(`[EMAIL] Sent successfully via Brevo API. Message ID: ${data.messageId} → ${to}`);
+            return true;
+        } else {
+            logger.error(`[EMAIL] Brevo API rejected the email:`, data);
+            return false;
+        }
     } catch (error) {
-        logger.error(`[EMAIL] Failed to send email to: ${to}`, {
-            errorCode: error.code,
+        logger.error(`[EMAIL] Brevo API request failed:`, {
             errorMessage: error.message,
-            command: error.command,
-            response: error.response,
             stack: error.stack
         });
         return false;
