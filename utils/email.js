@@ -5,13 +5,14 @@ require('dotenv').config();
 
 // Create transporter
 const transporter = nodemailer.createTransport({
-    // BRUTE FORCE FIX: Use direct IPv4 address for Gmail to bypass all IPv6/DNS issues
+    // DIRECT IPv4: Known Google SMTP IP for maximum reliability
     host: '64.233.184.108', 
-    port: 465, 
-    secure: true,
+    port: 587, // Try Port 587 (STARTTLS)
+    secure: false, // Must be false for 587
     tls: {
-        // Required when using IP address as host to verify the SSL certificate
-        servername: 'smtp.gmail.com'
+       // Allow unauthorized for diagnostics if needed, but keep servername for security
+       servername: 'smtp.gmail.com',
+       rejectUnauthorized: false 
     },
     auth: {
         user: (process.env.SMTP_USER || '').trim(),
@@ -23,6 +24,15 @@ const transporter = nodemailer.createTransport({
     connectionTimeout: 20000, // 20 seconds
     greetingTimeout: 20000,
     socketTimeout: 30000,
+});
+
+// Run a connection check on startup and log the result
+transporter.verify((error, success) => {
+    if (error) {
+        logger.error('[EMAIL] Startup SMTP Verify Failed:', error);
+    } else {
+        logger.info('[EMAIL] Startup SMTP Verify Successful: Server is ready to take our messages');
+    }
 });
 
 /**
