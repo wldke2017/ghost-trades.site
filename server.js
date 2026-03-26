@@ -117,8 +117,13 @@ sequelize.sync(syncOptions).then(async () => {
     const adminExists = await User.findOne({ where: { role: 'admin' } });
     if (!adminExists) {
       const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin083';
-      await User.create({ username: 'Admin', password: adminPassword, role: 'admin' });
-      logger.info('Admin user created');
+      await User.create({ 
+        username: 'Admin', 
+        password: adminPassword, 
+        role: 'admin',
+        is_verified: true 
+      });
+      logger.info('Admin user created (Verified)');
     }
   } catch (error) {
     logger.error('Error seeding users:', error.message);
