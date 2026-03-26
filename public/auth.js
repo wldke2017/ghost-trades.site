@@ -397,6 +397,14 @@ async function handleRegister() {
         return;
     }
 
+    // Add loading state to button
+    const registerBtn = document.querySelector('#register-form button');
+    const originalBtnText = registerBtn ? registerBtn.innerHTML : 'CREATE ACCOUNT';
+    if (registerBtn) {
+        registerBtn.disabled = true;
+        registerBtn.innerHTML = 'PROCESSING...';
+    }
+
     try {
         const response = await fetch('/auth/register', {
             method: 'POST',
@@ -448,6 +456,13 @@ async function handleRegister() {
     } catch (error) {
         console.error('Registration error:', error);
         showToast('Registration error: ' + error.message, 'error');
+    } finally {
+        // Restore button state
+        if (registerBtn) {
+            registerBtn.disabled = false;
+            registerBtn.style.opacity = '1';
+            registerBtn.innerHTML = originalBtnText;
+        }
     }
 }
 
