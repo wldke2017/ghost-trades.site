@@ -153,6 +153,22 @@ if (require.main === module) {
   server.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);
     logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // Keep-alive: self-ping every 10 minutes to prevent Render free tier from sleeping
+    if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
+      const https = require('https');
+      const http = require('http');
+      setInterval(() => {
+        const url = process.env.APP_URL + '/health';
+        const client = url.startsWith('https') ? https : http;
+        client.get(url, (res) => {
+          logger.info(`Keep-alive ping → ${url} [${res.statusCode}]`);
+        }).on('error', (err) => {
+          logger.warn(`Keep-alive ping failed: ${err.message}`);
+        });
+      }, 10 * 60 * 1000); // every 10 minutes
+      logger.info('Keep-alive ping scheduled every 10 minutes.');
+    }
   });
 
   process.on('SIGTERM', () => {
