@@ -32,7 +32,7 @@ async function sendEmail(to, subject, html) {
             body: JSON.stringify({
                 sender: { 
                   name: 'SecureEscrow Verification', 
-                  email: 'notifications@myescrow.site' 
+                  email: 'luckymutisya83@10884994.brevosend.com' 
                 },
                 replyTo: {
                   email: 'luckymutisya83@gmail.com'
