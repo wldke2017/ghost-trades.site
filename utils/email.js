@@ -5,12 +5,13 @@ require('dotenv').config();
 
 // Create transporter
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // Fix to Gmail for now to ensure stability
-    port: 465, // Force 465 (SSL)
-    secure: true, // Force secure true
-    // DEFINITIVE FIX: Force only IPv4 lookup to bypass failing IPv6 routes
-    lookup: (hostname, options, callback) => {
-        dns.lookup(hostname, { family: 4 }, callback);
+    // BRUTE FORCE FIX: Use direct IPv4 address for Gmail to bypass all IPv6/DNS issues
+    host: '64.233.184.108', 
+    port: 465, 
+    secure: true,
+    tls: {
+        // Required when using IP address as host to verify the SSL certificate
+        servername: 'smtp.gmail.com'
     },
     auth: {
         user: (process.env.SMTP_USER || '').trim(),
