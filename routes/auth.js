@@ -36,9 +36,6 @@ router.post('/register', authLimiter, validate('register'), async (req, res, nex
             return res.status(400).json({ error: 'Username already exists' });
         }
 
-        const otpCode = generateOTP();
-        const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
-
         logger.info(`[AUTH] Attempting to register user: ${username} (${email})`);
         const newUser = await User.create({
             username,
@@ -48,25 +45,27 @@ router.post('/register', authLimiter, validate('register'), async (req, res, nex
             email,
             phone_number,
             country,
-            otp_code: otpCode,
-            otp_expires_at: otpExpiresAt,
             is_verified: false
         }, { transaction: authTransaction });
 
         await authTransaction.commit();
-        logger.info(`[AUTH] User created successfully: ${username}. Triggering OTP email.`);
+        logger.info(`[AUTH] User created successfully: ${username}. Logging in immediately.`);
 
-        const emailSent = await sendOTPEmail(email, full_name, otpCode, 'Registration Verification');
-        if (!emailSent) {
-            logger.error(`[AUTH] Failed to send registration OTP email to: ${email}`);
-        } else {
-            logger.info(`[AUTH] Registration OTP email sent successfully to: ${email}`);
-        }
+        const token = jwt.sign(
+            { id: newUser.id, username: newUser.username, role: newUser.role },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
 
         res.status(201).json({
-            message: 'User registered. Please verify your email.',
-            requires_verification: true,
-            email: newUser.email
+            message: 'User registered successfully. You can verify your email later in settings for a verified badge.',
+            token,
+            user: {
+                id: newUser.id,
+                username: newUser.username,
+                role: newUser.role,
+                is_verified: false
+            }
         });
     } catch (error) {
         if (authTransaction) await authTransaction.rollback();
@@ -101,16 +100,7 @@ router.post('/login', authLimiter, validate('login'), async (req, res, next) => 
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Admins are exempt from OTP verification block (prevents lockout of existing admin accounts)
-        if (!user.is_verified && user.role !== 'admin') {
-            logger.info(`[AUTH] Login blocked: User ${username} is not verified. Redirecting to OTP.`);
-            return res.status(403).json({ 
-                error: 'Please verify your email address to log in.', 
-                requires_verification: true, 
-                email: user.email 
-            });
-        }
-
+        // All active users can log in. Verification is now post-login.
         logger.info(`[AUTH] Login successful for user: ${username} (Role: ${user.role})`);
 
         const token = jwt.sign(

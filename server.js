@@ -171,13 +171,21 @@ if (require.main === module) {
       const https = require('https');
       const url = process.env.RENDER_EXTERNAL_URL;
       
+      logger.info(`[SYSTEM] Initializing self-ping for ${url} (Interval: 5m)`);
+
       setInterval(() => {
         https.get(`${url}/health`, (res) => {
-          logger.info(`Self-ping successful: ${res.statusCode}`);
+          if (res.statusCode === 200) {
+            logger.info(`[SYSTEM] Self-ping successful: ${res.statusCode} (App is Awake)`);
+          } else {
+            logger.warn(`[SYSTEM] Self-ping returned non-200 status: ${res.statusCode}`);
+          }
         }).on('error', (err) => {
-          logger.error('Self-ping failed:', err.message);
+          logger.error(`[SYSTEM] Self-ping failed: ${err.message}`);
         });
-      }, 10 * 60 * 1000); // Ping every 10 minutes
+      }, 5 * 60 * 1000); // Ping every 5 minutes (more aggressive for free tier)
+    } else if (process.env.NODE_ENV === 'production') {
+      logger.warn('[SYSTEM] RENDER_EXTERNAL_URL is not set. Self-ping disabled.');
     }
   });
 

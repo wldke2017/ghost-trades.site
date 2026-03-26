@@ -99,6 +99,15 @@ router.post('/withdrawal', authenticateToken, transactionLimiter, validate('tran
             return res.status(400).json({ error: 'Valid M-Pesa phone number (254XXXXXXXXX) is required' });
         }
 
+        const user = await User.findByPk(req.user.id);
+        if (!user || (!user.is_verified && user.role !== 'admin')) {
+            return res.status(403).json({ 
+                error: 'Verification Required', 
+                message: 'Please verify your email address in settings to enable withdrawals.',
+                requires_verification: true 
+            });
+        }
+
         const wallet = await Wallet.findOne({ where: { user_id: req.user.id } });
 
         if (!wallet || parseFloat(wallet.available_balance) < parseFloat(amount)) {
