@@ -127,7 +127,7 @@ router.post('/login', authLimiter, validate('login'), async (req, res, next) => 
 router.get('/me', authenticateToken, async (req, res, next) => {
     try {
         const user = await User.findByPk(req.user.id, {
-            attributes: ['id', 'username', 'role', 'createdAt', 'avatar_path', 'mpesa_number', 'currency_preference', 'full_name', 'email', 'phone_number', 'country']
+            attributes: ['id', 'username', 'role', 'createdAt', 'avatar_path', 'mpesa_number', 'currency_preference', 'full_name', 'email', 'phone_number', 'country', 'is_verified']
         });
 
         if (!user) {
