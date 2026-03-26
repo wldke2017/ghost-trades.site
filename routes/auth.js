@@ -51,7 +51,12 @@ router.post('/register', authLimiter, validate('register'), async (req, res) => 
 
         await authTransaction.commit();
 
-        sendOTPEmail(email, full_name, otpCode, 'Registration Verification');
+        const emailSent = await sendOTPEmail(email, full_name, otpCode, 'Registration Verification');
+        if (!emailSent) {
+            console.error(`[OTP] Failed to send OTP email to: ${email}. Check SMTP settings.`);
+        } else {
+            console.log(`[OTP] OTP email sent successfully to: ${email}`);
+        }
 
         res.status(201).json({
             message: 'User registered. Please verify your email.',

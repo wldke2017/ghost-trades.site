@@ -35,10 +35,13 @@ async function sendEmail(to, subject, html) {
         };
 
         const info = await transporter.sendMail(mailOptions);
-        console.log('Email sent: %s', info.messageId);
+        console.log('[EMAIL] Sent successfully:', info.messageId, '→', to);
         return true;
     } catch (error) {
-        console.error('Error sending email:', error);
+        console.error('[EMAIL] Failed to send to:', to);
+        console.error('[EMAIL] Error code:', error.code);
+        console.error('[EMAIL] Error message:', error.message);
+        console.error('[EMAIL] Response:', error.response || 'none');
         return false;
     }
 }
