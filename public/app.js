@@ -479,6 +479,24 @@ function openSettingsModal() {
         document.getElementById('settings-mpesa').value = currentUser.mpesa_number || '';
         document.getElementById('settings-country').value = currentUser.country || '';
 
+        // Verification Status UI
+        const verifySection = document.getElementById('verification-status-section');
+        const verifyBtn = document.getElementById('verify-email-btn');
+        const verifyText = document.getElementById('verification-status-text');
+        const otpSection = document.getElementById('account-otp-section');
+
+        if (verifySection) {
+            if (currentUser.is_verified) {
+                verifySection.classList.add('hidden'); // Hide if already verified
+            } else {
+                verifySection.classList.remove('hidden');
+                verifyText.textContent = 'Unverified';
+                verifyText.className = 'text-sm font-bold text-red-500';
+                verifyBtn.classList.remove('hidden');
+                otpSection.classList.add('hidden');
+            }
+        }
+
         const currencyRadio = document.querySelector(`input[name="currency"][value="${currentUser.currency_preference || 'USD'}"]`);
         if (currencyRadio) currencyRadio.checked = true;
     }
@@ -497,6 +515,22 @@ function openWithdrawModal() {
     const bal = document.getElementById('balance-available')?.innerText || '$0.00';
     document.getElementById('withdraw-available-balance').innerText = bal;
 
+    // Verification Restriction check
+    const restrictMsg = document.getElementById('withdraw-restricted-msg');
+    const withdrawBtn = document.getElementById('withdraw-confirm-btn') || document.querySelector('button[onclick="requestWithdrawal()"]');
+
+    if (restrictMsg && withdrawBtn) {
+        if (currentUser && currentUser.is_verified) {
+            restrictMsg.classList.add('hidden');
+            withdrawBtn.disabled = false;
+            withdrawBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            restrictMsg.classList.remove('hidden');
+            withdrawBtn.disabled = true;
+            withdrawBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
     // Pre-fill phone number if available
     if (currentUser && currentUser.mpesa_number) {
         const phoneInput = document.getElementById('withdraw-phone');
@@ -504,6 +538,59 @@ function openWithdrawModal() {
     }
 
     openModal('withdraw-modal');
+}
+
+// Verification Flow Functions
+async function requestAccountVerification() {
+    if (!currentUser || !currentUser.email) return showToast('Email not found', 'error');
+
+    try {
+        const response = await fetch('/auth/resend-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: currentUser.email })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Verification code sent to ' + currentUser.email, 'success');
+            document.getElementById('account-otp-section').classList.remove('hidden');
+        } else {
+            showToast(data.error || 'Failed to send code', 'error');
+        }
+    } catch (e) { showToast('Connection error', 'error'); }
+}
+
+async function submitAccountVerification() {
+    const code = document.getElementById('account-otp-code').value;
+    if (!code || code.length < 6) return showToast('Please enter the 6-digit code', 'error');
+
+    try {
+        const response = await fetch('/auth/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: currentUser.email, otp_code: code })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Account verified successfully!', 'success');
+
+            // Update local state
+            currentUser.is_verified = true;
+            localStorage.setItem('userData', JSON.stringify(currentUser));
+
+            // Refresh UI
+            updateUserDisplay();
+            openSettingsModal(); // Refresh the settings modal view
+            
+            // Clean up
+            document.getElementById('account-otp-code').value = '';
+            document.getElementById('account-otp-section').classList.add('hidden');
+        } else {
+            showToast(data.error || 'Verification failed', 'error');
+        }
+    } catch (e) { showToast('Connection error', 'error'); }
 }
 
 
@@ -715,7 +802,16 @@ function updateUserDisplay() {
     if (typeof window !== 'undefined' && window.currentUsername) {
         const usernameEl = document.getElementById('header-username');
         if (usernameEl) {
-            usernameEl.textContent = window.currentUsername;
+            // Note: we keep the original structure from index.html
+            const badge = document.getElementById('header-verified-badge');
+            if (currentUser && currentUser.is_verified) {
+                if (badge) badge.classList.remove('hidden');
+            } else {
+                if (badge) badge.classList.add('hidden');
+            }
+            // Update node text if needed, but here we just update name
+            // The first child is the text node in our new structure
+            usernameEl.childNodes[0].textContent = window.currentUsername + ' ';
         }
     }
 }

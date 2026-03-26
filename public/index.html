@@ -110,7 +110,12 @@
                         </div>
                         <div class="text-sm">
                             <p class="text-gray-400 text-xs">Welcome back,</p>
-                            <p id="header-username" class="font-bold text-white leading-none">User</p>
+                            <p id="header-username" class="font-bold text-white leading-none inline-flex items-center">
+                                User
+                                <span id="header-verified-badge" class="hidden ml-1" title="Verified Account">
+                                    <i class="ti ti-circle-check-filled text-orange-500 text-[10px]"></i>
+                                </span>
+                            </p>
                         </div>
                     </div>
 
@@ -381,6 +386,29 @@
                 </button>
             </div>
             <div class="p-8 space-y-6">
+                <!-- Verification Status Section -->
+                <div id="verification-status-section" class="bg-gray-900/50 border border-gray-700/50 rounded-2xl p-4 hidden">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Account Status</p>
+                            <p id="verification-status-text" class="text-sm font-bold text-red-500">Unverified</p>
+                        </div>
+                        <button id="verify-email-btn" onclick="requestAccountVerification()" class="px-3 py-1.5 bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20">Verify Now</button>
+                    </div>
+                    
+                    <div id="account-otp-section" class="hidden mt-4 pt-4 border-t border-gray-800 space-y-3">
+                        <p class="text-[10px] text-gray-400">Enter the 6-digit code sent to your email:</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="account-otp-code" maxlength="6" class="flex-1 bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-center font-mono tracking-[0.3em] outline-none focus:border-orange-500/50" placeholder="------">
+                            <button onclick="submitAccountVerification()" class="px-4 py-2 bg-green-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-green-700 transition-colors">Submit</button>
+                        </div>
+                        <div class="flex justify-between items-center px-1">
+                             <button onclick="requestAccountVerification()" class="text-[10px] font-bold text-gray-500 hover:text-orange-400 uppercase tracking-tighter">Resend Code</button>
+                             <button onclick="document.getElementById('account-otp-section').classList.add('hidden')" class="text-[10px] font-bold text-gray-600 hover:text-gray-400 uppercase tracking-tighter">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- User Info Readonly -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -773,6 +801,18 @@
                 </button>
             </div>
             <div class="p-8 space-y-6">
+                <!-- Withdrawal Restriction Warning -->
+                <div id="withdraw-restricted-msg" class="hidden bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
+                    <div class="flex items-start gap-3">
+                        <i class="ti ti-alert-triangle text-red-500 text-xl mt-0.5"></i>
+                        <div>
+                            <p class="text-xs text-red-400 font-bold uppercase tracking-wider mb-1">Access Restricted</p>
+                            <p class="text-[11px] text-gray-400 leading-relaxed font-medium">Your account is currently <span class="text-red-500 font-bold">Unverified</span>. Withdrawals are reserved for verified users to ensure platform integrity.</p>
+                            <button onclick="closeModal('withdraw-modal'); openSettingsModal();" class="mt-3 text-[10px] bg-red-500/20 hover:bg-red-500/30 text-red-500 px-3 py-1.5 rounded-lg border border-red-500/20 font-black uppercase tracking-widest transition-all">Verify Email Now</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
                     <div class="flex justify-between mb-1">
                         <span class="text-xs text-orange-400 font-bold">Available to Withdraw</span>
@@ -812,7 +852,7 @@
                         applies.</p>
                 </div>
 
-                <button onclick="requestWithdrawal()"
+                <button id="withdraw-confirm-btn" onclick="requestWithdrawal()"
                     class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-orange-600/20">
                     Request Withdrawal
                 </button>
