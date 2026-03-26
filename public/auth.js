@@ -319,7 +319,9 @@ async function handleLogin() {
             body: JSON.stringify({ username, password }),
         });
 
-        const data = await response.json();
+        const data = response.headers.get('content-type')?.includes('application/json') 
+            ? await response.json() 
+            : { error: await response.text() };
 
         if (response.ok) {
             localStorage.setItem('authToken', data.token);
@@ -409,8 +411,9 @@ async function handleRegister() {
                 country
             }),
         });
-
-        const data = await response.json();
+        const data = response.headers.get('content-type')?.includes('application/json') 
+            ? await response.json() 
+            : { error: await response.text() };
 
         if (response.ok) {
             if (data.requires_verification) {
