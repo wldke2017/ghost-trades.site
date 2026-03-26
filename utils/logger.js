@@ -44,11 +44,9 @@ const logger = winston.createLogger({
   ]
 });
 
-// Add console transport in development
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: consoleFormat
-  }));
-}
+// Add console transport for visibility in both dev and production
+logger.add(new winston.transports.Console({
+  format: process.env.NODE_ENV === 'production' ? logFormat : consoleFormat
+}));
 
 module.exports = logger;
