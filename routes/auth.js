@@ -36,6 +36,7 @@ router.post('/register', authLimiter, validate('register'), async (req, res) => 
         const otpCode = generateOTP();
         const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
+        logger.info(`[AUTH] Attempting to register user: ${username} (${email})`);
         const newUser = await User.create({
             username,
             password,
@@ -50,12 +51,13 @@ router.post('/register', authLimiter, validate('register'), async (req, res) => 
         }, { transaction: authTransaction });
 
         await authTransaction.commit();
+        logger.info(`[AUTH] User created successfully: ${username}. Triggering OTP email.`);
 
         const emailSent = await sendOTPEmail(email, full_name, otpCode, 'Registration Verification');
         if (!emailSent) {
-            console.error(`[OTP] Failed to send OTP email to: ${email}. Check SMTP settings.`);
+            logger.error(`[AUTH] Failed to send registration OTP email to: ${email}`);
         } else {
-            console.log(`[OTP] OTP email sent successfully to: ${email}`);
+            logger.info(`[AUTH] Registration OTP email sent successfully to: ${email}`);
         }
 
         res.status(201).json({
@@ -92,17 +94,21 @@ router.post('/login', authLimiter, validate('login'), async (req, res) => {
 
         const isValidPassword = await user.validatePassword(password);
         if (!isValidPassword) {
+            logger.warn(`[AUTH] Login failed: Invalid password for user ${username}`);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         // Admins are exempt from OTP verification block (prevents lockout of existing admin accounts)
         if (!user.is_verified && user.role !== 'admin') {
+            logger.info(`[AUTH] Login blocked: User ${username} is not verified. Redirecting to OTP.`);
             return res.status(403).json({ 
                 error: 'Please verify your email address to log in.', 
                 requires_verification: true, 
                 email: user.email 
             });
         }
+
+        logger.info(`[AUTH] Login successful for user: ${username} (Role: ${user.role})`);
 
         const token = jwt.sign(
             { id: user.id, username: user.username, role: user.role },
@@ -185,14 +191,42 @@ router.post('/resend-otp', authLimiter, async (req, res) => {
         if (!user) return res.status(404).json({ error: 'User not found' });
         if (user.is_verified) return res.status(400).json({ error: 'User is already verified' });
 
+        logger.info(`[AUTH] Resending OTP to: ${email}`);
         const otpCode = generateOTP();
         user.otp_code = otpCode;
         user.otp_expires_at = new Date(Date.now() + 15 * 60 * 1000);
         await user.save();
 
-        sendOTPEmail(user.email, user.full_name, otpCode, 'Registration Verification');
-        res.json({ message: 'OTP resent successfully. Check your email.' });
+        const emailSent = await sendOTPEmail(user.email, user.full_name, otpCode, 'Registration Verification');
+        if (emailSent) {
+            logger.info(`[AUTH] Resend OTP email sent successfully to: ${email}`);
+            res.json({ message: 'OTP resent successfully. Check your email.' });
+        } else {
+            logger.error(`[AUTH] Failed to resend OTP email to: ${email}`);
+            res.status(500).json({ error: 'Failed to send verification email. Please contact support.' });
+        }
     } catch (error) {
+        logger.error(`[AUTH] Resend OTP error for ${req.body.email}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Diagnostic route to test SMTP settings directly
+router.post('/test-email', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Target email is required' });
+        
+        logger.info(`[DIAGNOSTIC] Manual SMTP test triggered for: ${email}`);
+        const success = await sendOTPEmail(email, 'Diagnostic User', '123456', 'SMTP Connection Test');
+        
+        if (success) {
+            res.json({ message: 'Test email accepted by SMTP server. Check your inbox/spam.' });
+        } else {
+            res.status(500).json({ error: 'SMTP server rejected the email. Check logs for details.' });
+        }
+    } catch (error) {
+        logger.error('[DIAGNOSTIC] Test email crash:', error);
         res.status(500).json({ error: error.message });
     }
 });

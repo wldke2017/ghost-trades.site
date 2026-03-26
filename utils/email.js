@@ -1,15 +1,20 @@
 const nodemailer = require('nodemailer');
+const logger = require('./logger');
 require('dotenv').config();
 
 // Create transporter
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
+    port: parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
     auth: {
         user: (process.env.SMTP_USER || '').trim(),
         pass: (process.env.SMTP_PASS || '').trim(),
     },
+    // Add timeouts to prevent hanging in production
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
 });
 
 /**
@@ -20,9 +25,7 @@ const transporter = nodemailer.createTransport({
  */
 async function sendEmail(to, subject, html) {
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        console.warn('SMTP credentials not configured. Email not sent to:', to);
-        console.warn('Email Subject:', subject);
-        console.warn('Email HTML:', html);
+        logger.warn(`[EMAIL] SMTP credentials not configured. Skipping email to: ${to}`);
         return false;
     }
 
@@ -34,14 +37,18 @@ async function sendEmail(to, subject, html) {
             html,
         };
 
+        logger.info(`[EMAIL] Attempting to send email to: ${to} (Subject: ${subject})`);
         const info = await transporter.sendMail(mailOptions);
-        console.log('[EMAIL] Sent successfully:', info.messageId, '→', to);
+        logger.info(`[EMAIL] Sent successfully: ${info.messageId} → ${to}`);
         return true;
     } catch (error) {
-        console.error('[EMAIL] Failed to send to:', to);
-        console.error('[EMAIL] Error code:', error.code);
-        console.error('[EMAIL] Error message:', error.message);
-        console.error('[EMAIL] Response:', error.response || 'none');
+        logger.error(`[EMAIL] Failed to send email to: ${to}`, {
+            errorCode: error.code,
+            errorMessage: error.message,
+            command: error.command,
+            response: error.response,
+            stack: error.stack
+        });
         return false;
     }
 }
