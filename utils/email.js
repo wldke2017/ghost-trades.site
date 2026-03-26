@@ -1,26 +1,23 @@
+const dns = require('dns');
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
-const dns = require('dns');
 require('dotenv').config();
-
-// Force IPv4 globally for this module to bypass IPv6 ENETUNREACH errors on Render
-if (typeof dns.setDefaultResultOrder === 'function') {
-    dns.setDefaultResultOrder('ipv4first');
-}
 
 // Create transporter
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com', // Fix to Gmail for now to ensure stability
     port: 465, // Force 465 (SSL)
     secure: true, // Force secure true
+    // DEFINITIVE FIX: Force only IPv4 lookup to bypass failing IPv6 routes
+    lookup: (hostname, options, callback) => {
+        dns.lookup(hostname, { family: 4 }, callback);
+    },
     auth: {
         user: (process.env.SMTP_USER || '').trim(),
         pass: (process.env.SMTP_PASS || '').trim(),
     },
     // Use pooling for better performance on rapid requests
     pool: true,
-    // Force IPv4 as some hosting environments (like Render) have issues with IPv6 to Gmail
-    family: 4, 
     // Add timeouts to prevent hanging in production
     connectionTimeout: 20000, // 20 seconds
     greetingTimeout: 20000,
