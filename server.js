@@ -154,20 +154,18 @@ if (require.main === module) {
     logger.info(`Server running on port ${PORT}`);
     logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
-    // Keep-alive: self-ping every 10 minutes to prevent Render free tier from sleeping
-    if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
+    // Self-pinging to prevent Render from sleeping (free tier)
+    if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
       const https = require('https');
-      const http = require('http');
+      const url = process.env.RENDER_EXTERNAL_URL;
+      
       setInterval(() => {
-        const url = process.env.APP_URL + '/health';
-        const client = url.startsWith('https') ? https : http;
-        client.get(url, (res) => {
-          logger.info(`Keep-alive ping → ${url} [${res.statusCode}]`);
+        https.get(`${url}/health`, (res) => {
+          logger.info(`Self-ping successful: ${res.statusCode}`);
         }).on('error', (err) => {
-          logger.warn(`Keep-alive ping failed: ${err.message}`);
+          logger.error('Self-ping failed:', err.message);
         });
-      }, 10 * 60 * 1000); // every 10 minutes
-      logger.info('Keep-alive ping scheduled every 10 minutes.');
+      }, 10 * 60 * 1000); // Ping every 10 minutes
     }
   });
 
