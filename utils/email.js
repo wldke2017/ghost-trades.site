@@ -31,8 +31,11 @@ async function sendEmail(to, subject, html) {
             },
             body: JSON.stringify({
                 sender: { 
-                  name: 'SecureEscrow', 
-                  email: process.env.SMTP_USER || 'luckymutisya83@gmail.com' 
+                  name: 'SecureEscrow Verification', 
+                  email: 'notifications@myescrow.site' 
+                },
+                replyTo: {
+                  email: 'luckymutisya83@gmail.com'
                 },
                 to: [{ email: to }],
                 subject: subject,
