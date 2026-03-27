@@ -143,6 +143,7 @@ const orderRoutes = require('./routes/orders');
 const adminRoutes = require('./routes/admin');
 const mpesaRoutes = require('./routes/mpesa');
 const aiStrategyRoutes = require('./routes/ai_strategy');
+const depositRoutes = require('./routes/deposits');
 
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
@@ -152,6 +153,7 @@ app.use('/orders', orderRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/mpesa', mpesaRoutes);
 app.use('/api/ai', aiStrategyRoutes);
+app.use('/api/deposits', depositRoutes);
 
 // Health Check Endpoint for Render
 app.get('/health', (req, res) => res.status(200).send('OK'));

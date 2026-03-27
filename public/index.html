@@ -546,6 +546,8 @@
                     class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Agent</button>
                 <button onclick="switchDepositTab('crypto')" id="tab-crypto"
                     class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Crypto</button>
+                <button onclick="switchDepositTab('card')" id="tab-card"
+                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap italic">Global Card</button>
             </div>
 
             <div class="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
@@ -782,6 +784,32 @@
                             Confirm Deposit
                         </button>
                     </div>
+                </div>
+
+                <!-- CARD TAB (FLUTTERWAVE) -->
+                <div id="deposit-card-content" class="hidden space-y-6 animate-fade-in">
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center space-x-3">
+                        <div class="flex space-x-1">
+                            <i class="ti ti-brand-visa text-blue-400 text-2xl"></i>
+                            <i class="ti ti-brand-mastercard text-red-400 text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-white">Credit / Debit Card</p>
+                            <p class="text-xs text-blue-400">Global • Instant • Flutterwave</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (USD)</label>
+                        <input type="number" id="card-deposit-amount" placeholder="e.g. 50"
+                            class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-4 text-xl font-mono text-white focus:outline-none focus:border-blue-500 transition-colors">
+                        <p class="text-[10px] text-gray-500 mt-2 px-1">Note: Payments are processed in your local currency at the mid-market rate.</p>
+                    </div>
+
+                    <button onclick="initiateCardDeposit()"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-600/20">
+                        Pay with Card
+                    </button>
                 </div>
             </div>
         </div>

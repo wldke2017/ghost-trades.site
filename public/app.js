@@ -844,30 +844,63 @@ function updateUserDisplay() {
 // Deposit Tab Switching
 function switchDepositTab(tab) {
     // Hide all
-    document.getElementById('deposit-mpesa-content').classList.add('hidden');
-    document.getElementById('deposit-agent-content').classList.add('hidden');
-    document.getElementById('deposit-crypto-content').classList.add('hidden');
+    const contents = ['mpesa', 'agent', 'crypto', 'card'];
+    contents.forEach(c => {
+        const el = document.getElementById(`deposit-${c}-content`);
+        if (el) el.classList.add('hidden');
+    });
 
     // Reset styles
-    ['mpesa', 'agent', 'crypto'].forEach(t => {
+    ['mpesa', 'agent', 'crypto', 'card'].forEach(t => {
         const el = document.getElementById(`tab-${t}`);
-        el.classList.remove('text-green-500', 'border-b-2', 'border-green-500', 'text-blue-500', 'border-blue-500', 'text-gray-500');
-        el.classList.add('text-gray-500');
-        el.style.borderBottom = 'none';
+        if (el) {
+            el.classList.remove('text-green-500', 'border-green-500', 'text-blue-500', 'border-blue-500', 'text-orange-500', 'border-orange-500', 'border-b-2', 'text-gray-500');
+            el.classList.add('text-gray-500');
+            el.style.borderBottom = 'none';
+        }
     });
 
     // Show selected
-    document.getElementById(`deposit-${tab}-content`).classList.remove('hidden');
+    const activeContent = document.getElementById(`deposit-${tab}-content`);
+    if (activeContent) activeContent.classList.remove('hidden');
 
     const activeBtn = document.getElementById(`tab-${tab}`);
-    activeBtn.classList.remove('text-gray-500');
+    if (activeBtn) {
+        activeBtn.classList.remove('text-gray-500');
+        activeBtn.classList.add('border-b-2');
+        
+        if (tab === 'mpesa') {
+            activeBtn.classList.add('text-green-500', 'border-green-500');
+        } else if (tab === 'crypto') {
+            activeBtn.classList.add('text-blue-500', 'border-blue-500');
+        } else if (tab === 'card') {
+            activeBtn.classList.add('text-blue-400', 'border-blue-400', 'italic');
+        } else {
+            activeBtn.classList.add('text-orange-500', 'border-orange-500');
+        }
+    }
+}
 
-    if (tab === 'mpesa') {
-        activeBtn.classList.add('text-green-500', 'border-b-2', 'border-green-500');
-    } else if (tab === 'crypto') {
-        activeBtn.classList.add('text-blue-500', 'border-b-2', 'border-blue-500');
-    } else {
-        activeBtn.classList.add('text-orange-500', 'border-b-2', 'border-orange-500');
+async function initiateCardDeposit() {
+    const amount = document.getElementById('card-deposit-amount').value;
+    if (!amount || amount <= 0) return showToast('Please enter a valid amount', 'error');
+
+    try {
+        showToast('Initiating secure payment...', 'info');
+        const response = await authenticatedFetch('/api/deposits/card-initiate', { 
+            method: 'POST',
+            body: JSON.stringify({ amount: parseFloat(amount) })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.link) {
+            window.location.href = data.link; // Redirect to Flutterwave checkout
+        } else {
+            showToast(data.error || 'Failed to initiate card payment', 'error');
+        }
+    } catch (e) { 
+        console.error('Card deposit error:', e);
+        showToast('Connection error', 'error'); 
     }
 }
 
