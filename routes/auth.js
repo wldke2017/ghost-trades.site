@@ -143,7 +143,38 @@ router.get('/me', authenticateToken, async (req, res, next) => {
     }
 });
 
-// Verify OTP
+// One-click Verify via Link
+router.get('/verify-link', async (req, res, next) => {
+    try {
+        const { email, code } = req.query;
+        if (!email || !code) return res.send('<h1>Invalid Link</h1><p>Missing email or code.</p>');
+
+        const user = await User.findOne({ where: { email } });
+        if (!user) return res.send('<h1>User Not Found</h1>');
+
+        if (user.otp_code !== code || user.otp_expires_at < new Date()) {
+            return res.send('<h1>Expired Link</h1><p>This verification link has expired or is invalid. Please request a new one from your settings.</p>');
+        }
+
+        user.is_verified = true;
+        user.otp_code = null;
+        user.otp_expires_at = null;
+        await user.save();
+
+        // Redirect to a success page or the main app
+        res.send(`
+            <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+                <h1 style="color: #10b981;">Verification Successful!</h1>
+                <p>Your account is now verified. You can close this window and refresh your dashboard.</p>
+                <a href="/" style="display: inline-block; padding: 10px 20px; background: #f97316; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">Back to Dashboard</a>
+            </div>
+        `);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Verify OTP (Traditional Code Entry)
 router.post('/verify-otp', authLimiter, async (req, res, next) => {
     try {
         const { email, otp_code } = req.body;

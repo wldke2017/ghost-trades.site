@@ -31,8 +31,8 @@ async function sendEmail(to, subject, html) {
             },
             body: JSON.stringify({
                 sender: { 
-                  name: 'SecureEscrow Verification', 
-                  email: 'luckymutisya83@10884994.brevosend.com' 
+                  name: 'SecureEscrow', 
+                  email: 'luckymutisya83@gmail.com' // Changed to verified personal email
                 },
                 replyTo: {
                   email: 'luckymutisya83@gmail.com'
@@ -87,11 +87,20 @@ async function sendOTPEmail(to, name, otpCode, purpose = 'Verification') {
             </p>
             
             <div style="background-color: #fff7ed; border: 2px dashed #fdba74; border-radius: 12px; padding: 24px; text-align: center; margin: 30px 0;">
+                <p style="margin: 0 0 10px 0; color: #9a3412; font-size: 14px; font-weight: bold;">Your 6-Digit Code</p>
                 <span style="font-size: 36px; font-weight: bold; color: #f97316; letter-spacing: 6px;">${otpCode}</span>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <p style="color: #6b7280; font-size: 14px; margin-bottom: 15px;">Or verify with one click:</p>
+                <a href="https://ghost-trades.site/auth/verify-link?email=${encodeURIComponent(to)}&code=${otpCode}" 
+                   style="background-color: #f97316; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                   Verify My Account
+                </a>
             </div>
             
             <p style="color: #6b7280; font-size: 14px;">
-                This code will expire in <strong>15 minutes</strong>. If you did not request this, please ignore this email or contact support if you have concerns.
+                This link and code will expire in <strong>15 minutes</strong>. If you did not request this, please ignore this email.
             </p>
             
             <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;">
