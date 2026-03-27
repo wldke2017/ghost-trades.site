@@ -64,6 +64,7 @@ router.post('/register', authLimiter, validate('register'), async (req, res, nex
                 id: newUser.id,
                 username: newUser.username,
                 role: newUser.role,
+                email: newUser.email,
                 is_verified: false
             }
         });
@@ -115,7 +116,9 @@ router.post('/login', authLimiter, validate('login'), async (req, res, next) => 
             user: {
                 id: user.id,
                 username: user.username,
-                role: user.role
+                role: user.role,
+                email: user.email,
+                is_verified: user.is_verified
             }
         });
     } catch (error) {

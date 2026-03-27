@@ -542,43 +542,65 @@ function openWithdrawModal() {
 
 // Verification Flow Functions
 async function requestAccountVerification() {
-    if (!currentUser || !currentUser.email) return showToast('Email not found', 'error');
+    console.log('[Verify] Requesting OTP. Current Email:', currentUser?.email);
+    
+    // If email is missing, try to fetch it first from the server
+    if (!currentUser || !currentUser.email) {
+        console.warn('[Verify] Email missing from local state. Fetching fresh profile...');
+        showToast('Refreshing profile...', 'info');
+        await fetchUserInfo(); // This refreshes currentUser from /auth/me
+    }
+
+    if (!currentUser || !currentUser.email) {
+        console.error('[Verify] No email found after refresh.');
+        return showToast('Unable to find your email address. Please contact support.', 'error');
+    }
 
     try {
-        const response = await fetch('/auth/resend-otp', {
+        const response = await authenticatedFetch('/auth/resend-otp', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: currentUser.email })
         });
-
+        
         const data = await response.json();
+        console.log('[Verify] OTP Request Status:', response.status);
+
         if (response.ok) {
             showToast('Verification code sent to ' + currentUser.email, 'success');
             document.getElementById('account-otp-section').classList.remove('hidden');
+            document.getElementById('verify-email-btn').textContent = 'Resend Code';
         } else {
             showToast(data.error || 'Failed to send code', 'error');
         }
-    } catch (e) { showToast('Connection error', 'error'); }
+    } catch (e) { 
+        console.error('[Verify] Network error:', e);
+        showToast('Connection error. Is the server running?', 'error'); 
+    }
 }
 
 async function submitAccountVerification() {
     const code = document.getElementById('account-otp-code').value;
+    console.log('[Verify] Submitting OTP:', code);
     if (!code || code.length < 6) return showToast('Please enter the 6-digit code', 'error');
 
     try {
-        const response = await fetch('/auth/verify-otp', {
+        const response = await authenticatedFetch('/auth/verify-otp', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: currentUser.email, otp_code: code })
         });
 
         const data = await response.json();
+        console.log('[Verify] Verify Response:', { status: response.status, data });
+
         if (response.ok) {
             showToast('Account verified successfully!', 'success');
-
-            // Update local state
+            
+            // Update local state and global vars
             currentUser.is_verified = true;
             localStorage.setItem('userData', JSON.stringify(currentUser));
+            if (typeof window !== 'undefined') {
+                window.currentUserVerified = true;
+            }
 
             // Refresh UI
             updateUserDisplay();
@@ -590,7 +612,10 @@ async function submitAccountVerification() {
         } else {
             showToast(data.error || 'Verification failed', 'error');
         }
-    } catch (e) { showToast('Connection error', 'error'); }
+    } catch (e) { 
+        console.error('[Verify] Connection error during submission:', e);
+        showToast('Connection error', 'error'); 
+    }
 }
 
 
