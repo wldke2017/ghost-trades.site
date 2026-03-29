@@ -42,9 +42,9 @@ router.get('/stats/global', authenticateToken, async (req, res, next) => {
         const totalClaimed = await Order.count({ where: { status: 'CLAIMED' } });
         const totalSettled = await Order.count({ where: { status: 'COMPLETED' } });
 
-        // Total commission (5% of all COMPLETED orders)
+        // Total commission (2.5% of all COMPLETED orders)
         const completedOrders = await Order.findAll({ where: { status: 'COMPLETED' } });
-        const totalCommission = completedOrders.reduce((sum, o) => sum + (parseFloat(o.amount) * 0.05), 0);
+        const totalCommission = completedOrders.reduce((sum, o) => sum + (parseFloat(o.amount) * 0.025), 0);
 
         res.json({
             totalCreated,
@@ -191,7 +191,7 @@ router.post('/:id/complete', authenticateToken, isMiddleman, async (req, res, ne
 // Maps to /orders/:id/release in original server.js
 router.post('/:id/release', authenticateToken, isAdmin, async (req, res, next) => {
     try {
-        // Commission rate hardcoded in server.js as 0.05. Using default from service (0.05).
+        // Commission rate hardcoded as 0.025 (2.5%).
         const result = await orderService.completeOrder(req.params.id);
 
         const io = req.app.get('socketio');

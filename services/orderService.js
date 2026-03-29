@@ -183,7 +183,7 @@ async function claimOrder(middlemanId, orderId) {
 /**
  * Complete order (Release funds with commission)
  */
-async function completeOrder(orderId, commissionRate = 0.05) {
+async function completeOrder(orderId, commissionRate = 0.025) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -352,7 +352,7 @@ async function resolveDispute(orderId, winner) {
     }
 
     const orderAmount = parseFloat(order.amount);
-    const commissionRate = parseFloat(process.env.COMMISSION_RATE || 0.05);
+    const commissionRate = parseFloat(process.env.COMMISSION_RATE || 0.025);
     const commission = orderAmount * commissionRate;
 
     // Get wallets
