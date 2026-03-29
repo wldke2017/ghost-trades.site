@@ -341,7 +341,7 @@ async function fetchAvailableOrders() {
             }
 
             available.forEach(order => {
-                const earn = (parseFloat(order.amount) * 0.05).toFixed(2); // 5% comm
+                const earn = (parseFloat(order.amount) * 0.025).toFixed(2); // 2.5% comm
                 const el = document.createElement('div');
                 el.className = 'bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-orange-500/50 transition-colors group';
                 el.innerHTML = `
