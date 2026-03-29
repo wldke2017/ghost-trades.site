@@ -443,9 +443,20 @@
                             class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-orange-500 outline-none transition-colors">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">M-Pesa Number</label>
-                        <input type="text" id="settings-mpesa" placeholder="2547..."
-                            class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-orange-500 outline-none transition-colors">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">M-Pesa / Phone Number</label>
+                        <div class="flex gap-2">
+                             <select id="settings-phone-code" class="w-24 bg-gray-900 border border-gray-700 rounded-xl px-2 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-all">
+                                <option value="254">🇰🇪 +254</option>
+                                <option value="234">🇳🇬 +234</option>
+                                <option value="1">🇺🇸 +1</option>
+                                <option value="44">🇬🇧 +44</option>
+                                <option value="27">🇿🇦 +27</option>
+                                <option value="256">🇺🇬 +256</option>
+                                <option value="255">🇹🇿 +255</option>
+                            </select>
+                            <input type="text" id="settings-mpesa" placeholder="712345678"
+                                class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all font-mono">
+                        </div>
                     </div>
                 </div>
 
@@ -575,9 +586,15 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
-                        <input type="text" id="deposit-phone" placeholder="254..."
-                            class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number (M-Pesa)</label>
+                        <div class="flex gap-2">
+                            <select id="deposit-phone-code" disabled class="w-24 bg-gray-800 border border-gray-700 rounded-xl px-2 py-3 text-sm text-gray-400 cursor-not-allowed">
+                                <option value="254">🇰🇪 +254</option>
+                            </select>
+                            <input type="text" id="deposit-phone" placeholder="712345678"
+                                class="flex-1 bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors font-mono">
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-1 italic">M-Pesa Express is limited to Kenyan numbers (+254).</p>
                     </div>
 
                     <div id="deposit-status"
@@ -773,6 +790,11 @@
 
                     <div id="txid-area" class="hidden space-y-4 pt-2 border-t border-gray-700">
                         <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Amount (USD)</label>
+                            <input type="number" id="crypto-amount" placeholder="e.g. 50"
+                                class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
+                        </div>
+                        <div class="space-y-2">
                             <label class="block text-xs font-bold text-gray-500 uppercase">Transaction Hash
                                 (TXID)</label>
                             <input type="text" id="crypto-txid" placeholder="Enter transaction hash..."
@@ -863,9 +885,20 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Send to M-Pesa</label>
-                    <input type="text" id="withdraw-phone" placeholder="254..."
-                        class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Withdraw to Phone</label>
+                    <div class="flex gap-2">
+                        <select id="withdraw-phone-code" class="w-24 bg-gray-900 border border-gray-700 rounded-xl px-2 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-all">
+                            <option value="254">🇰🇪 +254</option>
+                            <option value="234">🇳🇬 +234</option>
+                            <option value="1">🇺🇸 +1</option>
+                            <option value="44">🇬🇧 +44</option>
+                            <option value="27">🇿🇦 +27</option>
+                            <option value="256">🇺🇬 +256</option>
+                            <option value="255">🇹🇿 +255</option>
+                        </select>
+                        <input type="text" id="withdraw-phone" placeholder="712345678"
+                            class="flex-1 bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors font-mono">
+                    </div>
                 </div>
 
                 <div>

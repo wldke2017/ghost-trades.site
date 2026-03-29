@@ -199,11 +199,23 @@ function showLoginForm() {
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="space-y-1">
                                         <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Phone Number</label>
-                                        <input type="tel" id="register-phone" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all" placeholder="254...">
+                                        <div class="flex gap-2">
+                                            <select id="register-phone-code" class="w-24 bg-gray-900/50 border border-gray-700/50 rounded-xl px-2 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-all">
+                                                <option value="254">🇰🇪 +254</option>
+                                                <option value="234">🇳🇬 +234</option>
+                                                <option value="1">🇺🇸 +1</option>
+                                                <option value="44">🇬🇧 +44</option>
+                                                <option value="27">🇿🇦 +27</option>
+                                                <option value="256">🇺🇬 +256</option>
+                                                <option value="255">🇹🇿 +255</option>
+                                                <option value="">🏳️ Other</option>
+                                            </select>
+                                            <input type="tel" id="register-phone" class="flex-1 bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all font-mono" placeholder="712345678">
+                                        </div>
                                     </div>
                                     <div class="space-y-1">
                                         <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">Country</label>
-                                        <input type="text" id="register-country" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all">
+                                        <input type="text" id="register-country" class="w-full bg-gray-900/50 border border-gray-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-all" placeholder="e.g. Kenya">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -378,12 +390,18 @@ async function handleRegister() {
     const confirmPassword = document.getElementById('register-confirm-password').value;
     const full_name = document.getElementById('register-fullname').value;
     const email = document.getElementById('register-email').value;
-    const phone_number = document.getElementById('register-phone').value;
-    const country = document.getElementById('register-country').value;
+    const country = document.getElementById('register-country').value.trim();
+    const phoneCode = document.getElementById('register-phone-code').value;
+    const phoneNum = document.getElementById('register-phone').value.trim().replace(/\D/g, ''); // Remove non-digits
     const role = document.getElementById('register-role').value;
 
-    if (!username || !password || !email) {
-        showToast('Please fill in all required fields (Username, Email, Password)', 'error');
+    if (!full_name || !username || !email || !password) {
+        showToast('Please fill in all required fields (Full Name, Username, Email, Password)', 'error');
+        return;
+    }
+
+    if (!phoneNum || !phoneCode) {
+        showToast('Please enter a valid phone number and select a country code', 'error');
         return;
     }
 

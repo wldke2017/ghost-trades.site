@@ -95,8 +95,8 @@ router.post('/withdrawal', authenticateToken, transactionLimiter, validate('tran
         let { amount, phone, notes } = req.body;
         if (phone) phone = phone.trim();
 
-        if (!phone || !/^254[0-9]{9}$/.test(phone)) {
-            return res.status(400).json({ error: 'Valid M-Pesa phone number (254XXXXXXXXX) is required' });
+        if (!phone || phone.length < 7 || phone.length > 20) {
+            return res.status(400).json({ error: 'Valid phone number or account identifier is required' });
         }
 
         const user = await User.findByPk(req.user.id);

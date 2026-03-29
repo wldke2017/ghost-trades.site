@@ -4,6 +4,19 @@
 const API_BASE = ''; // Base path for API calls
 // EXCHANGE_RATE is defined in auth.js
 
+// --- Helper Functions ---
+function splitPhone(phone) {
+    if (!phone) return { code: '254', num: '' };
+    const codes = ['254', '234', '1', '44', '27', '256', '255'];
+    // Sort codes by length descending to match longest first (e.g. 254 before 2)
+    for (let code of codes.sort((a,b) => b.length - a.length)) {
+        if (phone.toString().startsWith(code)) {
+            return { code, num: phone.toString().slice(code.length) };
+        }
+    }
+    return { code: '254', num: phone };
+}
+
 // --- State ---
 let socket;
 currentUser = JSON.parse(localStorage.getItem('userData')) || null;
@@ -476,8 +489,11 @@ function openSettingsModal() {
         document.getElementById('settings-role').value = currentUser.role || 'Middleman';
         document.getElementById('settings-fullname').value = currentUser.full_name || '';
         document.getElementById('settings-email').value = currentUser.email || '';
-        document.getElementById('settings-mpesa').value = currentUser.mpesa_number || '';
         document.getElementById('settings-country').value = currentUser.country || '';
+        
+        const split = splitPhone(currentUser.mpesa_number || '');
+        document.getElementById('settings-phone-code').value = split.code;
+        document.getElementById('settings-mpesa').value = split.num;
 
         // Verification Status UI
         const verifySection = document.getElementById('verification-status-section');
@@ -504,8 +520,12 @@ function openSettingsModal() {
 }
 function openDepositModal() {
     if (currentUser && currentUser.mpesa_number) {
+        const split = splitPhone(currentUser.mpesa_number);
         const phoneInput = document.getElementById('deposit-phone');
-        if (phoneInput) phoneInput.value = currentUser.mpesa_number;
+        // Pre-fill only if it's a 254 number (M-Pesa constraint)
+        if (phoneInput && split.code === '254') {
+            phoneInput.value = split.num;
+        }
     }
     openModal('deposit-modal');
 }
@@ -533,8 +553,11 @@ function openWithdrawModal() {
 
     // Pre-fill phone number if available
     if (currentUser && currentUser.mpesa_number) {
+        const split = splitPhone(currentUser.mpesa_number);
+        const codeInput = document.getElementById('withdraw-phone-code');
         const phoneInput = document.getElementById('withdraw-phone');
-        if (phoneInput) phoneInput.value = currentUser.mpesa_number;
+        if (codeInput) codeInput.value = split.code;
+        if (phoneInput) phoneInput.value = split.num;
     }
 
     openModal('withdraw-modal');
@@ -622,9 +645,11 @@ async function submitAccountVerification() {
 // Deposit Logic
 async function initiateDeposit() {
     const amount = document.getElementById('deposit-amount').value;
-    const phone = document.getElementById('deposit-phone').value.trim();
+    const phoneCode = document.getElementById('deposit-phone-code').value;
+    const phoneNum = document.getElementById('deposit-phone').value.trim();
+    const phone = phoneCode + phoneNum;
 
-    if (!amount || !phone) return showToast('Please enter amount and phone', 'error');
+    if (!amount || !phoneNum) return showToast('Please enter amount and phone', 'error');
 
     const statusDiv = document.getElementById('deposit-status');
     statusDiv.classList.remove('hidden');
@@ -655,12 +680,14 @@ async function initiateDeposit() {
 // Withdraw Logic
 async function requestWithdrawal() {
     const amount = document.getElementById('withdraw-amount').value;
-    const phone = document.getElementById('withdraw-phone').value.trim();
+    const phoneCode = document.getElementById('withdraw-phone-code').value;
+    const phoneNum = document.getElementById('withdraw-phone').value.trim();
+    const phone = phoneCode + phoneNum;
     const notes = document.getElementById('withdraw-notes')?.value || '';
 
-    if (!amount || amount <= 0) return showToast('Please enter a valid amount', 'error');
-    if (!phone || !/^254[0-9]{9}$/.test(phone)) {
-        return showToast('Valid M-Pesa phone number (254XXXXXXXXX) is required', 'error');
+    if (!amount || !phoneNum) return showToast('Please enter amount and phone number', 'error');
+    if (!phoneNum || phoneNum.length < 7) {
+        return showToast('Please enter a valid phone number', 'error');
     }
 
     try {
@@ -687,9 +714,12 @@ async function requestWithdrawal() {
 async function updateProfileSettings() {
     const fullName = document.getElementById('settings-fullname').value;
     const email = document.getElementById('settings-email').value;
-    const mpesa = document.getElementById('settings-mpesa').value;
     const country = document.getElementById('settings-country').value;
     const currency = document.querySelector('input[name="currency"]:checked')?.value;
+    
+    const phoneCode = document.getElementById('settings-phone-code').value;
+    const phoneNum = document.getElementById('settings-mpesa').value.trim().replace(/\D/g, '');
+    const mpesa_formatted = phoneCode + phoneNum;
 
     try {
         const response = await authenticatedFetch('/users/profile', {
@@ -697,7 +727,7 @@ async function updateProfileSettings() {
             body: JSON.stringify({
                 full_name: fullName,
                 email: email,
-                mpesa_number: mpesa,
+                mpesa_number: mpesa_formatted,
                 country: country,
                 currency_preference: currency
             })
@@ -943,8 +973,16 @@ async function confirmManualDeposit(method) {
         formData.append('metadata', JSON.stringify({ method: 'Agent', agent: agentName, currency: 'KES' }));
 
     } else if (method === 'Crypto Deposit') {
-        showToast('Crypto deposit coming soon in this flow', 'info');
-        return;
+        const amountInput = document.getElementById('crypto-amount');
+        amount = amountInput ? amountInput.value : 0;
+        const txid = document.getElementById('crypto-txid').value.trim();
+
+        if (!amount || amount <= 0) return showToast('Please enter a valid USD amount sent.', 'error');
+        if (!txid) return showToast('Please enter the Transaction Hash (TXID).', 'error');
+
+        formData.append('amount', amount);
+        formData.append('notes', `Crypto Deposit (TXID: ${txid})`);
+        formData.append('metadata', JSON.stringify({ method: 'Crypto', network: 'TRC20', txid: txid, currency: 'USD' }));
     }
 
     try {
