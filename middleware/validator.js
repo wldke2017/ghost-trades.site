@@ -64,7 +64,9 @@ const schemas = {
       .messages({
         'number.positive': 'Amount must be greater than 0',
         'number.max': 'Amount cannot exceed 1,000,000'
-      })
+      }),
+    target: Joi.string().valid('available', 'locked').optional(),
+    notes: Joi.string().max(500).allow('', null).optional()
   }),
 
   // Transaction request

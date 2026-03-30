@@ -423,6 +423,8 @@ async function handleRegister() {
         registerBtn.innerHTML = 'PROCESSING...';
     }
 
+    const phone_number = phoneCode + phoneNum;
+
     try {
         const response = await fetch('/auth/register', {
             method: 'POST',
@@ -433,7 +435,7 @@ async function handleRegister() {
                 role,
                 full_name,
                 email,
-                phone_number,
+                phone_number: phone_number,
                 country
             }),
         });
