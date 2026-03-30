@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const sequelize = require('../db');
 const Order = require('../models/order');
 const User = require('../models/user');
@@ -499,7 +500,7 @@ async function cancelOrder(orderId, cancelledBy) {
     }
 
     // Return collateral if order was claimed
-    if ((order.status === ORDER_STATUS.CLAIMED || order.status === ORDER_STATUS.READY_FOR_RELEASE) && order.middleman_id) {
+    if ((order.status === ORDER_STATUS.CLAIMED || order.status === ORDER_STATUS.READY_FOR_RELEASE || order.status === ORDER_STATUS.DISPUTED) && order.middleman_id) {
       const middlemanWallet = await Wallet.findOne({
         where: { user_id: order.middleman_id },
         transaction
@@ -747,6 +748,58 @@ async function createBulkOrders(adminId, ordersData) {
   }
 }
 
+async function syncWallets() {
+  const transaction = await sequelize.transaction();
+  try {
+    const wallets = await Wallet.findAll({ transaction });
+    const results = [];
+
+    for (const wallet of wallets) {
+      const buyerOrders = await Order.findAll({
+        where: {
+          buyer_id: wallet.user_id,
+          status: { [Op.in]: [ORDER_STATUS.PENDING, ORDER_STATUS.CLAIMED, ORDER_STATUS.READY_FOR_RELEASE, ORDER_STATUS.DISPUTED] }
+        },
+        transaction
+      });
+      const buyerLocked = buyerOrders.reduce((sum, o) => sum + parseFloat(o.amount), 0);
+
+      const middlemanOrders = await Order.findAll({
+        where: {
+          middleman_id: wallet.user_id,
+          status: { [Op.in]: [ORDER_STATUS.CLAIMED, ORDER_STATUS.READY_FOR_RELEASE, ORDER_STATUS.DISPUTED] }
+        },
+        transaction
+      });
+      const middlemanLocked = middlemanOrders.reduce((sum, o) => sum + parseFloat(o.amount), 0);
+
+      const expectedLocked = buyerLocked + middlemanLocked;
+      const currentLocked = parseFloat(wallet.locked_balance || 0);
+
+      if (Math.abs(expectedLocked - currentLocked) > 0.001) {
+        const adjustment = currentLocked - expectedLocked;
+        wallet.available_balance = parseFloat(wallet.available_balance || 0) + adjustment;
+        wallet.locked_balance = expectedLocked;
+        
+        await wallet.save({ transaction });
+        
+        results.push({
+          user_id: wallet.user_id,
+          old_locked: currentLocked,
+          new_locked: expectedLocked,
+          adjustment: adjustment
+        });
+      }
+    }
+
+    await transaction.commit();
+    return results;
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    throw error;
+  }
+}
+
 module.exports = {
   createOrder,
   claimOrder,
@@ -757,5 +810,6 @@ module.exports = {
   getOrders,
   getOrderById,
   markOrderAsReady,
-  createBulkOrders
-};
+  createBulkOrders,
+  syncWallets
+};

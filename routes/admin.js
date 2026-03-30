@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const orderService = require('../services/orderService');
 const User = require('../models/user');
 const Wallet = require('../models/wallet');
 const Order = require('../models/order');
@@ -189,6 +190,18 @@ router.delete('/users/:id', authenticateToken, isAdmin, async (req, res) => {
 
         await user.destroy();
         res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/wallets/sync', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const results = await orderService.syncWallets();
+        res.json({
+            message: `Synchronization complete. Adjusted ${results.length} wallets.`,
+            details: results
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

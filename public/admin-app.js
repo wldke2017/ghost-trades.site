@@ -962,6 +962,34 @@ async function submitBalanceAdjustment() {
     }
 }
 
+async function syncAllWallets() {
+    showConfirmDialog(
+        'Synchronize All Wallets',
+        'This will recalculate all users\' locked balances based on their active orders. This fixes "ghost" locked funds that may occur if orders were improperly cleared. Proceed?',
+        async () => {
+            try {
+                const response = await authenticatedFetch('/admin/wallets/sync', {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Sync failed');
+                }
+
+                const result = await response.json();
+                showToast(result.message, 'success');
+                
+                // Refresh dashboard
+                await updateAdminDashboard();
+            } catch (error) {
+                console.error('Sync error:', error);
+                showToast('Failed to sync wallets: ' + error.message, 'error');
+            }
+        }
+    );
+}
+
 // Logout function
 function logout() {
     localStorage.removeItem('authToken');
