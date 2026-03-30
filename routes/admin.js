@@ -99,14 +99,15 @@ router.get('/transaction-requests', authenticateToken, isAdmin, async (req, res)
 router.post('/wallets/:user_id/deposit', authenticateToken, isAdmin, validate('walletTransaction'), async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-        const { amount } = req.body;
+        const { amount, target = 'available' } = req.body;
         const userId = req.params.user_id;
 
         let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
         if (!wallet) wallet = await Wallet.create({ user_id: userId, available_balance: 0, locked_balance: 0 }, { transaction });
 
-        const balanceBefore = parseFloat(wallet.available_balance);
-        wallet.available_balance = balanceBefore + parseFloat(amount);
+        const balanceField = target === 'locked' ? 'locked_balance' : 'available_balance';
+        const balanceBefore = parseFloat(wallet[balanceField]);
+        wallet[balanceField] = balanceBefore + parseFloat(amount);
         await wallet.save({ transaction });
 
         await Transaction.create({
@@ -114,14 +115,18 @@ router.post('/wallets/:user_id/deposit', authenticateToken, isAdmin, validate('w
             type: 'DEPOSIT',
             amount: parseFloat(amount),
             balance_before: balanceBefore,
-            balance_after: wallet.available_balance,
-            description: 'Manual admin deposit'
+            balance_after: wallet[balanceField],
+            description: `Manual admin deposit (${target})`
         }, { transaction });
 
         await transaction.commit();
 
         const io = req.app.get('socketio');
-        if (io) io.emit('walletUpdated', { user_id: userId, available_balance: wallet.available_balance });
+        if (io) io.emit('walletUpdated', { 
+            user_id: userId, 
+            available_balance: wallet.available_balance,
+            locked_balance: wallet.locked_balance 
+        });
 
         res.json({ message: 'Deposit successful', wallet });
     } catch (error) {
@@ -133,16 +138,18 @@ router.post('/wallets/:user_id/deposit', authenticateToken, isAdmin, validate('w
 router.post('/wallets/:user_id/withdraw', authenticateToken, isAdmin, validate('walletTransaction'), async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-        const { amount } = req.body;
+        const { amount, target = 'available' } = req.body;
         const userId = req.params.user_id;
 
         const wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
-        if (!wallet || parseFloat(wallet.available_balance) < parseFloat(amount)) {
-            throw new Error('Insufficient available balance');
+        const balanceField = target === 'locked' ? 'locked_balance' : 'available_balance';
+        
+        if (!wallet || parseFloat(wallet[balanceField]) < parseFloat(amount)) {
+            throw new Error(`Insufficient ${target} balance`);
         }
 
-        const balanceBefore = parseFloat(wallet.available_balance);
-        wallet.available_balance = balanceBefore - parseFloat(amount);
+        const balanceBefore = parseFloat(wallet[balanceField]);
+        wallet[balanceField] = balanceBefore - parseFloat(amount);
         await wallet.save({ transaction });
 
         await Transaction.create({
@@ -150,14 +157,18 @@ router.post('/wallets/:user_id/withdraw', authenticateToken, isAdmin, validate('
             type: 'WITHDRAWAL',
             amount: -parseFloat(amount),
             balance_before: balanceBefore,
-            balance_after: wallet.available_balance,
-            description: 'Manual admin withdrawal'
+            balance_after: wallet[balanceField],
+            description: `Manual admin withdrawal (${target})`
         }, { transaction });
 
         await transaction.commit();
 
         const io = req.app.get('socketio');
-        if (io) io.emit('walletUpdated', { user_id: userId, available_balance: wallet.available_balance });
+        if (io) io.emit('walletUpdated', { 
+            user_id: userId, 
+            available_balance: wallet.available_balance,
+            locked_balance: wallet.locked_balance 
+        });
 
         res.json({ message: 'Withdrawal successful', wallet });
     } catch (error) {

@@ -917,13 +917,14 @@ async function submitBalanceAdjustment() {
     if (!balanceModalData) return;
 
     const amount = parseFloat(document.getElementById('balance-amount').value);
+    const target = document.getElementById('balance-target').value;
 
     if (!amount || amount <= 0) {
         showToast('Please enter a valid amount', 'error');
         return;
     }
 
-    if (balanceModalData.type === 'withdraw' && amount > balanceModalData.availableBalance) {
+    if (balanceModalData.type === 'withdraw' && target === 'available' && amount > balanceModalData.availableBalance) {
         showToast('Withdrawal amount exceeds available balance', 'error');
         return;
     }
@@ -937,7 +938,8 @@ async function submitBalanceAdjustment() {
             method: 'POST',
             body: JSON.stringify({
                 amount,
-                notes: `Admin Manual ${balanceModalData.type}: ${currentUsername}`
+                target,
+                notes: `Admin Manual ${balanceModalData.type} (${target}): ${currentUsername}`
             })
         });
 
