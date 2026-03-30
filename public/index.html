@@ -550,22 +550,29 @@
 
             <!-- Deposit Tabs -->
             <div class="flex overflow-x-auto border-b border-gray-700">
-                <button onclick="switchDepositTab('mpesa')" id="tab-mpesa"
-                    class="flex-1 py-3 px-4 text-sm font-bold text-green-500 border-b-2 border-green-500 transition-all whitespace-nowrap">M-Pesa
-                    Express</button>
                 <button onclick="switchDepositTab('agent')" id="tab-agent"
-                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Agent</button>
+                    class="flex-1 py-3 px-4 text-sm font-bold text-orange-500 border-b-2 border-orange-500 transition-all whitespace-nowrap">Agent</button>
                 <button onclick="switchDepositTab('crypto')" id="tab-crypto"
                     class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Crypto</button>
                 <button onclick="switchDepositTab('card')" id="tab-card"
                     class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap italic">Global Card</button>
+                <button onclick="switchDepositTab('mpesa')" id="tab-mpesa"
+                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">M-Pesa
+                    Express</button>
             </div>
 
             <div class="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
 
                 <!-- M-PESA EXPRESS TAB -->
-                <div id="deposit-mpesa-content" class="space-y-6">
-                    <div class="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center space-x-3">
+                <div id="deposit-mpesa-content" class="hidden space-y-6">
+                    <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-center space-x-3 mb-4">
+                        <i class="ti ti-alert-triangle text-yellow-500 text-2xl"></i>
+                        <div>
+                            <p class="font-bold text-white">System Notice</p>
+                            <p class="text-xs text-yellow-400">M-Pesa Express will be available soon. Please use verified agents for now.</p>
+                        </div>
+                    </div>
+                    <div class="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center space-x-3 opacity-50">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/M-PESA_LOGO-01.svg/1200px-M-PESA_LOGO-01.svg.png"
                             alt="M-Pesa" class="h-8 object-contain bg-white rounded px-1">
                         <div>
@@ -609,32 +616,42 @@
                 </div>
 
                 <!-- AGENT TAB -->
-                <!-- AGENT TAB -->
-                <div id="deposit-agent-content" class="hidden space-y-6">
+                <div id="deposit-agent-content" class="space-y-6">
                     <div class="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
-                        <p class="text-sm text-orange-200">Send money directly to one of our verified agents via M-Pesa
-                            to deposit.</p>
+                        <p class="text-sm text-orange-200">Send money directly to one of our verified agents via M-Pesa to deposit.</p>
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-3">Available Agents</label>
 
-                        <!-- Agent Card: ALLAN -->
-                        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col gap-3 hover:border-orange-500 transition-colors cursor-pointer"
-                            onclick="selectAgent('ALLAN KARIBA', '0101395336')">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div
-                                        class="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 font-bold">
-                                        AK</div>
-                                    <div>
-                                        <p class="font-bold text-white">ALLAN KARIBA</p>
-                                        <p class="text-xs text-green-400 flex items-center gap-1"><i
-                                                class="ti ti-circle-check-filled"></i> Verified Agent</p>
-                                    </div>
+                        <!-- Agent Card: PHYLLIS -->
+                        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center justify-between hover:border-orange-500 transition-colors cursor-pointer mb-4"
+                            onclick="selectAgent('PHYLLIS ASAVA', '0750913721')">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 font-bold">
+                                    PA</div>
+                                <div>
+                                    <p class="font-bold text-white uppercase">PHYLLIS ASAVA</p>
+                                    <p class="text-xs text-green-400 flex items-center gap-1"><i
+                                            class="ti ti-circle-check-filled"></i> Verified Agent</p>
                                 </div>
-                                <i class="ti ti-chevron-right text-gray-600"></i>
                             </div>
+                            <i class="ti ti-chevron-right text-gray-600"></i>
+                        </div>
+
+                        <!-- Agent Card: ALLAN -->
+                        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center justify-between hover:border-orange-500 transition-colors cursor-pointer"
+                            onclick="selectAgent('ALLAN KARIBA', '0101395336')">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 font-bold">
+                                    AK</div>
+                                <div>
+                                    <p class="font-bold text-white uppercase">ALLAN KARIBA</p>
+                                    <p class="text-xs text-green-400 flex items-center gap-1"><i
+                                            class="ti ti-circle-check-filled"></i> Verified Agent</p>
+                                </div>
+                            </div>
+                            <i class="ti ti-chevron-right text-gray-600"></i>
                         </div>
                     </div>
 
