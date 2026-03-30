@@ -471,7 +471,12 @@ async function handleRegister() {
                 }
             }
         } else {
-            showToast(data.error || 'Registration failed', 'error');
+            if (data.details) {
+                console.error('Validation details:', data.details);
+                showToast(data.details[0].message, 'error');
+            } else {
+                showToast(data.error || 'Registration failed', 'error');
+            }
         }
     } catch (error) {
         console.error('Registration error:', error);

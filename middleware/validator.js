@@ -5,12 +5,12 @@ const schemas = {
   // User registration
   register: Joi.object({
     username: Joi.string()
-      .alphanum()
+      .regex(/^[a-zA-Z0-9._]+$/)
       .min(3)
       .max(30)
       .required()
       .messages({
-        'string.alphanum': 'Username must only contain alphanumeric characters',
+        'string.pattern.base': 'Username can only contain letters, numbers, underscores, and dots',
         'string.min': 'Username must be at least 3 characters long',
         'string.max': 'Username cannot exceed 30 characters'
       }),
