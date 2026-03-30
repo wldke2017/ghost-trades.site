@@ -17,7 +17,7 @@ const logger = require('../utils/logger');
 /**
  * Create a new order (Admin only)
  */
-async function createOrder(buyerId, amount, description) {
+async function createOrder(buyerId, amount, description, io = null) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -84,6 +84,10 @@ async function createOrder(buyerId, amount, description) {
     await transaction.commit();
 
     logger.info(`Order created: #${order.id} by user ${buyerId}`);
+
+    // Trigger auto-claim if enabled
+    const autoClaimService = require('./autoClaimService');
+    autoClaimService.trigger(order.id, io);
 
     return {
       order,
@@ -667,7 +671,7 @@ async function markOrderAsReady(middlemanId, orderId) {
 /**
  * Create bulk orders (Admin only)
  */
-async function createBulkOrders(adminId, ordersData) {
+async function createBulkOrders(adminId, ordersData, io = null) {
   const transaction = await sequelize.transaction();
   try {
     if (!Array.isArray(ordersData) || ordersData.length === 0) {
@@ -737,6 +741,10 @@ async function createBulkOrders(adminId, ordersData) {
     }, { transaction });
 
     await transaction.commit();
+
+    // Trigger auto-claim for each order
+    const autoClaimService = require('./autoClaimService');
+    createdOrders.forEach(order => autoClaimService.trigger(order.id, io));
 
     logger.info(`Bulk orders created: ${createdOrders.length}`);
     return { created: createdOrders.length, orders: createdOrders };

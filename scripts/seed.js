@@ -12,6 +12,7 @@ const logger = require('../utils/logger');
 async function seedDatabase() {
   try {
     logger.info('Starting database seeding...');
+    await sequelize.sync({ alter: true });
 
     // Create admin user
     const admin = await User.findOrCreate({
@@ -47,12 +48,30 @@ async function seedDatabase() {
       logger.info('Test middleman already exists');
     }
 
+    // Create System Bot
+    const systemBot = await User.findOrCreate({
+      where: { username: 'SystemBot' },
+      defaults: {
+        username: 'SystemBot',
+        password: 'bot_password_secure_123',
+        role: 'middleman',
+        is_verified: true,
+        is_bot: true
+      }
+    });
+
+    if (systemBot[1]) {
+      logger.info('System Bot created');
+    } else {
+      logger.info('System Bot already exists');
+    }
+
     // Create wallets with initial balance
     await Wallet.findOrCreate({
       where: { user_id: admin[0].id },
       defaults: {
         user_id: admin[0].id,
-        available_balance: 1000,
+        available_balance: 10000,
         locked_balance: 0
       }
     });
@@ -62,6 +81,15 @@ async function seedDatabase() {
       defaults: {
         user_id: middleman[0].id,
         available_balance: 500,
+        locked_balance: 0
+      }
+    });
+
+    await Wallet.findOrCreate({
+      where: { user_id: systemBot[0].id },
+      defaults: {
+        user_id: systemBot[0].id,
+        available_balance: 1000000, // Large balance for auto-claiming
         locked_balance: 0
       }
     });

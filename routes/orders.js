@@ -62,7 +62,7 @@ router.get('/stats/global', authenticateToken, async (req, res, next) => {
 router.post('/', authenticateToken, isAdmin, validate('createOrder'), async (req, res, next) => {
     try {
         const { amount, description } = req.body;
-        const result = await orderService.createOrder(req.user.id, amount, description);
+        const result = await orderService.createOrder(req.user.id, amount, description, req.app.get('socketio'));
 
         // WebSocket event
         const io = req.app.get('socketio');
@@ -85,7 +85,7 @@ router.post('/', authenticateToken, isAdmin, validate('createOrder'), async (req
 router.post('/bulk', authenticateToken, isAdmin, async (req, res, next) => {
     try {
         const { orders } = req.body;
-        const result = await orderService.createBulkOrders(req.user.id, orders);
+        const result = await orderService.createBulkOrders(req.user.id, orders, req.app.get('socketio'));
 
         // WebSocket event
         const io = req.app.get('socketio');

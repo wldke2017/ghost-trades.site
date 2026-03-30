@@ -68,6 +68,10 @@ const User = sequelize.define('User', {
   otp_expires_at: {
     type: DataTypes.DATE,
     allowNull: true,
+  },
+  is_bot: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
   }
 }, {
   tableName: 'users',

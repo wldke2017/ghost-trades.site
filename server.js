@@ -98,6 +98,9 @@ const addColumnIfMissing = async (table, column, definition) => {
 };
 
 sequelize.sync(syncOptions).then(async () => {
+  // Ensure the is_bot column exists (extra safety for production)
+  await addColumnIfMissing('users', 'is_bot', 'BOOLEAN DEFAULT FALSE');
+  
   logger.info(`Database synced (Options: ${JSON.stringify(syncOptions)})`);
 
   // Ensure all columns added in the OTP auth feature exist in the database
