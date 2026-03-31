@@ -7,20 +7,27 @@ function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
 
-    toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 flex items-center space-x-3 max-w-md`;
+    toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 flex items-center space-x-3 max-w-md pointer-events-auto`;
     toast.innerHTML = `
         <i class="ti ti-${type === 'success' ? 'check' : type === 'error' ? 'x' : 'info-circle'} text-2xl"></i>
         <span class="font-medium">${message}</span>
     `;
 
-    const container = document.getElementById('toast-container') || document.body;
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'fixed top-4 right-4 z-[100] flex flex-col space-y-4 pointer-events-none';
+        document.body.appendChild(container);
+    }
+    
     container.appendChild(toast);
 
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(100%)';
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 4000);
 }
 
 // Check authentication on page load
@@ -242,6 +249,12 @@ function showLoginForm() {
                                 
                                 <input type="hidden" id="register-role" value="middleman">
                                 
+                                <!-- Inline register error -->
+                                <div id="register-error" class="hidden flex items-center space-x-2 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium px-4 py-3 rounded-xl">
+                                    <i class="ti ti-alert-circle text-base"></i>
+                                    <span id="register-error-message">Registration failed.</span>
+                                </div>
+                                
                                 <button onclick="handleRegister()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-xl transition-all duration-300 shadow-lg shadow-orange-500/10 mt-2">
                                     CREATE ACCOUNT
                                 </button>
@@ -395,23 +408,38 @@ async function handleRegister() {
     const phoneNum = document.getElementById('register-phone').value.trim().replace(/\D/g, ''); // Remove non-digits
     const role = document.getElementById('register-role').value;
 
+    const registerErrorBox = document.getElementById('register-error');
+    const registerErrorMsg = document.getElementById('register-error-message');
+    
+    // Helper to show inline error or toast fallback
+    const showRegError = (msg) => {
+        if (registerErrorBox && registerErrorMsg) {
+            registerErrorMsg.textContent = msg;
+            registerErrorBox.classList.remove('hidden');
+        } else {
+            showToast(msg, 'error');
+        }
+    };
+
+    if (registerErrorBox) registerErrorBox.classList.add('hidden');
+
     if (!full_name || !username || !email || !password) {
-        showToast('Please fill in all required fields (Full Name, Username, Email, Password)', 'error');
+        showRegError('Please fill in all required fields (Full Name, Username, Email, Password)');
         return;
     }
 
     if (!phoneNum || !phoneCode) {
-        showToast('Please enter a valid phone number and select a country code', 'error');
+        showRegError('Please enter a valid phone number and select a country code');
         return;
     }
 
     if (password.length < 6) {
-        showToast('Password must be at least 6 characters long', 'error');
+        showRegError('Password must be at least 6 characters long');
         return;
     }
 
     if (password !== confirmPassword) {
-        showToast('Passwords do not match', 'error');
+        showRegError('Passwords do not match');
         return;
     }
 
@@ -471,16 +499,12 @@ async function handleRegister() {
                 }
             }
         } else {
-            if (data.details) {
-                console.error('Validation details:', data.details);
-                showToast(data.details[0].message, 'error');
-            } else {
-                showToast(data.error || 'Registration failed', 'error');
-            }
+            const errorMsg = data.details ? data.details[0].message : (data.error || 'Registration failed');
+            showRegError(errorMsg);
         }
     } catch (error) {
         console.error('Registration error:', error);
-        showToast('Registration error: ' + error.message, 'error');
+        showRegError('Registration error: ' + error.message);
     } finally {
         // Restore button state
         if (registerBtn) {
