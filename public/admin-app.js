@@ -596,12 +596,42 @@ function displayUserManagement() {
                                 class="px-2 py-1 bg-red-700 text-white rounded text-xs font-semibold hover:bg-red-800 transition">
                             <i class="ti ti-trash"></i> Delete
                         </button>
+                        ${user.role === 'middleman' ? `
+                            <button onclick="toggleBotStatus(${user.id}, ${!user.is_bot}, '${user.username}')"
+                                    class="px-2 py-1 ${user.is_bot ? 'bg-indigo-600 hover:bg-indigo-700 ring-2 ring-indigo-300' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded text-xs font-semibold transition flex items-center gap-1">
+                                <i class="ti ti-robot"></i> ${user.is_bot ? 'Bot Active' : 'Make Bot'}
+                            </button>
+                        ` : ''}
                     ` : '<span class="text-xs text-gray-400">(You)</span>'}
                 </div>
             </td>
         `;
         usersBody.appendChild(row);
     });
+}
+
+async function toggleBotStatus(userId, isBot, username) {
+    if (!confirm(`Are you sure you want to ${isBot ? 'set' : 'remove'} ${username} as the Auto-Claim Bot?`)) {
+        return;
+    }
+
+    try {
+        const response = await authenticatedFetch(`/admin/users/${userId}/bot-status`, {
+            method: 'PUT',
+            body: JSON.stringify({ is_bot: isBot })
+        });
+
+        if (response.ok) {
+            showToast(`${username} is ${isBot ? 'now' : 'no longer'} the Auto-Claim Bot`, 'success');
+            await loadMasterOverview();
+        } else {
+            const data = await response.json();
+            showToast(data.error || 'Failed to update bot status', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating bot status:', error);
+        showToast('System error updating bot status', 'error');
+    }
 }
 
 function updateSystemHealthCards() {

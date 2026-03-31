@@ -67,7 +67,8 @@ router.get('/overview', authenticateToken, isAdmin, async (req, res) => {
                     status: u.status,
                     available_balance: available.toFixed(2),
                     locked_balance: locked.toFixed(2),
-                    total_balance: (available + locked).toFixed(2)
+                    total_balance: (available + locked).toFixed(2),
+                    is_bot: u.is_bot
                 };
             }),
             orders: orders,
@@ -178,6 +179,28 @@ router.post('/wallets/:user_id/withdraw', authenticateToken, isAdmin, validate('
 });
 
 // User Management
+router.put('/users/:id/bot-status', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { is_bot } = req.body;
+        const user = await User.findByPk(req.params.id);
+        
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.role !== 'middleman') return res.status(400).json({ error: 'Only middlemen can be designated as bots' });
+        if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot set self as bot' });
+
+        if (is_bot) {
+            // Remove bot status from all other users to ensure only one bot exists
+            await User.update({ is_bot: false }, { where: { is_bot: true } });
+        }
+
+        user.is_bot = is_bot;
+        await user.save();
+        res.json({ message: `Bot status updated successfully`, user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.put('/users/:id/status', authenticateToken, isAdmin, validate('updateUserStatus'), async (req, res) => {
     try {
         const { status } = req.body;
