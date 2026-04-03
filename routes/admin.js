@@ -298,4 +298,14 @@ router.put('/bot-config', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+router.post('/bot/run-scan', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const autoClaimService = require('../services/autoClaimService');
+        const result = await autoClaimService.runSingleScan(req.app.get('socketio'));
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

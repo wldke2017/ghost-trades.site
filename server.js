@@ -179,9 +179,6 @@ sequelize.sync(syncOptions).then(async () => {
   } catch (err) {
     logger.error('Error seeding BotConfig:', err.message);
   }
-
-  // Initialize bot periodic scanner
-  autoClaimService.startPeriodicScan(app.get('socketio'));
 });
 
 // Route Registrations
@@ -219,6 +216,14 @@ if (require.main === module) {
   server.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);
     logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // Initialize bot scanner once socket server is ready
+    try {
+        const autoClaimService = require('./services/autoClaimService');
+        autoClaimService.startPeriodicScan(app.get('socketio'));
+    } catch (err) {
+        logger.error('[AUTO-CLAIM] Error starting periodic scan at boot:', err.message);
+    }
 
     // Self-pinging to prevent Render from sleeping (free tier)
     if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {

@@ -1244,9 +1244,55 @@ async function fetchBotConfig() {
             document.getElementById('bot-auto-claim-toggle').checked = config.auto_claim_enabled;
             document.getElementById('bot-periodic-scan-toggle').checked = config.periodic_scan_enabled;
             document.getElementById('bot-scan-interval').value = config.scan_interval;
+
+            // Update status labels
+            const statusText = document.getElementById('bot-status-text');
+            const statusDot = document.getElementById('bot-status-dot');
+            if (config.periodic_scan_enabled || config.auto_claim_enabled) {
+                statusText.innerText = 'Active';
+                statusText.classList.remove('text-gray-400');
+                statusText.classList.add('text-indigo-400');
+                statusDot.classList.remove('bg-gray-600');
+                statusDot.classList.add('bg-indigo-500', 'animate-pulse');
+            } else {
+                statusText.innerText = 'Inactive';
+                statusText.classList.remove('text-indigo-400');
+                statusText.classList.add('text-gray-400');
+                statusDot.classList.remove('bg-indigo-500', 'animate-pulse');
+                statusDot.classList.add('bg-gray-600');
+            }
         }
     } catch (e) {
         console.error('Fetch bot config error:', e);
+    }
+}
+
+async function runManualBotScan() {
+    const btn = document.getElementById('run-bot-scan-btn');
+    const originalContent = btn.innerHTML;
+    
+    try {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="btn-loader h-4 w-4"></div> Scanning...';
+        
+        const response = await authenticatedFetch('/admin/bot/run-scan', {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(result.message, 'success');
+        } else {
+            showToast(result.message, 'info');
+        }
+        
+        document.getElementById('bot-last-scan').innerText = new Date().toLocaleTimeString();
+    } catch (error) {
+        showToast('Failed to run manual scan', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
     }
 }
 
@@ -1274,6 +1320,7 @@ async function saveBotConfig() {
 
         if (res.ok) {
             showToast('Bot configuration saved!', 'success');
+            fetchBotConfig(); // Refresh status indicators
         } else {
             const err = await res.json();
             showToast(err.error || 'Failed to save config', 'error');
@@ -1481,3 +1528,12 @@ function escapeHTML(str) {
         }[tag] || tag)
     );
 }
+
+// Initializations
+document.addEventListener('DOMContentLoaded', () => {
+    // Bot Scan Button
+    const runBtn = document.getElementById('run-bot-scan-btn');
+    if (runBtn) {
+        runBtn.addEventListener('click', runManualBotScan);
+    }
+});

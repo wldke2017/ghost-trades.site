@@ -518,6 +518,25 @@
                             <label class="text-xs text-gray-400">Scan Interval (Minutes)</label>
                             <input type="number" id="bot-scan-interval" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-indigo-500 transition-all">
                         </div>
+                        <div class="pt-2 flex flex-col space-y-3">
+                            <button id="run-bot-scan-btn" class="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all border border-gray-700 flex items-center justify-center gap-2 group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-400 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Run Scan Now
+                            </button>
+                            <div class="flex items-center justify-between px-1">
+                                <span class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Status:</span>
+                                <div class="flex items-center gap-2">
+                                    <div id="bot-status-dot" class="w-1.5 h-1.5 rounded-full bg-gray-600"></div>
+                                    <span id="bot-status-text" class="text-[10px] text-gray-400 font-bold uppercase">Inactive</span>
+                                </div>
+                            </div>
+                            <div class="px-1 flex justify-between">
+                                <span class="text-[10px] text-gray-500 uppercase tracking-widest font-bold font-mono">Last Scan:</span>
+                                <span id="bot-last-scan" class="text-[10px] text-gray-400 font-bold font-mono">Never</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -152,6 +152,32 @@ const autoClaimService = {
     } catch (err) {
       logger.error('[AUTO-CLAIM] Failed to start scanner:', err.message);
     }
+  },
+
+  /**
+   * Manually runs a single scan and returns the result for feedback
+   */
+  async runSingleScan(io) {
+    try {
+      logger.info('[AUTO-CLAIM] Manual scan triggered');
+      
+      const randomOrder = await Order.findOne({
+        where: { status: ORDER_STATUS.PENDING },
+        order: sequelize.random()
+      });
+
+      if (randomOrder) {
+        logger.info(`[AUTO-CLAIM] Manual scanner found pending order #${randomOrder.id}. Triggering claim.`);
+        this.trigger(randomOrder.id, io);
+        return { success: true, message: `Found order #${randomOrder.id} and triggered auto-claim.` };
+      } else {
+        logger.info('[AUTO-CLAIM] Manual scanner: No pending orders found.');
+        return { success: false, message: 'No pending orders currently available to claim.' };
+      }
+    } catch (err) {
+      logger.error('[AUTO-CLAIM] Manual scan error:', err.message);
+      throw err;
+    }
   }
 };
 
