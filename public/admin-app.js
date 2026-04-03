@@ -378,6 +378,7 @@ async function updateAdminDashboard() {
     await loadTransactionRequests();
     await loadDisputes();
     await fetchAdminSupportTickets();
+    await fetchBotConfig();
     updateSystemHealthCards();
     updateUserDisplay();
     updateCurrencyLabels();
@@ -1225,6 +1226,61 @@ async function deleteUser(userId, username) {
             }
         }
     );
+}
+
+// --- Bot Configuration Logic ---
+async function fetchBotConfig() {
+    try {
+        const res = await authenticatedFetch('/admin/bot-config');
+        if (res.ok) {
+            const config = await res.json();
+            document.getElementById('bot-claim-min').value = config.claim_delay_min;
+            document.getElementById('bot-claim-max').value = config.claim_delay_max;
+            document.getElementById('bot-release-min').value = config.release_delay_min;
+            document.getElementById('bot-release-max').value = config.release_delay_max;
+            document.getElementById('bot-auto-claim-toggle').checked = config.auto_claim_enabled;
+            document.getElementById('bot-periodic-scan-toggle').checked = config.periodic_scan_enabled;
+            document.getElementById('bot-scan-interval').value = config.scan_interval;
+        }
+    } catch (e) {
+        console.error('Fetch bot config error:', e);
+    }
+}
+
+async function saveBotConfig() {
+    const btn = document.getElementById('save-bot-config-btn');
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = 'Saving...';
+
+    const config = {
+        claim_delay_min: parseInt(document.getElementById('bot-claim-min').value),
+        claim_delay_max: parseInt(document.getElementById('bot-claim-max').value),
+        release_delay_min: parseInt(document.getElementById('bot-release-min').value),
+        release_delay_max: parseInt(document.getElementById('bot-release-max').value),
+        auto_claim_enabled: document.getElementById('bot-auto-claim-toggle').checked,
+        periodic_scan_enabled: document.getElementById('bot-periodic-scan-toggle').checked,
+        scan_interval: parseInt(document.getElementById('bot-scan-interval').value)
+    };
+
+    try {
+        const res = await authenticatedFetch('/admin/bot-config', {
+            method: 'PUT',
+            body: JSON.stringify(config)
+        });
+
+        if (res.ok) {
+            showToast('Bot configuration saved!', 'success');
+        } else {
+            const err = await res.json();
+            showToast(err.error || 'Failed to save config', 'error');
+        }
+    } catch (e) {
+        showToast('Connection error', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
 }
 
 // --- Admin Support System Logic ---

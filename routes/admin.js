@@ -6,6 +6,7 @@ const Wallet = require('../models/wallet');
 const Order = require('../models/order');
 const Transaction = require('../models/transaction');
 const TransactionRequest = require('../models/transactionRequest');
+const BotConfig = require('../models/botConfig');
 const ActivityLog = require('../models/activityLog');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validator');
@@ -236,6 +237,62 @@ router.post('/wallets/sync', authenticateToken, isAdmin, async (req, res) => {
             message: `Synchronization complete. Adjusted ${results.length} wallets.`,
             details: results
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Bot Configuration
+router.get('/bot-config', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        let config = await BotConfig.findOne();
+        if (!config) {
+            config = await BotConfig.create({
+                claim_delay_min: 5,
+                claim_delay_max: 15,
+                release_delay_min: 15,
+                release_delay_max: 20,
+                auto_claim_enabled: true,
+                periodic_scan_enabled: false,
+                scan_interval: 5
+            });
+        }
+        res.json(config);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.put('/bot-config', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const {
+            claim_delay_min,
+            claim_delay_max,
+            release_delay_min,
+            release_delay_max,
+            auto_claim_enabled,
+            periodic_scan_enabled,
+            scan_interval
+        } = req.body;
+
+        let config = await BotConfig.findOne();
+        if (!config) config = await BotConfig.create({});
+
+        config.claim_delay_min = claim_delay_min ?? config.claim_delay_min;
+        config.claim_delay_max = claim_delay_max ?? config.claim_delay_max;
+        config.release_delay_min = release_delay_min ?? config.release_delay_min;
+        config.release_delay_max = release_delay_max ?? config.release_delay_max;
+        config.auto_claim_enabled = auto_claim_enabled ?? config.auto_claim_enabled;
+        config.periodic_scan_enabled = periodic_scan_enabled ?? config.periodic_scan_enabled;
+        config.scan_interval = scan_interval ?? config.scan_interval;
+
+        await config.save();
+
+        // Notify autoClaimService to restart or update its worker
+        const autoClaimService = require('../services/autoClaimService');
+        autoClaimService.updateConfig(config, req.app.get('socketio'));
+
+        res.json({ message: 'Bot configuration updated successfully', config });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

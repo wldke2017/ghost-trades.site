@@ -77,16 +77,18 @@ router.post('/', authenticateToken, async (req, res, next) => {
                 attachment_path
             });
             
-            // Notify admin
-            const io = req.app.get('socketio');
-            if (io) {
-                // Fetch full ticket data
-                const fullTicket = await SupportTicket.findByPk(ticket.id, {
-                    include: [{ model: User, as: 'user', attributes: ['id', 'username'] }]
-                });
-                io.emit('support_ticket_created', { ticket: fullTicket, message });
+                // Notify admin
+                const io = req.app.get('socketio');
+                if (io) {
+                    // Fetch full ticket data
+                    const fullTicket = await SupportTicket.findByPk(ticket.id, {
+                        include: [{ model: User, as: 'user', attributes: ['id', 'username'] }]
+                    });
+                    io.to('admins').emit('support_ticket_created', { ticket: fullTicket, message });
+                    // Also emit globally for safety (if admins aren't room-joined)
+                    io.emit('support_ticket_created', { ticket: fullTicket, message });
+                }
             }
-        }
 
         res.status(201).json(ticket);
     } catch (error) {
@@ -163,10 +165,12 @@ router.post('/:id/messages', authenticateToken, async (req, res, next) => {
         const io = req.app.get('socketio');
         if (io) {
             io.to('ticket_' + ticket.id).emit('support_message', msgWithSender);
+            
             if (req.user.role !== 'admin') {
                 const fullTicket = await SupportTicket.findByPk(ticket.id, {
                     include: [{ model: User, as: 'user', attributes: ['id', 'username'] }]
                 });
+                io.to('admins').emit('support_message', msgWithSender);
                 io.emit('support_ticket_updated', fullTicket);
             }
         }

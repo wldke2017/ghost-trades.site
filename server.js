@@ -12,6 +12,8 @@ const User = require('./models/user');
 const Wallet = require('./models/wallet');
 const SupportTicket = require('./models/supportTicket');
 const SupportMessage = require('./models/supportMessage');
+const BotConfig = require('./models/botConfig');
+const autoClaimService = require('./services/autoClaimService');
 const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
@@ -39,9 +41,20 @@ const setupSocket = (socketIoInstance) => {
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
-    socket.on('register', (userId) => {
+    socket.on('register', async (userId) => {
       socket.join(`user_${userId}`);
       console.log(`Socket ${socket.id} joined room user_${userId}`);
+
+      // If use is admin, join admins room
+      try {
+        const u = await User.findByPk(userId);
+        if (u && u.role === 'admin') {
+            socket.join('admins');
+            console.log(`Socket ${socket.id} joined admins room`);
+        }
+      } catch (err) {
+        console.error('Socket register error:', err);
+      }
     });
 
     socket.on('join_ticket', (ticketId) => {
@@ -147,6 +160,28 @@ sequelize.sync(syncOptions).then(async () => {
   } catch (error) {
     logger.error('Error seeding users:', error.message);
   }
+
+  // Ensure BotConfig exists
+  try {
+    const configExists = await BotConfig.findOne();
+    if (!configExists) {
+        await BotConfig.create({
+            claim_delay_min: 5,
+            claim_delay_max: 15,
+            release_delay_min: 15,
+            release_delay_max: 20,
+            auto_claim_enabled: true,
+            periodic_scan_enabled: false,
+            scan_interval: 5
+        });
+        logger.info('Default BotConfig created');
+    }
+  } catch (err) {
+    logger.error('Error seeding BotConfig:', err.message);
+  }
+
+  // Initialize bot periodic scanner
+  autoClaimService.startPeriodicScan(app.get('socketio'));
 });
 
 // Route Registrations
