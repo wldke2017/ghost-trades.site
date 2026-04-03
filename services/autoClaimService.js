@@ -130,8 +130,8 @@ const autoClaimService = {
         return;
       }
 
-      const intervalMs = (config.scan_interval || 5) * 60 * 1000;
-      logger.info(`[AUTO-CLAIM] Starting periodic scanner (Interval: ${config.scan_interval}m)`);
+      const intervalMs = (config.scan_interval || 30) * 1000;
+      logger.info(`[AUTO-CLAIM] Starting periodic scanner (Interval: ${config.scan_interval}s)`);
 
       scanTimer = setInterval(async () => {
         try {
