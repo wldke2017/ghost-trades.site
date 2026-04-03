@@ -106,6 +106,39 @@ body::before {
     transition: all var(--transition-base);
 }
 
+/* Custom Toggle Button */
+.custom-toggle-btn {
+    width: 3.5rem; /* w-14 */
+    height: 1.75rem; /* h-7 */
+    background-color: #374151; /* bg-gray-700 */
+    border-radius: 9999px; /* rounded-full */
+    position: relative;
+    transition: all var(--transition-base);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.custom-toggle-btn::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    width: 1.25rem; /* h-5 */
+    height: 1.25rem; /* w-5 */
+    background-color: white;
+    border-radius: 9999px;
+    transition: all var(--transition-base);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.peer:checked ~ label .custom-toggle-btn {
+    background-color: #6366f1; /* bg-indigo-500 */
+}
+
+.peer:checked ~ label .custom-toggle-btn::after {
+    left: calc(100% - 1.25rem - 4px);
+}
+
 
 /* --- Collapsible Sections --- */
 .collapsible-header {
