@@ -586,6 +586,12 @@ function displayUserManagement() {
         row.className = 'border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition';
 
         const isCurrentUser = user.id === currentUserId;
+        const botBtn = user.role === 'middleman' ? `
+            <button onclick="toggleBotStatus(${user.id}, ${!user.is_bot}, '${user.username}')"
+                    class="px-2 py-1 ${user.is_bot ? 'bg-indigo-600 hover:bg-indigo-700 ring-2 ring-indigo-300' : 'bg-gray-500 hover:bg-gray-600 shadow-sm'} text-white rounded text-[10px] uppercase font-black transition flex items-center gap-1 group">
+                <i class="ti ti-robot ${user.is_bot ? 'animate-bounce' : ''}"></i> ${user.is_bot ? 'Active Bot' : 'Tag as Bot'}
+            </button>
+        ` : '';
 
         row.innerHTML = `
             <td class="py-3 px-4 font-semibold text-gray-900 dark:text-white">${user.username}</td>
@@ -599,42 +605,26 @@ function displayUserManagement() {
             <td class="py-3 px-4 font-bold text-purple-600 dark:text-purple-400">${formatCurrency(user.locked_balance)}</td>
             <td class="py-3 px-4 font-bold text-blue-600 dark:text-blue-400">${formatCurrency(user.total_balance)}</td>
             <td class="py-3 px-4">
-                <div class="flex space-x-1 flex-wrap">
+                <div class="flex space-x-1 flex-wrap gap-y-1">
                     <button onclick="showDepositModal(${user.id}, '${user.username}')"
-                            class="px-2 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700 transition">
+                            class="px-2 py-1 bg-green-600 text-white rounded text-[10px] font-black uppercase hover:bg-green-700 transition">
                         <i class="ti ti-plus"></i> Deposit
                     </button>
                     <button onclick="showWithdrawModal(${user.id}, '${user.username}', ${user.available_balance})"
-                            class="px-2 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 transition">
+                            class="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-black uppercase hover:bg-red-700 transition">
                         <i class="ti ti-minus"></i> Withdraw
                     </button>
                     ${!isCurrentUser ? `
                         <button onclick="updateUserStatus(${user.id}, 'disabled')"
-                                class="px-2 py-1 bg-yellow-600 text-white rounded text-xs font-semibold hover:bg-yellow-700 transition ${user.status === 'disabled' ? 'opacity-50 cursor-not-allowed' : ''}"
-                                ${user.status === 'disabled' ? 'disabled' : ''}>
+                                class="px-2 py-1 bg-yellow-600 text-white rounded text-[10px] font-black uppercase hover:bg-yellow-700 transition ${user.status === 'disabled' ? 'opacity-50' : ''}">
                             <i class="ti ti-ban"></i> Disable
                         </button>
-                        <button onclick="updateUserStatus(${user.id}, 'blocked')"
-                                class="px-2 py-1 bg-orange-600 text-white rounded text-xs font-semibold hover:bg-orange-700 transition ${user.status === 'blocked' ? 'opacity-50 cursor-not-allowed' : ''}"
-                                ${user.status === 'blocked' ? 'disabled' : ''}>
-                            <i class="ti ti-lock"></i> Block
-                        </button>
-                        <button onclick="updateUserStatus(${user.id}, 'active')"
-                                class="px-2 py-1 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700 transition ${user.status === 'active' ? 'opacity-50 cursor-not-allowed' : ''}"
-                                ${user.status === 'active' ? 'disabled' : ''}>
-                            <i class="ti ti-check"></i> Activate
-                        </button>
+                        ${botBtn}
                         <button onclick="deleteUser(${user.id}, '${user.username}')"
-                                class="px-2 py-1 bg-red-700 text-white rounded text-xs font-semibold hover:bg-red-800 transition">
-                            <i class="ti ti-trash"></i> Delete
+                                class="px-2 py-1 bg-red-800 text-white rounded text-[10px] font-black uppercase hover:bg-red-900 transition">
+                            <i class="ti ti-trash"></i>
                         </button>
-                        ${user.role === 'middleman' ? `
-                            <button onclick="toggleBotStatus(${user.id}, ${!user.is_bot}, '${user.username}')"
-                                    class="px-2 py-1 ${user.is_bot ? 'bg-indigo-600 hover:bg-indigo-700 ring-2 ring-indigo-300' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded text-xs font-semibold transition flex items-center gap-1">
-                                <i class="ti ti-robot"></i> ${user.is_bot ? 'Bot Active' : 'Make Bot'}
-                            </button>
-                        ` : ''}
-                    ` : '<span class="text-xs text-gray-400">(You)</span>'}
+                    ` : '<span class="text-[10px] text-gray-500 font-bold">(YOU)</span>'}
                 </div>
             </td>
         `;
@@ -643,19 +633,20 @@ function displayUserManagement() {
 }
 
 async function toggleBotStatus(userId, isBot, username) {
-    if (!confirm(`Are you sure you want to ${isBot ? 'set' : 'remove'} ${username} as the Auto-Claim Bot?`)) {
+    if (!confirm(`Are you sure you want to designate ${username} as the system bot? This user will perform all automated claims and must have a middleman role.`)) {
         return;
     }
 
     try {
-        const response = await authenticatedFetch(`/admin/users/${userId}/bot-status`, {
-            method: 'PUT',
-            body: JSON.stringify({ is_bot: isBot })
+        const response = await authenticatedFetch('/admin/bot/set-active', {
+            method: 'POST',
+            body: JSON.stringify({ userId, is_bot: isBot })
         });
 
         if (response.ok) {
-            showToast(`${username} is ${isBot ? 'now' : 'no longer'} the Auto-Claim Bot`, 'success');
+            showToast(`${username} is now the official system bot`, 'success');
             await loadMasterOverview();
+            fetchBotConfig(); // Refresh bot configuration display
         } else {
             const data = await response.json();
             showToast(data.error || 'Failed to update bot status', 'error');
@@ -1254,6 +1245,18 @@ async function fetchBotConfig() {
             document.getElementById('bot-scan-interval').value = config.scan_interval;
 
             // Update status labels
+            const botAccEl = document.getElementById('bot-account-name');
+            if (botAccEl) {
+                botAccEl.innerText = config.activeBot ? config.activeBot.username : 'NONE (Assign a Bot Below)';
+                if (!config.activeBot) {
+                    botAccEl.classList.add('text-red-400');
+                    botAccEl.classList.remove('text-indigo-400');
+                } else {
+                    botAccEl.classList.remove('text-red-400');
+                    botAccEl.classList.add('text-indigo-400');
+                }
+            }
+
             const statusText = document.getElementById('bot-status-text');
             const statusDot = document.getElementById('bot-status-dot');
             if (config.periodic_scan_enabled || config.auto_claim_enabled) {
@@ -1264,9 +1267,9 @@ async function fetchBotConfig() {
                 statusDot.classList.add('bg-indigo-500', 'animate-pulse');
             } else {
                 statusText.innerText = 'Inactive';
-                statusText.classList.remove('text-indigo-400');
+                statusText.classList.remove('text-indigo-400', 'text-emerald-400');
                 statusText.classList.add('text-gray-400');
-                statusDot.classList.remove('bg-indigo-500', 'animate-pulse');
+                statusDot.classList.remove('bg-indigo-500', 'bg-emerald-500', 'animate-pulse');
                 statusDot.classList.add('bg-gray-600');
             }
         }

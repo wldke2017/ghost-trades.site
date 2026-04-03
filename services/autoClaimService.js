@@ -33,11 +33,9 @@ const autoClaimService = {
    */
   async trigger(orderId, io) {
     try {
-      // Import orderService here to avoid circular dependency
-      const orderService = require('./orderService');
-
-      const delayMin = (config.claim_delay_min || 5) * 1000;
-      const delayMax = (config.claim_delay_max || 15) * 1000;
+      const config = await BotConfig.findOne();
+      const delayMin = (config?.claim_delay_min || 5) * 1000;
+      const delayMax = (config?.claim_delay_max || 15) * 1000;
       const delay = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
       
       logger.info(`[AUTO-CLAIM] Order #${orderId} scheduled for claim in ${delay/1000}s`);
@@ -50,14 +48,15 @@ const autoClaimService = {
             return;
           }
 
-          const bot = await User.findOne({ 
-            where: { is_bot: true, status: 'active', role: 'middleman' } 
-          });
+          const bot = await this.getBotUser();
 
           if (!bot) {
-            logger.warn('[AUTO-CLAIM] No active bot users found.');
+            logger.warn('[AUTO-CLAIM] No system bot user identified (is_bot=true, role=middleman). Manual setup required in Admin Dashboard.');
             return;
           }
+
+          // Import orderService here to avoid circular dependency
+          const orderService = require('./orderService');
 
           logger.info(`[AUTO-CLAIM] Bot ${bot.username} attempting to claim order #${orderId}`);
           
@@ -73,8 +72,9 @@ const autoClaimService = {
           }
 
           // --- Auto-Release Logic ---
-          const relMin = (config.release_delay_min || 15) * 1000;
-          const relMax = (config.release_delay_max || 20) * 1000;
+          const config = await BotConfig.findOne();
+          const relMin = (config?.release_delay_min || 15) * 1000;
+          const relMax = (config?.release_delay_max || 20) * 1000;
           const releaseDelay = Math.floor(Math.random() * (relMax - relMin + 1)) + relMin;
           
           logger.info(`[AUTO-RELEASE] Scheduling automatic release for order #${orderId} in ${releaseDelay/1000}s`);
@@ -203,6 +203,18 @@ const autoClaimService = {
       logger.error('[AUTO-CLAIM] Manual scan error:', err.message);
       throw err;
     }
+  },
+
+  /**
+   * Helper to find the active bot account
+   */
+  async getBotUser() {
+    return await User.findOne({ 
+      where: { 
+        is_bot: true, 
+        role: 'middleman' 
+      } 
+    });
   }
 };
 

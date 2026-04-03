@@ -257,7 +257,14 @@ router.get('/bot-config', authenticateToken, isAdmin, async (req, res) => {
                 scan_interval: 5
             });
         }
-        res.json(config);
+
+        const autoClaimService = require('../services/autoClaimService');
+        const botUser = await autoClaimService.getBotUser();
+        
+        const configJson = config.toJSON();
+        configJson.activeBot = botUser ? { id: botUser.id, username: botUser.username } : null;
+
+        res.json(configJson);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -303,6 +310,31 @@ router.post('/bot/run-scan', authenticateToken, isAdmin, async (req, res) => {
         const autoClaimService = require('../services/autoClaimService');
         const result = await autoClaimService.runSingleScan(req.app.get('socketio'));
         res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/bot/set-active', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ error: 'User ID is required' });
+
+        const User = require('../models/user');
+        
+        // Remove is_bot from all other users first (to maintain single bot policy)
+        await User.update({ is_bot: false }, { where: { is_bot: true } });
+        
+        // Set new bot
+        const user = await User.findByPk(userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        
+        user.is_bot = true;
+        user.role = 'middleman'; // Must be middleman to claim
+        user.status = 'active';
+        await user.save();
+
+        res.json({ message: `User ${user.username} is now the system bot`, bot: { id: user.id, username: user.username } });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

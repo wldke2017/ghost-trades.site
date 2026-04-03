@@ -525,16 +525,22 @@
                                 </svg>
                                 Run Manual Scan
                             </button>
-                            <div class="flex items-center justify-between px-1">
-                                <span class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Status:</span>
-                                <div class="flex items-center gap-2">
-                                    <div id="bot-status-dot" class="w-1.5 h-1.5 rounded-full bg-gray-600"></div>
-                                    <span id="bot-status-text" class="text-[10px] text-gray-400 font-bold uppercase">Inactive</span>
+                            <div class="px-1 flex flex-col space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Bot Account:</span>
+                                    <span id="bot-account-name" class="text-[10px] text-indigo-400 font-bold font-mono">Loading...</span>
                                 </div>
-                            </div>
-                            <div class="px-1 flex justify-between">
-                                <span class="text-[10px] text-gray-500 uppercase tracking-widest font-bold font-mono">Last Scan:</span>
-                                <span id="bot-last-scan" class="text-[10px] text-gray-400 font-bold font-mono">Never</span>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Status:</span>
+                                    <div class="flex items-center gap-2">
+                                        <div id="bot-status-dot" class="w-1.5 h-1.5 rounded-full bg-gray-600 animate-pulse-slow"></div>
+                                        <span id="bot-status-text" class="text-[10px] text-gray-400 font-bold uppercase">Inactive</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] text-gray-500 uppercase tracking-widest font-bold font-mono">Last Scan:</span>
+                                    <span id="bot-last-scan" class="text-[10px] text-gray-400 font-bold font-mono">Never</span>
+                                </div>
                             </div>
                         </div>
                     </div>
