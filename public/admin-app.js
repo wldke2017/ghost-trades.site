@@ -633,9 +633,11 @@ function displayUserManagement() {
 }
 
 async function toggleBotStatus(userId, isBot, username) {
-    if (!confirm(`Are you sure you want to designate ${username} as the system bot? This user will perform all automated claims and must have a middleman role.`)) {
-        return;
-    }
+    const confirmation = isBot 
+        ? `Are you sure you want to designate ${username} as the official system bot? They will perform all automated claims.` 
+        : `Are you sure you want to STOP ${username} from being the system bot? No automated claims will occur until a new bot is tagged.`;
+
+    if (!confirm(confirmation)) return;
 
     try {
         const response = await authenticatedFetch('/admin/bot/set-active', {
@@ -644,7 +646,7 @@ async function toggleBotStatus(userId, isBot, username) {
         });
 
         if (response.ok) {
-            showToast(`${username} is now the official system bot`, 'success');
+            showToast(isBot ? `${username} is now the system bot` : 'System bot disabled', 'success');
             await loadMasterOverview();
             fetchBotConfig(); // Refresh bot configuration display
         } else {

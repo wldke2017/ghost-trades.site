@@ -317,14 +317,19 @@ router.post('/bot/run-scan', authenticateToken, isAdmin, async (req, res) => {
 
 router.post('/bot/set-active', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const { userId } = req.body;
+        const { userId, is_bot } = req.body;
         if (!userId) return res.status(400).json({ error: 'User ID is required' });
 
         const User = require('../models/user');
         
-        // Remove is_bot from all other users first (to maintain single bot policy)
+        // Remove is_bot from all users if we're setting a single one (to maintain single bot policy)
+        // or just clear the current one if disabling
         await User.update({ is_bot: false }, { where: { is_bot: true } });
         
+        if (is_bot === false) {
+            return res.json({ message: 'System bot disabled' });
+        }
+
         // Set new bot
         const user = await User.findByPk(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
