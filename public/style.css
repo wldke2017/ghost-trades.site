@@ -91,6 +91,22 @@ body::before {
     z-index: 0;
 }
 
+/* Custom Peer Utilities for Toggles */
+.peer:checked ~ .peer-checked-label-on {
+    color: #818cf8 !important; /* indigo-400 */
+    opacity: 1 !important;
+}
+
+.peer:not(:checked) ~ .peer-checked-label-off {
+    color: #d1d5db !important; /* gray-300 */
+    opacity: 1 !important;
+}
+
+.peer-checked-label-on, .peer-checked-label-off {
+    transition: all var(--transition-base);
+}
+
+
 /* --- Collapsible Sections --- */
 .collapsible-header {
     display: flex;
