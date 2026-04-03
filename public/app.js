@@ -813,7 +813,12 @@ async function verifyPasswordChangeOTP() {
 // --- Socket.IO ---
 function setupSocketRequest() {
     socket = io();
-    socket.on('connect', () => console.log('Connected to socket'));
+    socket.on('connect', () => {
+        console.log('Connected to socket');
+        if (window.currentUserId) {
+            socket.emit('register', window.currentUserId);
+        }
+    });
 
     socket.on('orderCreated', order => {
         showToast(`New ${formatCurrency(order.amount)} order available!`, 'info');

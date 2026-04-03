@@ -55,6 +55,9 @@ function initializeSocket() {
     socket.on('connect', () => {
         console.log('Connected to WebSocket');
         showToast('Connected to real-time updates', 'info');
+        if (currentUserId) {
+            socket.emit('register', currentUserId);
+        }
     });
 
     socket.on('orderCreated', (order) => {
