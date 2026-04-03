@@ -414,6 +414,33 @@
             </div>
         </div>
 
+        <!-- Support Center (Admin) -->
+        <div class="bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-cyan-100 dark:bg-cyan-900 rounded-lg flex items-center justify-center">
+                        <i class="ti ti-headset text-2xl text-cyan-600 dark:text-cyan-400"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Support Center</h2>
+                        <p class="text-sm text-gray-300">Manage user support tickets and chat</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="admin-support-list" class="space-y-4">
+                <!-- Support tickets will be loaded here -->
+            </div>
+
+            <div id="empty-support-tickets" class="text-center py-12 hidden">
+                <div class="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="ti ti-headset text-4xl text-gray-500"></i>
+                </div>
+                <p class="text-gray-300 font-medium">No active support tickets</p>
+                <p class="text-sm text-gray-400 mt-1">All users have been assisted!</p>
+            </div>
+        </div>
+
     </main>
 
     <!-- Balance Adjustment Modal -->
@@ -580,6 +607,63 @@
 
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Admin Support Chat Modal -->
+    <div id="admin-support-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-3xl max-w-2xl w-full h-[80vh] flex flex-col border border-gray-700 shadow-2xl overflow-hidden animate-fade-in relative">
+            
+            <!-- Support Header -->
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-500 flex items-center justify-center">
+                        <i class="ti ti-headset text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white leading-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]" id="admin-support-ticket-subject">Ticket</h3>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest"><span id="admin-support-ticket-user"></span></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeAdminTicket()" class="px-3 py-1.5 text-red-500 hover:text-white hover:bg-red-500 bg-red-500/10 rounded-xl transition-all font-bold text-xs" id="admin-close-ticket-btn">
+                        Close Ticket
+                    </button>
+                    <button onclick="closeModal('admin-support-modal')" class="p-2 text-gray-500 hover:text-red-400 bg-gray-800 rounded-xl transition-all">
+                        <i class="ti ti-x text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- View: Chat Room -->
+            <div class="flex-1 flex flex-col bg-gray-900/30 overflow-hidden relative">
+                <!-- Chat Messages Area -->
+                <div id="admin-support-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                    <!-- Messages will be injected here -->
+                </div>
+
+                <!-- Image Preview Area -->
+                <div id="admin-chat-image-preview-container" class="hidden absolute bottom-20 left-4 right-4 bg-gray-800 border border-gray-600 p-2 rounded-xl flex items-center justify-between">
+                    <div class="text-xs text-gray-300 font-bold truncate flex items-center gap-2">
+                        <i class="ti ti-photo"></i><span id="admin-chat-image-preview-name">image.png</span>
+                        <img id="admin-chat-image-preview-img" src="" class="h-8 w-8 object-cover rounded hidden ml-2">
+                    </div>
+                    <button onclick="clearAdminChatImagePreview()" class="text-gray-400 hover:text-red-400"><i class="ti ti-x"></i></button>
+                </div>
+
+                <!-- Input Area -->
+                <div id="admin-support-chat-input-area" class="p-3 bg-gray-800 border-t border-gray-700 flex items-end gap-2">
+                    <input type="file" id="admin-chat-file-input" accept="image/*" class="hidden" onchange="handleAdminChatImageSelect(event)">
+                    <button onclick="document.getElementById('admin-chat-file-input').click()" class="p-3 text-gray-400 hover:text-cyan-400 bg-gray-900 rounded-xl transition-colors shrink-0">
+                        <i class="ti ti-photo text-xl"></i>
+                    </button>
+                    <textarea id="admin-support-chat-input" rows="1" placeholder="Type your reply..." class="flex-1 bg-gray-900 border border-gray-700 focus:border-cyan-500 rounded-xl px-4 py-3 text-sm text-white outline-none resize-none custom-scrollbar" onkeydown="handleAdminChatEnter(event)"></textarea>
+                    <button onclick="sendAdminChatMessage()" class="p-3 text-white bg-cyan-500 hover:bg-cyan-600 rounded-xl transition-colors shadow-lg shadow-cyan-500/20 shrink-0">
+                        <i class="ti ti-send text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
 
     <script src="auth-v5.js?v=5.0"></script>
     <script src="admin-app.js?v=5.0"></script>

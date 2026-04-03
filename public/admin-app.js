@@ -112,6 +112,25 @@ function initializeSocket() {
     socket.on('disconnect', () => {
         console.log('Disconnected from WebSocket');
     });
+
+    // Support sockets
+    socket.on('support_ticket_created', data => {
+        showToast(`New Support Ticket #${data.ticket_id} created!`, 'info');
+        fetchAdminSupportTickets();
+    });
+    
+    socket.on('support_ticket_updated', data => {
+        fetchAdminSupportTickets();
+    });
+    
+    socket.on('support_message', msg => {
+        if (currentAdminTicketId == msg.ticket_id) {
+            appendAdminChatMessage(msg);
+        } else {
+            showToast('New support message received', 'info');
+        }
+        fetchAdminSupportTickets();
+    });
 }
 
 // Dark Mode Functions
@@ -358,6 +377,7 @@ async function updateAdminDashboard() {
     await loadMasterOverview();
     await loadTransactionRequests();
     await loadDisputes();
+    await fetchAdminSupportTickets();
     updateSystemHealthCards();
     updateUserDisplay();
     updateCurrencyLabels();
@@ -1204,5 +1224,201 @@ async function deleteUser(userId, username) {
                 showToast('Server error during user deletion', 'error');
             }
         }
+    );
+}
+
+// --- Admin Support System Logic ---
+let currentAdminTicketId = null;
+
+async function fetchAdminSupportTickets() {
+    try {
+        const res = await authenticatedFetch('/api/support/admin/tickets');
+        if (res.ok) {
+            const tickets = await res.json();
+            const container = document.getElementById('admin-support-list');
+            const emptyState = document.getElementById('empty-support-tickets');
+            
+            container.innerHTML = '';
+            
+            if (tickets.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            tickets.forEach(ticket => {
+                const statusColor = ticket.status === 'open' ? 'text-green-500 bg-green-500/10' : 'text-gray-500 bg-gray-500/10';
+                container.innerHTML += `
+                    <div onclick="openAdminTicketChat(${ticket.id}, '${escapeHTML(ticket.subject)}', '${ticket.user?.username || 'Unknown User'}')" class="bg-gray-700 p-4 rounded-xl border border-gray-600 hover:border-cyan-500/50 transition-all cursor-pointer">
+                        <div class="flex justify-between items-start mb-2">
+                            <h5 class="text-sm font-bold text-white">#${ticket.id} - ${escapeHTML(ticket.subject)}</h5>
+                            <span class="text-[10px] uppercase font-bold px-2 py-1 rounded ${statusColor}">${ticket.status}</span>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <p class="text-xs text-gray-400">User: <span class="font-bold text-gray-300">${ticket.user?.username || 'Unknown'}</span></p>
+                            <p class="text-[10px] text-gray-500">${new Date(ticket.createdAt).toLocaleString()}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    } catch (e) {
+        console.error('Fetch admin tickets error:', e);
+    }
+}
+
+async function openAdminTicketChat(ticketId, subject, username) {
+    document.getElementById('admin-support-modal').classList.remove('hidden');
+    document.getElementById('admin-support-ticket-subject').innerText = '#' + ticketId + ' - ' + subject;
+    document.getElementById('admin-support-ticket-user').innerText = 'User: ' + username;
+    
+    if (socket && currentAdminTicketId) {
+        socket.emit('leave_ticket', currentAdminTicketId);
+    }
+
+    currentAdminTicketId = ticketId;
+    if (socket) socket.emit('join_ticket', ticketId);
+
+    try {
+        const res = await authenticatedFetch('/api/support/' + ticketId + '/messages');
+        if (res.ok) {
+            const data = await res.json();
+            const container = document.getElementById('admin-support-chat-messages');
+            container.innerHTML = '';
+            
+            const closeBtn = document.getElementById('admin-close-ticket-btn');
+            if (data.ticket.status === 'closed') {
+                document.getElementById('admin-support-chat-input-area').classList.add('hidden');
+                closeBtn.classList.add('hidden');
+            } else {
+                document.getElementById('admin-support-chat-input-area').classList.remove('hidden');
+                closeBtn.classList.remove('hidden');
+            }
+
+            data.messages.forEach(msg => appendAdminChatMessage(msg));
+            setTimeout(() => container.scrollTop = container.scrollHeight, 100);
+        }
+    } catch (e) {
+        showToast('Error loading messages', 'error');
+    }
+}
+
+function appendAdminChatMessage(msg) {
+    const container = document.getElementById('admin-support-chat-messages');
+    const isMe = msg.sender_id === currentUserId;
+    const alignClass = isMe ? 'self-end bg-cyan-600 text-white rounded-br-sm' : 'self-start bg-gray-700 border border-gray-600 text-gray-200 rounded-bl-sm';
+    
+    let imgHtml = '';
+    if (msg.attachment_path) {
+        imgHtml = `<img src="${msg.attachment_path}" class="max-w-xs mt-2 rounded-lg border border-gray-500/50 cursor-pointer" onclick="window.open(this.src, '_blank')">`;
+    }
+
+    container.innerHTML += `
+        <div class="flex flex-col w-fit max-w-[80%] ${alignClass} px-4 py-2 mt-2 rounded-2xl shadow-md space-y-1">
+            ${!isMe ? `<span class="text-[10px] font-bold text-gray-400 mb-1 leading-none">${msg.sender?.username}</span>` : ''}
+            ${msg.message ? `<p class="text-sm whitespace-pre-wrap leading-tight">${escapeHTML(msg.message)}</p>` : ''}
+            ${imgHtml}
+            <span class="text-[9px] opacity-70 text-right mt-1 leading-none inline-block">${new Date(msg.createdAt).toLocaleTimeString()}</span>
+        </div>
+    `;
+    setTimeout(() => {
+       const wrapper = document.getElementById('admin-support-chat-messages');
+       wrapper.scrollTop = wrapper.scrollHeight;
+    }, 100);
+}
+
+let pendingAdminChatImageBase64 = null;
+
+async function handleAdminChatImageSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        pendingAdminChatImageBase64 = await toBase64(file);
+        document.getElementById('admin-chat-image-preview-name').innerText = file.name;
+        document.getElementById('admin-chat-image-preview-img').src = pendingAdminChatImageBase64;
+        document.getElementById('admin-chat-image-preview-img').classList.remove('hidden');
+        document.getElementById('admin-chat-image-preview-container').classList.remove('hidden');
+        document.getElementById('admin-support-chat-input').focus();
+    }
+}
+
+function clearAdminChatImagePreview() {
+    pendingAdminChatImageBase64 = null;
+    document.getElementById('admin-chat-file-input').value = '';
+    document.getElementById('admin-chat-image-preview-container').classList.add('hidden');
+}
+
+function handleAdminChatEnter(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAdminChatMessage();
+    }
+}
+
+async function sendAdminChatMessage() {
+    const inputEl = document.getElementById('admin-support-chat-input');
+    const message = inputEl.value.trim();
+    
+    if (!message && !pendingAdminChatImageBase64) return;
+    if (!currentAdminTicketId) return;
+
+    try {
+        const res = await authenticatedFetch('/api/support/' + currentAdminTicketId + '/messages', {
+            method: 'POST',
+            body: JSON.stringify({ message, image_base64: pendingAdminChatImageBase64 })
+        });
+        
+        if (res.ok) {
+            inputEl.value = '';
+            clearAdminChatImagePreview();
+        } else {
+            const err = await res.json();
+            showToast(err.error || 'Failed to send message', 'error');
+        }
+    } catch (e) {
+        showToast('Connection error', 'error');
+    }
+}
+
+async function closeAdminTicket() {
+    if (!currentAdminTicketId) return;
+    if (!confirm('Are you sure you want to close this ticket?')) return;
+
+    try {
+        const res = await authenticatedFetch('/api/support/admin/tickets/' + currentAdminTicketId + '/close', {
+            method: 'POST'
+        });
+        
+        if (res.ok) {
+            showToast('Ticket closed', 'success');
+            document.getElementById('admin-support-chat-input-area').classList.add('hidden');
+            document.getElementById('admin-close-ticket-btn').classList.add('hidden');
+            fetchAdminSupportTickets();
+        } else {
+            showToast('Failed to close ticket', 'error');
+        }
+    } catch (e) {
+        showToast('Connection error', 'error');
+    }
+}
+
+function toBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+function escapeHTML(str) {
+    if(!str) return '';
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
     );
 }

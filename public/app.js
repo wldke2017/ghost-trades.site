@@ -825,6 +825,27 @@ function setupSocketRequest() {
             fetchWalletBalance();
         }
     });
+
+    socket.on('support_ticket_created', data => {
+        showToast('New Support Ticket Created', 'info');
+        if(!document.getElementById('support-modal').classList.contains('hidden')){
+            fetchSupportTickets();
+        }
+    });
+    
+    socket.on('support_ticket_updated', data => {
+        if(!document.getElementById('support-modal').classList.contains('hidden')){
+            fetchSupportTickets();
+        }
+    });
+    
+    socket.on('support_message', msg => {
+        if (currentTicketId == msg.ticket_id) {
+            appendChatMessage(msg);
+        } else {
+            showToast('New message from Support', 'info');
+        }
+    });
 }
 
 // --- Utils ---
@@ -1094,4 +1115,230 @@ function validateAgentDepositForm() {
         btn.disabled = true;
         btn.classList.add('opacity-50', 'cursor-not-allowed');
     }
+}
+
+// --- Support System Logic ---
+let currentTicketId = null;
+
+function openSupportModal() {
+    openModal('support-modal');
+    showTicketList();
+}
+
+function showTicketList() {
+    document.getElementById('support-view-list').classList.remove('hidden');
+    document.getElementById('support-view-new').classList.add('hidden');
+    document.getElementById('support-view-chat').classList.add('hidden');
+    document.getElementById('back-to-tickets-btn').classList.add('hidden');
+    
+    if (socket && currentTicketId) {
+        socket.emit('leave_ticket', currentTicketId);
+        currentTicketId = null;
+    }
+
+    fetchSupportTickets();
+}
+
+function showNewTicketForm() {
+    document.getElementById('support-view-list').classList.add('hidden');
+    document.getElementById('support-view-new').classList.remove('hidden');
+    document.getElementById('support-view-chat').classList.add('hidden');
+    document.getElementById('back-to-tickets-btn').classList.remove('hidden');
+    document.getElementById('new-ticket-subject').value = '';
+    document.getElementById('new-ticket-message').value = '';
+    document.getElementById('new-ticket-image').value = '';
+}
+
+async function fetchSupportTickets() {
+    try {
+        const res = await authenticatedFetch('/api/support');
+        if (res.ok) {
+            const tickets = await res.json();
+            const container = document.getElementById('support-ticket-list');
+            container.innerHTML = '';
+            
+            if (tickets.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 opacity-50">
+                        <i class="ti ti-message-circle-off text-4xl text-gray-600 mb-3"></i>
+                        <p class="text-xs text-gray-500">No support tickets found.</p>
+                    </div>`;
+                return;
+            }
+
+            tickets.forEach(ticket => {
+                const statusColor = ticket.status === 'open' ? 'text-green-500 bg-green-500/10' : 'text-gray-500 bg-gray-500/10';
+                container.innerHTML += `
+                    <div onclick="openTicketChat(${ticket.id})" class="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-orange-500/50 transition-all cursor-pointer">
+                        <div class="flex justify-between items-start mb-2">
+                            <h5 class="text-sm font-bold text-white">${ticket.subject}</h5>
+                            <span class="text-[10px] uppercase font-bold px-2 py-1 rounded ${statusColor}">${ticket.status}</span>
+                        </div>
+                        <p class="text-xs text-gray-400">Created: ${new Date(ticket.createdAt).toLocaleString()}</p>
+                    </div>
+                `;
+            });
+        }
+    } catch (e) {
+        console.error('Fetch tickets error:', e);
+    }
+}
+
+async function submitNewTicket() {
+    const subject = document.getElementById('new-ticket-subject').value.trim();
+    const message = document.getElementById('new-ticket-message').value.trim();
+    const fileInput = document.getElementById('new-ticket-image');
+
+    if (!subject) return showToast('Subject is required', 'error');
+
+    let image_base64 = null;
+    if (fileInput.files.length > 0) {
+        image_base64 = await toBase64(fileInput.files[0]);
+    }
+
+    try {
+        const res = await authenticatedFetch('/api/support', {
+            method: 'POST',
+            body: JSON.stringify({ subject, initial_message: message, image_base64 })
+        });
+        if (res.ok) {
+            const ticket = await res.json();
+            showToast('Ticket created', 'success');
+            openTicketChat(ticket.id);
+        } else {
+            const err = await res.json();
+            showToast(err.error || 'Failed to create ticket', 'error');
+        }
+    } catch (e) {
+        showToast('Connection error', 'error');
+    }
+}
+
+async function openTicketChat(ticketId) {
+    document.getElementById('support-view-list').classList.add('hidden');
+    document.getElementById('support-view-new').classList.add('hidden');
+    document.getElementById('support-view-chat').classList.remove('hidden');
+    document.getElementById('support-view-chat').classList.add('flex');
+    document.getElementById('back-to-tickets-btn').classList.remove('hidden');
+
+    currentTicketId = ticketId;
+    if (socket) socket.emit('join_ticket', ticketId);
+
+    try {
+        const res = await authenticatedFetch('/api/support/' + ticketId + '/messages');
+        if (res.ok) {
+            const data = await res.json();
+            const container = document.getElementById('support-chat-messages');
+            container.innerHTML = '';
+            
+            if (data.ticket.status === 'closed') {
+                document.getElementById('support-chat-input-area').classList.add('hidden');
+            } else {
+                document.getElementById('support-chat-input-area').classList.remove('hidden');
+            }
+
+            data.messages.forEach(msg => appendChatMessage(msg));
+            setTimeout(() => container.scrollTop = container.scrollHeight, 100);
+        }
+    } catch (e) {
+        showToast('Error loading messages', 'error');
+    }
+}
+
+function appendChatMessage(msg) {
+    const container = document.getElementById('support-chat-messages');
+    const isMe = msg.sender_id === window.currentUserId;
+    const alignClass = isMe ? 'self-end bg-orange-500 text-white rounded-br-sm' : 'self-start bg-gray-800 border border-gray-700 text-gray-200 rounded-bl-sm';
+    
+    let imgHtml = '';
+    if (msg.attachment_path) {
+        imgHtml = `<img src="${msg.attachment_path}" class="max-w-xs mt-2 rounded-lg border border-gray-600/50 cursor-pointer" onclick="window.open(this.src, '_blank')">`;
+    }
+
+    container.innerHTML += `
+        <div class="flex flex-col w-fit max-w-[80%] ${alignClass} px-4 py-2 mt-2 rounded-2xl shadow-md space-y-1">
+            ${!isMe ? `<span class="text-[10px] font-bold text-gray-400 mb-1 leading-none">${msg.sender?.role === 'admin' ? 'Support Admin' : msg.sender?.username}</span>` : ''}
+            ${msg.message ? `<p class="text-sm whitespace-pre-wrap leading-tight">${escapeHTML(msg.message)}</p>` : ''}
+            ${imgHtml}
+            <span class="text-[9px] opacity-70 text-right mt-1 leading-none inline-block">${new Date(msg.createdAt).toLocaleTimeString()}</span>
+        </div>
+    `;
+    setTimeout(() => {
+       const wrapper = document.getElementById('support-chat-messages');
+       wrapper.scrollTop = wrapper.scrollHeight;
+    }, 100);
+}
+
+let pendingChatImageBase64 = null;
+
+async function handleChatImageSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        pendingChatImageBase64 = await toBase64(file);
+        document.getElementById('chat-image-preview-name').innerText = file.name;
+        document.getElementById('chat-image-preview-img').src = pendingChatImageBase64;
+        document.getElementById('chat-image-preview-img').classList.remove('hidden');
+        document.getElementById('chat-image-preview-container').classList.remove('hidden');
+        document.getElementById('support-chat-input').focus();
+    }
+}
+
+function clearChatImagePreview() {
+    pendingChatImageBase64 = null;
+    document.getElementById('chat-file-input').value = '';
+    document.getElementById('chat-image-preview-container').classList.add('hidden');
+}
+
+function handleChatEnter(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+    }
+}
+
+async function sendChatMessage() {
+    const inputEl = document.getElementById('support-chat-input');
+    const message = inputEl.value.trim();
+    
+    if (!message && !pendingChatImageBase64) return;
+    if (!currentTicketId) return;
+
+    try {
+        const res = await authenticatedFetch('/api/support/' + currentTicketId + '/messages', {
+            method: 'POST',
+            body: JSON.stringify({ message, image_base64: pendingChatImageBase64 })
+        });
+        
+        if (res.ok) {
+            inputEl.value = '';
+            clearChatImagePreview();
+        } else {
+            const err = await res.json();
+            showToast(err.error || 'Failed to send message', 'error');
+        }
+    } catch (e) {
+        showToast('Connection error', 'error');
+    }
+}
+
+function toBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+function escapeHTML(str) {
+    if(!str) return '';
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
 }

@@ -10,6 +10,8 @@ const fs = require('fs');
 const sequelize = require('./db');
 const User = require('./models/user');
 const Wallet = require('./models/wallet');
+const SupportTicket = require('./models/supportTicket');
+const SupportMessage = require('./models/supportMessage');
 const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
@@ -40,6 +42,16 @@ const setupSocket = (socketIoInstance) => {
     socket.on('register', (userId) => {
       socket.join(`user_${userId}`);
       console.log(`Socket ${socket.id} joined room user_${userId}`);
+    });
+
+    socket.on('join_ticket', (ticketId) => {
+      socket.join(`ticket_${ticketId}`);
+      console.log(`Socket ${socket.id} joined room ticket_${ticketId}`);
+    });
+
+    socket.on('leave_ticket', (ticketId) => {
+      socket.leave(`ticket_${ticketId}`);
+      console.log(`Socket ${socket.id} left room ticket_${ticketId}`);
     });
 
     socket.on('disconnect', () => {
@@ -147,6 +159,7 @@ const adminRoutes = require('./routes/admin');
 const mpesaRoutes = require('./routes/mpesa');
 const aiStrategyRoutes = require('./routes/ai_strategy');
 const depositRoutes = require('./routes/deposits');
+const supportRoutes = require('./routes/support');
 
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
@@ -157,6 +170,7 @@ app.use('/admin', adminRoutes);
 app.use('/api/mpesa', mpesaRoutes);
 app.use('/api/ai', aiStrategyRoutes);
 app.use('/api/deposits', depositRoutes);
+app.use('/api/support', supportRoutes);
 
 // Health Check Endpoint for Render
 app.get('/health', (req, res) => res.status(200).send('OK'));

@@ -119,6 +119,12 @@
                         </div>
                     </div>
 
+                    <!-- Support Button -->
+                    <button onclick="openSupportModal()"
+                        class="p-2.5 bg-gray-800 text-gray-400 hover:text-white rounded-xl hover:bg-gray-700 transition-all border border-transparent hover:border-gray-600" title="Live Support">
+                        <i class="ti ti-headset text-xl"></i>
+                    </button>
+
                     <!-- Settings Button -->
                     <button id="settings-btn" onclick="openSettingsModal()"
                         class="p-2.5 bg-gray-800 text-gray-400 hover:text-white rounded-xl hover:bg-gray-700 transition-all border border-transparent hover:border-gray-600">
@@ -140,6 +146,9 @@
 
                 <!-- Mobile Menu Button -->
                 <div class="lg:hidden flex items-center space-x-2">
+                    <button onclick="openSupportModal()" class="p-2 text-gray-400 hover:text-white">
+                        <i class="ti ti-headset text-xl"></i>
+                    </button>
                     <button onclick="openSettingsModal()" class="p-2 text-gray-400 hover:text-white">
                         <i class="ti ti-settings text-xl"></i>
                     </button>
@@ -977,6 +986,103 @@
     <div id="order-modal"
         class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <!-- Content injected dynamically -->
+    </div>
+
+    <!-- Support Modal -->
+    <div id="support-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-3xl max-w-2xl w-full h-[80vh] flex flex-col border border-gray-700 shadow-2xl overflow-hidden animate-fade-in relative">
+            
+            <!-- Support Header -->
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center">
+                        <i class="ti ti-headset text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white leading-tight">Live Support</h3>
+                        <p class="text-[10px] text-green-400 font-bold uppercase tracking-widest"><i class="ti ti-circle-filled text-[8px] mr-1"></i>Online</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="back-to-tickets-btn" onclick="showTicketList()" class="hidden p-2 text-gray-400 hover:text-white bg-gray-800 rounded-xl transition-all">
+                         <i class="ti ti-arrow-left text-xl"></i>
+                    </button>
+                    <button onclick="closeModal('support-modal')" class="p-2 text-gray-500 hover:text-red-400 bg-gray-800 rounded-xl transition-all">
+                        <i class="ti ti-x text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- View: Ticket List -->
+            <div id="support-view-list" class="flex-1 flex flex-col overflow-hidden">
+                <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest">My Tickets</h4>
+                    <button onclick="showNewTicketForm()" class="text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="ti ti-plus mr-1"></i>New Ticket
+                    </button>
+                </div>
+                <div id="support-ticket-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                    <!-- Tickets injected via JS -->
+                    <div class="text-center py-12 opacity-50">
+                        <i class="ti ti-message-circle-off text-4xl text-gray-600 mb-3"></i>
+                        <p class="text-xs text-gray-500">No support tickets found.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: New Ticket -->
+            <div id="support-view-new" class="hidden flex-1 flex flex-col p-6 overflow-y-auto custom-scrollbar">
+                <h4 class="text-lg font-bold text-white mb-6">Create New Ticket</h4>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Subject / Issue Overview</label>
+                        <input type="text" id="new-ticket-subject" placeholder="e.g. Order #1002 Failed to Claim" class="w-full bg-gray-900 border border-gray-700 focus:border-orange-500 rounded-xl px-4 py-3 text-sm text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Message</label>
+                        <textarea id="new-ticket-message" rows="4" placeholder="Describe the issue in detail..." class="w-full bg-gray-900 border border-gray-700 focus:border-orange-500 rounded-xl px-4 py-3 text-sm text-white outline-none custom-scrollbar"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Attach Screenshot (Optional)</label>
+                        <input type="file" id="new-ticket-image" accept="image/*" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-xs text-gray-400 focus:outline-none">
+                    </div>
+                </div>
+                <div class="mt-auto pt-6 flex gap-3">
+                    <button onclick="showTicketList()" class="flex-1 py-3 text-sm font-bold text-gray-400 bg-gray-900 hover:bg-gray-700 rounded-xl transition-all">Cancel</button>
+                    <button onclick="submitNewTicket()" class="flex-1 py-3 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all">Create Ticket</button>
+                </div>
+            </div>
+
+            <!-- View: Chat Room -->
+            <div id="support-view-chat" class="hidden flex-1 flex flex-col bg-gray-900/30 overflow-hidden relative">
+                <!-- Chat Messages Area -->
+                <div id="support-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                    <!-- Messages will be injected here -->
+                </div>
+
+                <!-- Image Preview Area -->
+                <div id="chat-image-preview-container" class="hidden absolute bottom-20 left-4 right-4 bg-gray-800 border border-gray-600 p-2 rounded-xl flex items-center justify-between">
+                    <div class="text-xs text-gray-300 font-bold truncate flex items-center gap-2">
+                        <i class="ti ti-photo"></i><span id="chat-image-preview-name">image.png</span>
+                        <img id="chat-image-preview-img" src="" class="h-8 w-8 object-cover rounded hidden ml-2">
+                    </div>
+                    <button onclick="clearChatImagePreview()" class="text-gray-400 hover:text-red-400"><i class="ti ti-x"></i></button>
+                </div>
+
+                <!-- Input Area -->
+                <div id="support-chat-input-area" class="p-3 bg-gray-800 border-t border-gray-700 flex items-end gap-2">
+                    <input type="file" id="chat-file-input" accept="image/*" class="hidden" onchange="handleChatImageSelect(event)">
+                    <button onclick="document.getElementById('chat-file-input').click()" class="p-3 text-gray-400 hover:text-orange-400 bg-gray-900 rounded-xl transition-colors shrink-0">
+                        <i class="ti ti-photo text-xl"></i>
+                    </button>
+                    <textarea id="support-chat-input" rows="1" placeholder="Type your message..." class="flex-1 bg-gray-900 border border-gray-700 focus:border-orange-500 rounded-xl px-4 py-3 text-sm text-white outline-none resize-none custom-scrollbar" onkeydown="handleChatEnter(event)"></textarea>
+                    <button onclick="sendChatMessage()" class="p-3 text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors shadow-lg shadow-orange-500/20 shrink-0">
+                        <i class="ti ti-send text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
     </div>
 
     <script src="auth-v5.js?v=5.0"></script>
