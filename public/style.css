@@ -94,16 +94,23 @@ body::before {
 /* Custom Peer Utilities for Toggles */
 .peer:checked ~ .peer-checked-label-on {
     color: #818cf8 !important; /* indigo-400 */
-    opacity: 1 !important;
+}
+
+.peer:checked ~ .peer-checked-label-off {
+    color: #4b5563 !important; /* gray-600 (dim) */
 }
 
 .peer:not(:checked) ~ .peer-checked-label-off {
-    color: #d1d5db !important; /* gray-300 */
-    opacity: 1 !important;
+    color: #f3f4f6 !important; /* gray-100 (bright white) */
+}
+
+.peer:not(:checked) ~ .peer-checked-label-on {
+    color: #4b5563 !important; /* gray-600 (dim) */
 }
 
 .peer-checked-label-on, .peer-checked-label-off {
     transition: all var(--transition-base);
+    cursor: pointer;
 }
 
 /* Custom Toggle Button */
