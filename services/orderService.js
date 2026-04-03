@@ -87,7 +87,7 @@ async function createOrder(buyerId, amount, description, io = null) {
 
     // Trigger auto-claim if enabled
     const autoClaimService = require('./autoClaimService');
-    autoClaimService.trigger(order.id, io);
+    autoClaimService.immediateClaim(order.id, io);
 
     return {
       order,
@@ -744,7 +744,7 @@ async function createBulkOrders(adminId, ordersData, io = null) {
 
     // Trigger auto-claim for each order
     const autoClaimService = require('./autoClaimService');
-    createdOrders.forEach(order => autoClaimService.trigger(order.id, io));
+    createdOrders.forEach(order => autoClaimService.immediateClaim(order.id, io));
 
     logger.info(`Bulk orders created: ${createdOrders.length}`);
     return { created: createdOrders.length, orders: createdOrders };

@@ -13,16 +13,26 @@ let scanTimer = null;
  */
 const autoClaimService = {
   /**
+   * Wrapper for immediate claiming upon order creation.
+   * Only executes if 'auto_claim_enabled' is true in config.
+   */
+  async immediateClaim(orderId, io) {
+    try {
+      const config = await BotConfig.findOne();
+      if (config && config.auto_claim_enabled) {
+        logger.info(`[AUTO-CLAIM] Immediate claim triggered for Order #${orderId}`);
+        return this.trigger(orderId, io);
+      }
+    } catch (err) {
+      logger.error(`[AUTO-CLAIM] Immediate claim error for Order #${orderId}:`, err.message);
+    }
+  },
+
+  /**
    * Triggers an auto-claim for a specific order after a natural delay
    */
   async trigger(orderId, io) {
     try {
-      const config = await BotConfig.findOne();
-      if (!config || !config.auto_claim_enabled) {
-        logger.info(`[AUTO-CLAIM] Auto-claim is disabled or config missing. Skipping Order #${orderId}`);
-        return;
-      }
-
       // Import orderService here to avoid circular dependency
       const orderService = require('./orderService');
 
@@ -130,20 +140,25 @@ const autoClaimService = {
         return;
       }
 
-      const intervalMs = (config.scan_interval || 30) * 1000;
-      logger.info(`[AUTO-CLAIM] Starting periodic scanner (Interval: ${config.scan_interval}s)`);
+      const intervalSec = Math.max(config.scan_interval || 30, 1);
+      const intervalMs = intervalSec * 1000;
+      logger.info(`[AUTO-CLAIM] Starting periodic scanner (Interval: ${intervalSec}s)`);
 
       scanTimer = setInterval(async () => {
         try {
-          // Find a random pending order
           const randomOrder = await Order.findOne({
             where: { status: ORDER_STATUS.PENDING },
             order: sequelize.random()
           });
 
           if (randomOrder) {
-            logger.info(`[AUTO-CLAIM] Scanner found random pending order #${randomOrder.id}. Triggering claim.`);
+            logger.info(`[AUTO-CLAIM] Periodic scanner found order #${randomOrder.id}. Triggering claim.`);
+            // Note: trigger() no longer checks config.auto_claim_enabled
             this.trigger(randomOrder.id, io);
+          }
+
+          if (io) {
+            io.emit('botScanPerformed', { timestamp: new Date().toISOString() });
           }
         } catch (err) {
           logger.error('[AUTO-CLAIM] Scanner error:', err.message);
@@ -169,9 +184,19 @@ const autoClaimService = {
       if (randomOrder) {
         logger.info(`[AUTO-CLAIM] Manual scanner found pending order #${randomOrder.id}. Triggering claim.`);
         this.trigger(randomOrder.id, io);
+        
+        if (io) {
+            io.emit('botScanPerformed', { timestamp: new Date().toISOString() });
+        }
+        
         return { success: true, message: `Found order #${randomOrder.id} and triggered auto-claim.` };
       } else {
         logger.info('[AUTO-CLAIM] Manual scanner: No pending orders found.');
+        
+        if (io) {
+            io.emit('botScanPerformed', { timestamp: new Date().toISOString() });
+        }
+        
         return { success: false, message: 'No pending orders currently available to claim.' };
       }
     } catch (err) {

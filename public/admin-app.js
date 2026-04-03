@@ -112,6 +112,14 @@ function initializeSocket() {
         loadMasterOverview();
     });
 
+    socket.on('botScanPerformed', (data) => {
+        console.log('Bot scan performed:', data);
+        const lastScanEl = document.getElementById('bot-last-scan');
+        if (lastScanEl) {
+            lastScanEl.innerText = new Date(data.timestamp).toLocaleTimeString();
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Disconnected from WebSocket');
     });
