@@ -1,8 +1,10 @@
+const Order = require('../models/order');
 const User = require('../models/user');
 const BotConfig = require('../models/botConfig');
 const { ORDER_STATUS } = require('../config/constants');
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');
+const sequelize = require('../db');
 
 let scanTimer = null;
 
