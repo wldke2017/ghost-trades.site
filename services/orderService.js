@@ -295,6 +295,40 @@ async function completeOrder(orderId, commissionRate = 0.025) {
 }
 
 /**
+ * Complete all orders that are currently claimed or ready for release (Admin only)
+ */
+async function completeAllReadyOrders() {
+  const orders = await Order.findAll({
+    where: {
+      status: {
+        [Op.in]: [ORDER_STATUS.CLAIMED, ORDER_STATUS.READY_FOR_RELEASE]
+      }
+    }
+  });
+
+  const results = {
+    processed: orders.length,
+    successful: 0,
+    failed: 0,
+    errors: []
+  };
+
+  for (const order of orders) {
+    try {
+      // Use the existing completeOrder logic
+      await completeOrder(order.id);
+      results.successful++;
+    } catch (error) {
+      results.failed++;
+      results.errors.push({ orderId: order.id, error: error.message });
+      logger.error(`Failed to bulk release order #${order.id}:`, error);
+    }
+  }
+
+  return results;
+}
+
+/**
  * Dispute an order
  */
 async function disputeOrder(orderId) {
@@ -812,6 +846,7 @@ module.exports = {
   createOrder,
   claimOrder,
   completeOrder,
+  completeAllReadyOrders,
   disputeOrder,
   resolveDispute,
   cancelOrder,

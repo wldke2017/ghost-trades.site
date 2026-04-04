@@ -116,7 +116,7 @@ This is now a **Private Gig Platform** where the Admin (Boss) manages all orders
 ### 👑 For Admin (The Boss)
 - **Create Orders**: Post new escrow orders (only admins can create)
 - **Manage Disputes**: Resolve disputed orders with "God-mode" buttons
-  - Award Middleman: Unlock collateral + pay 5% commission
+  - Award Middleman: Unlock collateral + pay 2.5% commission
   - Award Buyer: Return collateral to middleman, no commission
 - **Master Overview**: See all wallets and orders at a glance
   - View all user balances (available, locked, total)
@@ -127,14 +127,14 @@ This is now a **Private Gig Platform** where the Admin (Boss) manages all orders
 ### 👷 For Middlemen (The Workers)
 - **View Available Orders**: See orders posted by admin
 - **Claim Orders**: Lock collateral to start working
-- **Earn Commission**: Get 5% commission on successful completion
+- **Earn Commission**: Get 2.5% commission on successful completion
 - **Track History**: View completed transactions
 
 ### 🔄 Escrow Flow
 1. **Admin** posts an order with amount and description
 2. **Middleman** claims order (locks collateral from their balance)
 3. **Work Completion**: Admin releases funds
-4. **Payment**: Middleman receives collateral back + 5% commission
+4. **Payment**: Middleman receives collateral back + 2.5% commission
 5. **Dispute Resolution**: Admin decides winner
    - If Middleman wins: Gets collateral + commission
    - If Buyer wins: Gets collateral back, no commission
@@ -290,7 +290,7 @@ Both start with $1000.00 initial balance.
 
 ## 📝 Technical Notes
 - Each user automatically gets a wallet with $0 initial balance
-- Commission rate is configurable (default 5%)
+- Commission rate is configurable (default 2.5%)
 - Collateral must match order amount to claim
 - UI built with Tailwind CSS via CDN (no build step required)
 - Icons from Tabler Icons library (icon font)

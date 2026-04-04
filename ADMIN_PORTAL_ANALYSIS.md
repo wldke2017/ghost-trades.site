@@ -34,13 +34,13 @@ Admins can:
 #### 3. **Global Order Manager**
 Admins can:
 - View all orders across the entire system
-- **Release Orders**: Complete claimed orders and pay 5% commission to middleman
+- **Release Orders**: Complete claimed orders and pay 2.5% commission to middleman
 - **Cancel Orders**: Cancel any order and return collateral if applicable
 
 #### 4. **Dispute Resolution Center**
 Admins can:
 - View all disputed orders
-- **Award Middleman**: Give collateral + 5% commission
+- **Award Middleman**: Give collateral + 2.5% commission
 - **Refund Buyer**: Return collateral to middleman, no commission paid
 
 #### 5. **Request Manager**

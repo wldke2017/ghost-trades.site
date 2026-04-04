@@ -96,7 +96,7 @@ function showLoginForm() {
                             </div>
                             <div>
                                 <p class="text-white font-bold text-sm">High Commissions</p>
-                                <p class="text-gray-400 text-xs">Up to 5% earned per transaction</p>
+                                <p class="text-gray-400 text-xs">Up to 2.5% earned per transaction</p>
                             </div>
                         </div>
                         <div class="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">

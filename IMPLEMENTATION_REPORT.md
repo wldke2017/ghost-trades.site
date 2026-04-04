@@ -36,7 +36,7 @@ After thorough analysis of your escrow system, I've identified the codebase is *
 - ✅ Wallet management with available/locked balances
 - ✅ Order creation and lifecycle management
 - ✅ Escrow service with collateral locking
-- ✅ Commission calculation (5% configurable)
+- ✅ Commission calculation (2.5% configurable)
 - ✅ Dispute resolution system
 - ✅ Transaction request system (deposits/withdrawals)
 - ✅ Activity logging

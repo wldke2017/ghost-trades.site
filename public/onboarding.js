@@ -29,7 +29,7 @@ function startOnboarding() {
             },
             {
                 element: '#available-orders-section',
-                intro: 'Browse and claim new escrow orders here. Each order you successfully middleman earns you a <b>5% commission</b>!',
+                intro: 'Browse and claim new escrow orders here. Each order you successfully middleman earns you a <b>2.5% commission</b>!',
                 position: 'top'
             },
             {

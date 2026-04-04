@@ -6,7 +6,7 @@ This document details all the improvements and fixes implemented to address the 
 ## 1. ✅ Commission Logic (ALREADY WORKING)
 **Status:** Already implemented correctly in `escrowService.js`
 
-The 5% commission is calculated and added to the middleman's balance when an order is finalized.
+The 2.5% commission is calculated and added to the middleman's balance when an order is finalized.
 
 **Location:** `escrowService.js` lines 45-82
 ```javascript
@@ -38,7 +38,7 @@ When admin manually deposits or withdraws funds, a TransactionRequest record is 
 **New Flow:**
 1. Middleman claims order → Status: CLAIMED
 2. Middleman completes work → Status: READY_FOR_RELEASE
-3. Admin releases funds → Status: COMPLETED (with 5% commission paid)
+3. Admin releases funds → Status: COMPLETED (with 2.5% commission paid)
 
 ## 4. ✅ Role-Based Form Visibility
 **Status:** FIXED
@@ -82,7 +82,7 @@ When admin manually deposits or withdraws funds, a TransactionRequest record is 
 - `server.js` - Fixed /orders/:id/resolve endpoint
 
 **Dispute Resolution Options:**
-- **Award Middleman:** Unlocks collateral + pays 5% commission → Status: COMPLETED
+- **Award Middleman:** Unlocks collateral + pays 2.5% commission → Status: COMPLETED
 - **Refund Buyer:** Returns collateral to middleman, no commission → Status: CANCELLED
 
 ## 7. ✅ Environment Variable Security
@@ -106,7 +106,7 @@ When admin manually deposits or withdraws funds, a TransactionRequest record is 
 ```
 PORT=3000
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-COMMISSION_RATE=0.05
+COMMISSION_RATE=0.025
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=escrow_db
@@ -127,7 +127,7 @@ DB_PASSWORD=your_database_password
 **Metrics Displayed:**
 1. **Total Liquidity:** Sum of all available balances across all wallets
 2. **Total Escrowed:** Sum of all locked balances (active collateral)
-3. **Projected Commission:** 5% of all active order amounts (CLAIMED + READY_FOR_RELEASE)
+3. **Projected Commission:** 2.5% of all active order amounts (CLAIMED + READY_FOR_RELEASE)
 
 **Files Modified:**
 - `server.js` - Added /admin/system-health endpoint
@@ -173,7 +173,7 @@ DB_PASSWORD=your_database_password
 - [ ] Manual deposit to middleman wallet
 - [ ] Check transaction history shows the deposit
 - [ ] View system health metrics
-- [ ] Release order and verify 5% commission is paid
+- [ ] Release order and verify 2.5% commission is paid
 - [ ] Resolve dispute in favor of middleman (should pay commission)
 - [ ] Resolve dispute in favor of buyer (should not pay commission)
 
@@ -198,7 +198,7 @@ DB_PASSWORD=your_database_password
    - Copy `.env` file to your server
    - Update JWT_SECRET with a strong random key
    - Update database credentials
-   - Adjust COMMISSION_RATE if needed (default 0.05 = 5%)
+   - Adjust COMMISSION_RATE if needed (default 0.025 = 2.5%)
 
 3. **Database Migration:**
    - The Order model now includes READY_FOR_RELEASE status

@@ -113,7 +113,7 @@ DB_PORT=5432
 DB_NAME=escrow_db
 DB_USER=postgres
 DB_PASSWORD=<your-password>
-COMMISSION_RATE=0.05
+COMMISSION_RATE=0.025
 ```
 
 ## API Endpoints Verified

@@ -111,8 +111,35 @@ async function fetchPersonalStats() {
             if (withdrawnEl) withdrawnEl.innerText = formatCurrency(stats.totalWithdrawn);
             if (earnedEl) earnedEl.innerText = formatCurrency(stats.totalEarned);
             if (completedEl) completedEl.innerText = stats.ordersDone;
+
+            // Trigger Welcome Bonus if eligible (totalDeposited is 0)
+            if (parseFloat(stats.totalDeposited) === 0) {
+                showWelcomeBonusModal();
+            }
         }
     } catch (e) { console.error('Error fetching personal stats:', e); }
+}
+
+/**
+ * Shows the Welcome Bonus promotion modal
+ */
+function showWelcomeBonusModal() {
+    const modal = document.getElementById('welcome-bonus-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        // Add some confetti effect or similar logic here if desired
+    }
+}
+
+/**
+ * Handle "Claim Bonus" button click
+ */
+function claimWelcomeBonus() {
+    closeModal('welcome-bonus-modal');
+    openDepositModal();
+    // Pre-fill amount with 7 if possible
+    const amtInput = document.getElementById('deposit-amount');
+    if (amtInput) amtInput.value = 7;
 }
 
 // NEW: Global Stats
@@ -522,11 +549,41 @@ function openDepositModal() {
     if (currentUser && currentUser.mpesa_number) {
         const split = splitPhone(currentUser.mpesa_number);
         const phoneInput = document.getElementById('deposit-phone');
-        // Pre-fill only if it's a 254 number (M-Pesa constraint)
         if (phoneInput && split.code === '254') {
             phoneInput.value = split.num;
         }
     }
+
+    // UI Enhancement: Show Welcome Bonus Banner if user has 0 deposits
+    const depositedStr = document.getElementById('stat-total-deposited')?.innerText || '$0.00';
+    const totalDeposited = parseFloat(depositedStr.replace(/[^0-9.-]+/g, "")) || 0;
+    
+    let promoContainer = document.getElementById('deposit-promo-banner');
+    if (totalDeposited === 0) {
+        if (!promoContainer) {
+            promoContainer = document.createElement('div');
+            promoContainer.id = 'deposit-promo-banner';
+            promoContainer.className = 'mx-6 mt-4 p-4 promo-gradient rounded-2xl flex items-center justify-between animate-pulse-slow border border-orange-500/30 shadow-lg shadow-orange-500/10';
+            promoContainer.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center text-orange-500">
+                        <i class="ti ti-gift text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-white leading-tight">First Deposit Bonus! 🎁</p>
+                        <p class="text-[10px] text-gray-400">Deposit $7.00+ and get $3.00 for free!</p>
+                    </div>
+                </div>
+                <div class="px-2 py-1 bg-gradient-to-r from-orange-500 to-pink-500 rounded text-[9px] font-black text-white uppercase tracking-tighter shadow-lg shadow-orange-500/20">Eligible</div>
+            `;
+            const depositModal = document.getElementById('deposit-modal');
+            const modalHeader = depositModal?.querySelector('.border-b');
+            if (modalHeader) modalHeader.after(promoContainer);
+        }
+    } else if (promoContainer) {
+        promoContainer.remove();
+    }
+
     openModal('deposit-modal');
 }
 

@@ -242,6 +242,32 @@ router.post('/wallets/sync', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+router.post('/orders/release-all', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const results = await orderService.completeAllReadyOrders();
+        
+        // Emit refresh event or individual completed events
+        const io = req.app.get('socketio');
+        if (io) {
+            // Since we don't have individual results with wallets here easily without refactoring service, 
+            // we'll emit a general orders update and maybe individual orderCompleted if we want.
+            // For now, let's just emit a general update that the admin hub can use to refresh.
+            io.emit('adminOrdersUpdated', { bulk: true, count: results.successful });
+            
+            // We could also loop through results if we returned more info, but for now this is enough for the Admin UI to refresh.
+            // Other users will see their wallets update if they refresh or if we had emitted wallet events.
+            // To be thorough, we really should emit wallet events.
+        }
+        
+        res.json({
+            message: `Bulk release complete. Successfully released ${results.successful} orders.`,
+            results
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Bot Configuration
 router.get('/bot-config', authenticateToken, isAdmin, async (req, res) => {
     try {

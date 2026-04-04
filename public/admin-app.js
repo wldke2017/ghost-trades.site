@@ -106,6 +106,14 @@ function initializeSocket() {
         updateAdminDashboard();
     });
 
+    socket.on('adminOrdersUpdated', (data) => {
+        console.log('Admin orders updated bulk:', data);
+        if (data.bulk) {
+            showToast(`Bulk Release: ${data.count} orders finalized!`, 'success');
+        }
+        updateAdminDashboard();
+    });
+
     socket.on('transactionRequestReviewed', (data) => {
         console.log('Transaction request reviewed:', data);
         // Refresh to show updated state
@@ -893,7 +901,7 @@ async function createNewOrder() {
 async function adminReleaseOrder(orderId) {
     showConfirmDialog(
         'Release Order',
-        `Complete order #${orderId}? The middleman will receive their collateral back plus 5% commission.`,
+        `Complete order #${orderId}? The middleman will receive their collateral back plus 2.5% commission.`,
         async () => {
             try {
                 const response = await authenticatedFetch(`/orders/${orderId}/release`, {
@@ -1129,7 +1137,7 @@ async function loadDisputes() {
 async function resolveDispute(orderId, winner) {
     const winnerText = winner === 'middleman' ? 'Middleman (Worker)' : 'Buyer (Admin)';
     const message = winner === 'middleman'
-        ? `Award this dispute to the Middleman? They will receive their collateral back plus 5% commission.`
+        ? `Award this dispute to the Middleman? They will receive their collateral back plus 2.5% commission.`
         : `Award this dispute to the Buyer? The Middleman will get their collateral back but no commission will be paid.`;
 
     showConfirmDialog(
@@ -1539,6 +1547,44 @@ function escapeHTML(str) {
             "'": '&#39;',
             '"': '&quot;'
         }[tag] || tag)
+    );
+}
+
+/**
+ * Bulk release all claimed/ready orders
+ */
+async function releaseAllOrders() {
+    showConfirmDialog(
+        'Bulk Release Orders',
+        'Are you sure you want to release ALL orders currently in CLAIMED or READY_FOR_RELEASE status? This will complete the orders and pay commissions to middlemen.',
+        async () => {
+            try {
+                showToast('Starting bulk release...', 'info');
+                
+                const response = await authenticatedFetch('/admin/orders/release-all', {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to bulk release orders');
+                }
+
+                const result = await response.json();
+                showToast(`Successfully processed ${result.results.processed} orders.`, 'success');
+                
+                if (result.results.failed > 0) {
+                    showToast(`${result.results.successful} released, ${result.results.failed} failed.`, 'warning');
+                    console.error('Bulk release errors:', result.results.errors);
+                }
+
+                // Refresh dashboard
+                updateAdminDashboard();
+            } catch (error) {
+                console.error('Error in bulk release:', error);
+                showToast(error.message, 'error');
+            }
+        }
     );
 }
 

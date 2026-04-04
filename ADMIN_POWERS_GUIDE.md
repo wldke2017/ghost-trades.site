@@ -34,7 +34,7 @@ When you login as **Admin** (username: `Admin`, password: `Admin083`), you get a
 ### 4. **Dispute Resolution**
 - View all disputed orders
 - Resolve disputes by awarding to either:
-  - **Middleman**: They get collateral back + 5% commission
+  - **Middleman**: They get collateral back + 2.5% commission
   - **Buyer**: Middleman gets collateral back, no commission
 
 ---
@@ -60,8 +60,8 @@ When you (Admin) create an order, you're using **virtual cash** - this is the ke
 3. **Order Completion**
    - You (Admin) approve the completed work
    - Middleman's $1000 collateral is unlocked
-   - Middleman receives 5% commission ($50)
-   - Middleman's new balance: $1050
+   - Middleman receives 2.5% commission ($12.50)
+   - Middleman's new balance: $1012.50
    - Order status: "COMPLETED"
 
 4. **If Disputed**
@@ -73,7 +73,7 @@ When you (Admin) create an order, you're using **virtual cash** - this is the ke
 
 - **No Real Money Needed**: Admin doesn't need funds to create orders
 - **Collateral System**: Middlemen put up real money as guarantee
-- **Commission Incentive**: Middlemen earn 5% for completing work
+- **Commission Incentive**: Middlemen earn 2.5% for completing work
 - **Risk Management**: Slashing mechanism ensures quality work
 
 ---
@@ -89,9 +89,9 @@ When you (Admin) create an order, you're using **virtual cash** - this is the ke
 3. **Middleman**: Completes the work
 4. **Admin**: Approves and releases the order
 5. **Middleman**: Receives collateral + commission
-   - Available: $0 → $525
+   - Available: $0 → $512.50
    - Locked: $500 → $0
-   - Net profit: $25 (5% of $500)
+   - Net profit: $12.50 (2.5% of $500)
 
 ### If Work is Unsatisfactory
 
@@ -168,7 +168,7 @@ When you (Admin) create an order, you're using **virtual cash** - this is the ke
 2. **Check Balance**: Ensure you have funds
 3. **Claim Order**: Find pending order and click "Claim"
 4. **Complete Work**: Do the required task
-5. **Get Paid**: Admin completes order, you receive collateral + 5% commission
+5. **Get Paid**: Admin completes order, you receive collateral + 2.5% commission
 
 ---
 
@@ -189,7 +189,7 @@ The analytics dashboard shows:
 1. **Virtual Cash is Unlimited**: Admin can create orders of any amount
 2. **Middlemen Need Real Balance**: They must have funds to claim orders
 3. **Collateral = Order Amount**: Always 1:1 ratio
-4. **Commission = 5%**: Fixed rate on all completed orders
+4. **Commission = 2.5%**: Fixed rate on all completed orders
 5. **Slashing is Permanent**: Disputed collateral is removed from system
 6. **Admin Has Full Control**: Can manage all aspects of the system
 

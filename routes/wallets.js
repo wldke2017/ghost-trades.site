@@ -50,11 +50,11 @@ router.get('/stats/personal', authenticateToken, async (req, res) => {
             where: { middleman_id: userId, status: 'COMPLETED' }
         });
 
-        // Calculate real commission earned (Assuming 5% of completed orders)
+        // Calculate real commission earned (Assuming 2.5% of completed orders)
         const completedOrders = await Order.findAll({
             where: { middleman_id: userId, status: 'COMPLETED' }
         });
-        const totalEarned = completedOrders.reduce((sum, order) => sum + (parseFloat(order.amount) * 0.05), 0);
+        const totalEarned = completedOrders.reduce((sum, order) => sum + (parseFloat(order.amount) * 0.025), 0);
 
         res.json({
             totalDeposited: Math.abs(parseFloat(totalDeposited || 0)).toFixed(2),

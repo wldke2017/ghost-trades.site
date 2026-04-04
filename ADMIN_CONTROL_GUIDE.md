@@ -54,7 +54,7 @@ When middleman completes work:
 2. Admin reviews and clicks "Release"
 3. System:
    - Unlocks middleman's collateral
-   - Adds 5% commission to middleman's available balance
+   - Adds 2.5% commission to middleman's available balance
    - Updates order status to COMPLETED
    - Both admin and middleman see updates immediately
 
@@ -70,7 +70,7 @@ When middleman completes work:
 When an order is disputed:
 
 #### Award to Middleman
-- Middleman receives collateral back + 5% commission
+- Middleman receives collateral back + 2.5% commission
 - Order status: COMPLETED
 - Middleman balance updates immediately
 
@@ -184,7 +184,7 @@ node test_websocket_sync.js
 3. Middleman completes work and marks as complete
 4. Admin sees order in READY_FOR_RELEASE status
 5. Admin clicks "Release"
-6. Middleman receives collateral + 5% commission
+6. Middleman receives collateral + 2.5% commission
 7. Both see updates immediately
 
 ### Workflow 3: Handle Dispute
