@@ -166,13 +166,12 @@ router.post('/:id/messages', authenticateToken, async (req, res, next) => {
         if (io) {
             io.to('ticket_' + ticket.id).emit('support_message', msgWithSender);
             
-            if (req.user.role !== 'admin') {
-                const fullTicket = await SupportTicket.findByPk(ticket.id, {
-                    include: [{ model: User, as: 'user', attributes: ['id', 'username'] }]
-                });
-                io.to('admins').emit('support_message', msgWithSender);
-                io.emit('support_ticket_updated', fullTicket);
-            }
+            // Always notify admin room and trigger global update to keep dashboard in sync
+            const fullTicket = await SupportTicket.findByPk(ticket.id, {
+                include: [{ model: User, as: 'user', attributes: ['id', 'username'] }]
+            });
+            io.to('admins').emit('support_message', msgWithSender);
+            io.emit('support_ticket_updated', fullTicket);
         }
 
         res.status(201).json(msgWithSender);

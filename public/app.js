@@ -113,7 +113,11 @@ async function fetchPersonalStats() {
             if (completedEl) completedEl.innerText = stats.ordersDone;
 
             // Trigger Welcome Bonus if eligible (totalDeposited is 0)
-            if (parseFloat(stats.totalDeposited) === 0) {
+            const depVal = parseFloat(stats.totalDeposited) || 0;
+            console.log('[Promo] Total Deposited:', depVal, 'Stats Object:', stats);
+            
+            if (depVal === 0) {
+                console.log('[Promo] User eligible for Welcome Bonus. Showing modal...');
                 showWelcomeBonusModal();
             }
         }
@@ -136,7 +140,7 @@ function showWelcomeBonusModal() {
  */
 function claimWelcomeBonus() {
     closeModal('welcome-bonus-modal');
-    openDepositModal();
+    openDepositModal(true); // Pass true to suppress the popup shown again
     // Pre-fill amount with 7 if possible
     const amtInput = document.getElementById('deposit-amount');
     if (amtInput) amtInput.value = 7;
@@ -545,7 +549,7 @@ function openSettingsModal() {
     }
     openModal('settings-modal');
 }
-function openDepositModal() {
+function openDepositModal(suppressPromo = false) {
     if (currentUser && currentUser.mpesa_number) {
         const split = splitPhone(currentUser.mpesa_number);
         const phoneInput = document.getElementById('deposit-phone');
@@ -560,6 +564,11 @@ function openDepositModal() {
     
     let promoContainer = document.getElementById('deposit-promo-banner');
     if (totalDeposited === 0) {
+        // Trigger the full popup if not suppressed
+        if (!suppressPromo) {
+            showWelcomeBonusModal();
+        }
+
         if (!promoContainer) {
             promoContainer = document.createElement('div');
             promoContainer.id = 'deposit-promo-banner';
