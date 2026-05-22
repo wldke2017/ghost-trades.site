@@ -83,7 +83,7 @@ const autoClaimService = {
             try {
               const currentOrder = await Order.findByPk(orderId);
               if (!currentOrder || (currentOrder.status !== ORDER_STATUS.CLAIMED && currentOrder.status !== ORDER_STATUS.READY_FOR_RELEASE)) {
-                 return;
+                return;
               }
 
               const completedResult = await orderService.completeOrder(orderId);
@@ -186,7 +186,7 @@ const autoClaimService = {
         this.trigger(randomOrder.id, io);
         
         if (io) {
-            io.emit('botScanPerformed', { timestamp: new Date().toISOString() });
+          io.emit('botScanPerformed', { timestamp: new Date().toISOString() });
         }
         
         return { success: true, message: `Found order #${randomOrder.id} and triggered auto-claim.` };
@@ -194,7 +194,7 @@ const autoClaimService = {
         logger.info('[AUTO-CLAIM] Manual scanner: No pending orders found.');
         
         if (io) {
-            io.emit('botScanPerformed', { timestamp: new Date().toISOString() });
+          io.emit('botScanPerformed', { timestamp: new Date().toISOString() });
         }
         
         return { success: false, message: 'No pending orders currently available to claim.' };

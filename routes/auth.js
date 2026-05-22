@@ -13,247 +13,295 @@ const { generateOTP, sendOTPEmail } = require('../utils/email');
 
 // Register new user
 router.post('/register', authLimiter, validate('register'), async (req, res, next) => {
-    let authTransaction;
-    try {
-        const { username, password, role, full_name, email, phone_number, country } = req.body;
-        authTransaction = await sequelize.transaction();
+  let authTransaction;
+  try {
+    const { username, password, role, full_name, email, phone_number, country } = req.body;
+    authTransaction = await sequelize.transaction();
 
-        // Prevent registration as admin
-        if (role === 'admin') {
-            if (authTransaction) await authTransaction.rollback();
-            return res.status(403).json({ error: 'Cannot register as admin. Only middleman accounts can be created.' });
-        }
-
-        if (!role || role !== 'middleman') {
-            if (authTransaction) await authTransaction.rollback();
-            return res.status(400).json({ error: 'Invalid role. Only "middleman" role is allowed for registration.' });
-        }
-
-        // Check if user already exists
-        const existingUser = await User.findOne({ where: { username } });
-        if (existingUser) {
-            if (authTransaction) await authTransaction.rollback();
-            return res.status(400).json({ error: 'Username already exists' });
-        }
-
-        logger.info(`[AUTH] Attempting to register user: ${username} (${email})`);
-        const newUser = await User.create({
-            username,
-            password,
-            role,
-            full_name,
-            email,
-            phone_number,
-            country,
-            is_verified: false
-        }, { transaction: authTransaction });
-
-        await authTransaction.commit();
-        logger.info(`[AUTH] User created successfully: ${username}. Logging in immediately.`);
-
-        const token = jwt.sign(
-            { id: newUser.id, username: newUser.username, role: newUser.role },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.status(201).json({
-            message: 'User registered successfully. You can verify your email later in settings for a verified badge.',
-            token,
-            user: {
-                id: newUser.id,
-                username: newUser.username,
-                role: newUser.role,
-                email: newUser.email,
-                is_verified: false
-            }
-        });
-    } catch (error) {
-        if (authTransaction) await authTransaction.rollback();
-        next(error);
+    // Prevent registration as admin
+    if (role === 'admin') {
+      if (authTransaction) await authTransaction.rollback();
+      return res.status(403).json({ error: 'Cannot register as admin. Only middleman accounts can be created.' });
     }
+
+    if (!role || role !== 'middleman') {
+      if (authTransaction) await authTransaction.rollback();
+      return res.status(400).json({ error: 'Invalid role. Only "middleman" role is allowed for registration.' });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ where: { username } });
+    if (existingUser) {
+      if (authTransaction) await authTransaction.rollback();
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    logger.info(`[AUTH] Attempting to register user: ${username} (${email})`);
+    const newUser = await User.create({
+      username,
+      password,
+      role,
+      full_name,
+      email,
+      phone_number,
+      country,
+      is_verified: false
+    }, { transaction: authTransaction });
+
+    await authTransaction.commit();
+    logger.info(`[AUTH] User created successfully: ${username}. Logging in immediately.`);
+
+    const token = jwt.sign(
+      { id: newUser.id, username: newUser.username, role: newUser.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'User registered successfully. You can verify your email later in settings for a verified badge.',
+      token,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        role: newUser.role,
+        email: newUser.email,
+        is_verified: false
+      }
+    });
+  } catch (error) {
+    if (authTransaction) await authTransaction.rollback();
+    next(error);
+  }
 });
 
 // Login user
 router.post('/login', authLimiter, validate('login'), async (req, res, next) => {
-    try {
-        const { username, password } = req.body;
-        // Find user by username or email
-        const user = await User.findOne({ 
-            where: { 
-                [Op.or]: [
-                    { username },
-                    { email: username }
-                ]
-            } 
-        });
-        if (!user) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        if (user.status !== 'active') {
-            return res.status(403).json({ error: 'Account is disabled or blocked' });
-        }
-
-        const isValidPassword = await user.validatePassword(password);
-        if (!isValidPassword) {
-            logger.warn(`[AUTH] Login failed: Invalid password for user ${username}`);
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        // All active users can log in. Verification is now post-login.
-        logger.info(`[AUTH] Login successful for user: ${username} (Role: ${user.role})`);
-
-        const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            message: 'Login successful',
-            token,
-            user: {
-                id: user.id,
-                username: user.username,
-                role: user.role,
-                email: user.email,
-                is_verified: user.is_verified
-            }
-        });
-    } catch (error) {
-        next(error);
+  try {
+    const { username, password } = req.body;
+    // Find user by username or email
+    const user = await User.findOne({ 
+      where: { 
+        [Op.or]: [
+          { username },
+          { email: username }
+        ]
+      } 
+    });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    if (user.status !== 'active') {
+      return res.status(403).json({ error: 'Account is disabled or blocked' });
+    }
+
+    const isValidPassword = await user.validatePassword(password);
+    if (!isValidPassword) {
+      logger.warn(`[AUTH] Login failed: Invalid password for user ${username}`);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // All active users can log in. Verification is now post-login.
+    logger.info(`[AUTH] Login successful for user: ${username} (Role: ${user.role})`);
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.email,
+        is_verified: user.is_verified
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Get current user info (protected)
 router.get('/me', authenticateToken, async (req, res, next) => {
-    try {
-        const user = await User.findByPk(req.user.id, {
-            attributes: ['id', 'username', 'role', 'createdAt', 'avatar_path', 'mpesa_number', 'currency_preference', 'full_name', 'email', 'phone_number', 'country', 'is_verified']
-        });
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'username', 'role', 'createdAt', 'avatar_path', 'mpesa_number', 'currency_preference', 'full_name', 'email', 'phone_number', 'country', 'is_verified']
+    });
 
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        res.json(user);
-    } catch (error) {
-        next(error);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
+
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // One-click Verify via Link
 router.get('/verify-link', async (req, res, next) => {
+  try {
+    const { email, code } = req.query;
+    if (!email || !code) return res.send('<h1>Invalid Link</h1><p>Missing email or code.</p>');
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.send('<h1>User Not Found</h1>');
+
+    if (user.otp_code !== code || user.otp_expires_at < new Date()) {
+      return res.send('<h1>Expired Link</h1><p>This verification link has expired or is invalid. Please request a new one from your settings.</p>');
+    }
+
+    const transaction = await sequelize.transaction();
     try {
-        const { email, code } = req.query;
-        if (!email || !code) return res.send('<h1>Invalid Link</h1><p>Missing email or code.</p>');
+      user.is_verified = true;
+      user.otp_code = null;
+      user.otp_expires_at = null;
+      await user.save({ transaction });
 
-        const user = await User.findOne({ where: { email } });
-        if (!user) return res.send('<h1>User Not Found</h1>');
+      const walletService = require('../services/walletService');
+      await walletService.checkAndApplyVerificationBonus(user.id, transaction);
 
-        if (user.otp_code !== code || user.otp_expires_at < new Date()) {
-            return res.send('<h1>Expired Link</h1><p>This verification link has expired or is invalid. Please request a new one from your settings.</p>');
-        }
+      await transaction.commit();
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
 
-        user.is_verified = true;
-        user.otp_code = null;
-        user.otp_expires_at = null;
-        await user.save();
+    // Emit socket event to notify client of new wallet balance
+    const io = req.app.get('socketio');
+    if (io) {
+      const wallet = await Wallet.findOne({ where: { user_id: user.id } });
+      if (wallet) {
+        io.emit('walletUpdated', {
+          user_id: user.id,
+          available_balance: wallet.available_balance,
+          locked_balance: wallet.locked_balance
+        });
+      }
+    }
 
-        // Redirect to a success page or the main app
-        res.send(`
+    // Redirect to a success page or the main app
+    res.send(`
             <div style="font-family: sans-serif; text-align: center; padding: 50px;">
                 <h1 style="color: #10b981;">Verification Successful!</h1>
                 <p>Your account is now verified. You can close this window and refresh your dashboard.</p>
                 <a href="/" style="display: inline-block; padding: 10px 20px; background: #f97316; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">Back to Dashboard</a>
             </div>
         `);
-    } catch (error) {
-        next(error);
-    }
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Verify OTP (Traditional Code Entry)
 router.post('/verify-otp', authLimiter, async (req, res, next) => {
-    try {
-        const { email, otp_code } = req.body;
-        if (!email || !otp_code) return res.status(400).json({ error: 'Email and OTP code are required' });
+  try {
+    const { email, otp_code } = req.body;
+    if (!email || !otp_code) return res.status(400).json({ error: 'Email and OTP code are required' });
 
-        const user = await User.findOne({ where: { email } });
-        if (!user) return res.status(404).json({ error: 'User not found' });
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-        if (user.otp_code !== otp_code || user.otp_expires_at < new Date()) {
-            return res.status(400).json({ error: 'Invalid or expired OTP code' });
-        }
-
-        user.is_verified = true;
-        user.otp_code = null;
-        user.otp_expires_at = null;
-        await user.save();
-
-        const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            message: 'Email verified successfully',
-            token,
-            user: { id: user.id, username: user.username, role: user.role }
-        });
-    } catch (error) {
-        next(error);
+    if (user.otp_code !== otp_code || user.otp_expires_at < new Date()) {
+      return res.status(400).json({ error: 'Invalid or expired OTP code' });
     }
+
+    const transaction = await sequelize.transaction();
+    try {
+      user.is_verified = true;
+      user.otp_code = null;
+      user.otp_expires_at = null;
+      await user.save({ transaction });
+
+      const walletService = require('../services/walletService');
+      await walletService.checkAndApplyVerificationBonus(user.id, transaction);
+
+      await transaction.commit();
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+
+    // Emit socket event to notify client of new wallet balance
+    const io = req.app.get('socketio');
+    if (io) {
+      const wallet = await Wallet.findOne({ where: { user_id: user.id } });
+      if (wallet) {
+        io.emit('walletUpdated', {
+          user_id: user.id,
+          available_balance: wallet.available_balance,
+          locked_balance: wallet.locked_balance
+        });
+      }
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      message: 'Email verified successfully',
+      token,
+      user: { id: user.id, username: user.username, role: user.role }
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Resend OTP
 router.post('/resend-otp', authLimiter, async (req, res, next) => {
-    try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'Email is required' });
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
 
-        const user = await User.findOne({ where: { email } });
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        if (user.is_verified) return res.status(400).json({ error: 'User is already verified' });
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.is_verified) return res.status(400).json({ error: 'User is already verified' });
 
-        logger.info(`[AUTH] Resending OTP to: ${email}`);
-        const otpCode = generateOTP();
-        user.otp_code = otpCode;
-        user.otp_expires_at = new Date(Date.now() + 15 * 60 * 1000);
-        await user.save();
+    logger.info(`[AUTH] Resending OTP to: ${email}`);
+    const otpCode = generateOTP();
+    user.otp_code = otpCode;
+    user.otp_expires_at = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
 
-        const emailSent = await sendOTPEmail(user.email, user.full_name, otpCode, 'Registration Verification');
-        if (emailSent) {
-            logger.info(`[AUTH] Resend OTP email sent successfully to: ${email}`);
-            res.json({ message: 'OTP resent successfully. Check your email.' });
-        } else {
-            logger.error(`[AUTH] Failed to resend OTP email to: ${email}`);
-            res.status(500).json({ error: 'Failed to send verification email. Please contact support.' });
-        }
-    } catch (error) {
-        next(error);
+    const emailSent = await sendOTPEmail(user.email, user.full_name, otpCode, 'Registration Verification');
+    if (emailSent) {
+      logger.info(`[AUTH] Resend OTP email sent successfully to: ${email}`);
+      res.json({ message: 'OTP resent successfully. Check your email.' });
+    } else {
+      logger.error(`[AUTH] Failed to resend OTP email to: ${email}`);
+      res.status(500).json({ error: 'Failed to send verification email. Please contact support.' });
     }
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Diagnostic route to test SMTP settings directly
 router.post('/test-email', async (req, res, next) => {
-    try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'Target email is required' });
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Target email is required' });
         
-        logger.info(`[DIAGNOSTIC] Manual SMTP test triggered for: ${email}`);
-        const success = await sendOTPEmail(email, 'Diagnostic User', '123456', 'SMTP Connection Test');
+    logger.info(`[DIAGNOSTIC] Manual SMTP test triggered for: ${email}`);
+    const success = await sendOTPEmail(email, 'Diagnostic User', '123456', 'SMTP Connection Test');
         
-        if (success) {
-            res.json({ message: 'Test email accepted by SMTP server. Check your inbox/spam.' });
-        } else {
-            res.status(500).json({ error: 'SMTP server rejected the email. Check logs for details.' });
-        }
-    } catch (error) {
-        next(error);
+    if (success) {
+      res.json({ message: 'Test email accepted by SMTP server. Check your inbox/spam.' });
+    } else {
+      res.status(500).json({ error: 'SMTP server rejected the email. Check logs for details.' });
     }
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

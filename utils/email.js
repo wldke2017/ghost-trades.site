@@ -14,66 +14,66 @@ const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
  * @param {string} html - HTML content
  */
 async function sendEmail(to, subject, html) {
-    if (!BREVO_API_KEY) {
-        logger.warn(`[EMAIL] Brevo API Key not configured. Skipping email to: ${to}`);
-        return false;
-    }
+  if (!BREVO_API_KEY) {
+    logger.warn(`[EMAIL] Brevo API Key not configured. Skipping email to: ${to}`);
+    return false;
+  }
 
-    try {
-        logger.info(`[EMAIL] Attempting to send email via Brevo Web API to: ${to}`);
+  try {
+    logger.info(`[EMAIL] Attempting to send email via Brevo Web API to: ${to}`);
         
-        const response = await fetch(BREVO_API_URL, {
-            method: 'POST',
-            headers: {
-                'accept': 'application/json',
-                'api-key': BREVO_API_KEY,
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify({
-                sender: { 
-                  name: 'SecureEscrow', 
-                  email: 'luckymutisya83@gmail.com' // Changed to verified personal email
-                },
-                replyTo: {
-                  email: 'luckymutisya83@gmail.com'
-                },
-                to: [{ email: to }],
-                subject: subject,
-                htmlContent: html
-            })
-        });
+    const response = await fetch(BREVO_API_URL, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': BREVO_API_KEY,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { 
+          name: 'SecureEscrow', 
+          email: 'luckymutisya83@gmail.com' // Changed to verified personal email
+        },
+        replyTo: {
+          email: 'luckymutisya83@gmail.com'
+        },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html
+      })
+    });
 
-        const data = await response.json();
+    const data = await response.json();
 
-        if (response.ok) {
-            logger.info(`[EMAIL] Sent successfully via Brevo API. Message ID: ${data.messageId} → ${to}`);
-            return true;
-        } else {
-            logger.error(`[EMAIL] Brevo API rejected the email:`, data);
-            return false;
-        }
-    } catch (error) {
-        logger.error(`[EMAIL] Brevo API request failed:`, {
-            errorMessage: error.message,
-            stack: error.stack
-        });
-        return false;
+    if (response.ok) {
+      logger.info(`[EMAIL] Sent successfully via Brevo API. Message ID: ${data.messageId} → ${to}`);
+      return true;
+    } else {
+      logger.error('[EMAIL] Brevo API rejected the email:', data);
+      return false;
     }
+  } catch (error) {
+    logger.error('[EMAIL] Brevo API request failed:', {
+      errorMessage: error.message,
+      stack: error.stack
+    });
+    return false;
+  }
 }
 
 /**
  * Generate a 6-digit random OTP
  */
 function generateOTP() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 /**
  * Send an OTP email to a user
  */
 async function sendOTPEmail(to, name, otpCode, purpose = 'Verification') {
-    const subject = `Your SecureEscrow ${purpose} Code`;
-    const html = `
+  const subject = `Your SecureEscrow ${purpose} Code`;
+  const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
             <div style="text-align: center; margin-bottom: 30px;">
                 <h2 style="color: #f97316; margin: 0; font-size: 24px;">SecureEscrow</h2>
@@ -111,11 +111,11 @@ async function sendOTPEmail(to, name, otpCode, purpose = 'Verification') {
         </div>
     `;
 
-    return sendEmail(to, subject, html);
+  return sendEmail(to, subject, html);
 }
 
 module.exports = {
-    sendEmail,
-    generateOTP,
-    sendOTPEmail
+  sendEmail,
+  generateOTP,
+  sendOTPEmail
 };

@@ -8,8 +8,8 @@
 
 const sequelize = require('../db');
 // Load all models so Sequelize is aware of them
-const User = require('../models/user');
-const Wallet = require('../models/wallet');
+require('../models/user');
+require('../models/wallet');
 const logger = require('../utils/logger');
 
 async function runMigrations() {
@@ -19,8 +19,6 @@ async function runMigrations() {
     // Test connection
     await sequelize.authenticate();
     logger.info('Database connection established');
-
-    const qi = sequelize.getQueryInterface();
 
     // ── users table ──────────────────────────────────────────────────────────
     logger.info('Ensuring users table columns are up to date...');
@@ -45,7 +43,22 @@ async function runMigrations() {
     await addIfMissing('users', 'country',           'VARCHAR(255)');
     await addIfMissing('users', 'avatar_path',       'VARCHAR(255)');
     await addIfMissing('users', 'mpesa_number',      'VARCHAR(255)');
-    await addIfMissing('users', 'currency_preference', "VARCHAR(255) DEFAULT 'USD'");
+    await addIfMissing('users', 'currency_preference', 'VARCHAR(255) DEFAULT \'USD\'');
+
+    // Ensure transaction types ENUM contains WELCOME_BONUS and VERIFICATION_BONUS in Postgres
+    try {
+      await sequelize.query('ALTER TYPE "enum_transactions_type" ADD VALUE IF NOT EXISTS \'WELCOME_BONUS\';');
+      logger.info('Enum value WELCOME_BONUS ensured.');
+    } catch (err) {
+      logger.warn(`Could not add enum value WELCOME_BONUS: ${err.message}`);
+    }
+
+    try {
+      await sequelize.query('ALTER TYPE "enum_transactions_type" ADD VALUE IF NOT EXISTS \'VERIFICATION_BONUS\';');
+      logger.info('Enum value VERIFICATION_BONUS ensured.');
+    } catch (err) {
+      logger.warn(`Could not add enum value VERIFICATION_BONUS: ${err.message}`);
+    }
 
     // Ensure status column has correct ENUM-like default (postgres TEXT column)
     // Only attempt if you know it is already a string column

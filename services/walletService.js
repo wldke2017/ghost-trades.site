@@ -92,6 +92,12 @@ async function depositFunds(userId, amount, adminId, notes = null) {
       }
     }, { transaction });
 
+    // Auto-check for welcome bonus eligibility
+    await checkAndApplyWelcomeBonus(userId, depositAmount, transaction);
+
+    // Reload the wallet model to reflect the newly updated balance
+    await wallet.reload({ transaction });
+
     await transaction.commit();
 
     logger.info(`Deposit of ${depositAmount} to user ${userId} by admin ${adminId}`);
@@ -216,9 +222,120 @@ async function getTransactionHistory(userId, options = {}) {
   };
 }
 
+/**
+ * Automatically check and apply Welcome Bonus ($3 for first deposit >= $7)
+ */
+async function checkAndApplyWelcomeBonus(userId, depositAmount, transaction = null) {
+  try {
+    // Count successful deposits for this user
+    const depositCount = await Transaction.count({
+      where: { 
+        user_id: userId, 
+        type: TRANSACTION_TYPES.DEPOSIT 
+      },
+      transaction
+    });
+
+    // Award bonus ONLY if this is the VERY FIRST deposit and threshold is met ($7)
+    if (depositCount === 1 && parseFloat(depositAmount) >= 7) {
+      const wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
+      if (!wallet) return false;
+
+      const bonusAmount = 3.00;
+      const balanceBefore = parseFloat(wallet.available_balance);
+      
+      wallet.available_balance = balanceBefore + bonusAmount;
+      await wallet.save({ transaction });
+
+      // Record bonus transaction
+      await Transaction.create({
+        user_id: userId,
+        type: TRANSACTION_TYPES.WELCOME_BONUS,
+        amount: bonusAmount,
+        balance_before: balanceBefore,
+        balance_after: wallet.available_balance,
+        description: `Welcome Bonus ($${bonusAmount.toFixed(2)}) for first deposit of $${parseFloat(depositAmount).toFixed(2)}`
+      }, { transaction });
+
+      // Log activity
+      await ActivityLog.create({
+        user_id: userId,
+        action: 'welcome_bonus_awarded',
+        metadata: { 
+          deposit_amount: depositAmount, 
+          bonus_amount: bonusAmount,
+          at: new Date()
+        }
+      }, { transaction });
+
+      logger.info(`[BONUS] Welcome bonus of $${bonusAmount} awarded to user ${userId}`);
+      return true;
+    }
+  } catch (err) {
+    logger.error(`[BONUS] Error checking welcome bonus for user ${userId}:`, err);
+  }
+  return false;
+}
+
+/**
+ * Automatically check and apply Email Verification Bonus ($2 for verifying email)
+ */
+async function checkAndApplyVerificationBonus(userId, transaction = null) {
+  try {
+    // Check if verification bonus has already been awarded to this user
+    const existingBonus = await Transaction.findOne({
+      where: {
+        user_id: userId,
+        type: TRANSACTION_TYPES.VERIFICATION_BONUS
+      },
+      transaction
+    });
+
+    // If already awarded, do nothing
+    if (existingBonus) return false;
+
+    const wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
+    if (!wallet) return false;
+
+    const bonusAmount = 2.00;
+    const balanceBefore = parseFloat(wallet.available_balance);
+    
+    wallet.available_balance = balanceBefore + bonusAmount;
+    await wallet.save({ transaction });
+
+    // Record bonus transaction
+    await Transaction.create({
+      user_id: userId,
+      type: TRANSACTION_TYPES.VERIFICATION_BONUS,
+      amount: bonusAmount,
+      balance_before: balanceBefore,
+      balance_after: wallet.available_balance,
+      description: `Email Verification Bonus ($${bonusAmount.toFixed(2)})`
+    }, { transaction });
+
+    // Log activity
+    await ActivityLog.create({
+      user_id: userId,
+      action: 'verification_bonus_awarded',
+      metadata: {
+        bonus_amount: bonusAmount,
+        at: new Date()
+      }
+    }, { transaction });
+
+    logger.info(`[BONUS] Email verification bonus of $${bonusAmount} awarded to user ${userId}`);
+    return true;
+  } catch (err) {
+    logger.error(`[BONUS] Error checking verification bonus for user ${userId}:`, err);
+  }
+  return false;
+}
+
 module.exports = {
   getUserWallet,
   depositFunds,
   withdrawFunds,
-  getTransactionHistory
+  getTransactionHistory,
+  checkAndApplyWelcomeBonus,
+  checkAndApplyVerificationBonus
 };

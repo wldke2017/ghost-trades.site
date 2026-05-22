@@ -28,7 +28,7 @@ const socketIo = require('socket.io');
 let io = socketIo(server, {
   cors: {
     origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-    methods: ["GET", "POST"],
+    methods: ['GET', 'POST'],
     credentials: true
   }
 });
@@ -49,8 +49,8 @@ const setupSocket = (socketIoInstance) => {
       try {
         const u = await User.findByPk(userId);
         if (u && u.role === 'admin') {
-            socket.join('admins');
-            console.log(`Socket ${socket.id} joined admins room`);
+          socket.join('admins');
+          console.log(`Socket ${socket.id} joined admins room`);
         }
       } catch (err) {
         console.error('Socket register error:', err);
@@ -138,7 +138,7 @@ sequelize.sync(syncOptions).then(async () => {
   await addColumnIfMissing('users', 'country',           'VARCHAR(255)');
   await addColumnIfMissing('users', 'avatar_path',       'VARCHAR(255)');
   await addColumnIfMissing('users', 'mpesa_number',      'VARCHAR(255)');
-  await addColumnIfMissing('users', 'currency_preference', "VARCHAR(255) DEFAULT 'USD'");
+  await addColumnIfMissing('users', 'currency_preference', 'VARCHAR(255) DEFAULT \'USD\'');
   logger.info('Schema column check complete.');
 
   try {
@@ -165,16 +165,16 @@ sequelize.sync(syncOptions).then(async () => {
   try {
     const configExists = await BotConfig.findOne();
     if (!configExists) {
-        await BotConfig.create({
-            claim_delay_min: 5,
-            claim_delay_max: 15,
-            release_delay_min: 15,
-            release_delay_max: 20,
-            auto_claim_enabled: true,
-            periodic_scan_enabled: false,
-            scan_interval: 5
-        });
-        logger.info('Default BotConfig created');
+      await BotConfig.create({
+        claim_delay_min: 5,
+        claim_delay_max: 15,
+        release_delay_min: 15,
+        release_delay_max: 20,
+        auto_claim_enabled: true,
+        periodic_scan_enabled: false,
+        scan_interval: 5
+      });
+      logger.info('Default BotConfig created');
     }
   } catch (err) {
     logger.error('Error seeding BotConfig:', err.message);
@@ -219,10 +219,10 @@ if (require.main === module) {
 
     // Initialize bot scanner once socket server is ready
     try {
-        const autoClaimService = require('./services/autoClaimService');
-        autoClaimService.startPeriodicScan(app.get('socketio'));
+      const autoClaimService = require('./services/autoClaimService');
+      autoClaimService.startPeriodicScan(app.get('socketio'));
     } catch (err) {
-        logger.error('[AUTO-CLAIM] Error starting periodic scan at boot:', err.message);
+      logger.error('[AUTO-CLAIM] Error starting periodic scan at boot:', err.message);
     }
 
     // Self-pinging to prevent Render from sleeping (free tier)

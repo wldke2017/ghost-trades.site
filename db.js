@@ -40,13 +40,15 @@ const sequelize = process.env.DATABASE_URL
   );
 
 // Test database connection
-sequelize.authenticate()
-  .then(() => {
-    console.log('Database connection established successfully.');
-  })
-  .catch(err => {
-    console.error('Unable to connect to the database:', err);
-    process.exit(1);
-  });
+if (process.env.NODE_ENV !== 'test') {
+  sequelize.authenticate()
+    .then(() => {
+      console.log('Database connection established successfully.');
+    })
+    .catch(err => {
+      console.error('Unable to connect to the database:', err);
+      process.exit(1);
+    });
+}
 
 module.exports = sequelize;

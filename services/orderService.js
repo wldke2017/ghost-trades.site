@@ -855,4 +855,4 @@ module.exports = {
   markOrderAsReady,
   createBulkOrders,
   syncWallets
-};
+};

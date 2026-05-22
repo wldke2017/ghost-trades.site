@@ -56,69 +56,69 @@ if (last === 7 && prev === 8) {
 `;
 
 router.post('/generate', apiLimiter, async (req, res) => {
-    try {
-        const { prompt } = req.body;
+  try {
+    const { prompt } = req.body;
 
-        if (!prompt || typeof prompt !== 'string' || prompt.length > 500) {
-            return res.status(400).json({ error: 'Invalid prompt (max 500 chars)' });
-        }
+    if (!prompt || typeof prompt !== 'string' || prompt.length > 500) {
+      return res.status(400).json({ error: 'Invalid prompt (max 500 chars)' });
+    }
 
-        console.log('🤖 AI Strategy API: Received prompt request');
+    console.log('🤖 AI Strategy API: Received prompt request');
 
-        if (!GEMINI_API_KEY) {
-            // Mock response for testing/development if no key
-            console.warn('⚠️ No GEMINI_API_KEY found. Returning mock response.');
-            return res.json({
-                code: `// MOCK MODE: API Key missing
+    if (!GEMINI_API_KEY) {
+      // Mock response for testing/development if no key
+      console.warn('⚠️ No GEMINI_API_KEY found. Returning mock response.');
+      return res.json({
+        code: `// MOCK MODE: API Key missing
 // Prompt: "${prompt}"
 if (data.lastDigit % 2 === 0) {
     signal('CALL', 1.0);
     log('Mock Buy Call (Even digit)');
 } `
-            });
-        }
-
-        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `${SYSTEM_PROMPT} \n\nUSER PROMPT: "${prompt}"\n\nJAVASCRIPT BODY: `
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.2,
-                    maxOutputTokens: 1024,
-                }
-            })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Gemini API Error: ${errorText} `);
-        }
-
-        const data = await response.json();
-
-        // Extract text from Gemini response structure
-        let generatedCode = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-        // Clean up markdown code blocks if present (despite system prompt)
-        generatedCode = generatedCode.replace(/```javascript/g, '').replace(/```/g, '').trim();
-
-        // Basic Security Sanitization check
-        const dangerousKeywords = ['eval', 'Function', 'import', 'process', 'window', 'document'];
-        if (dangerousKeywords.some(kw => generatedCode.includes(kw))) {
-            return res.status(400).json({ error: 'Generated code failed security check.' });
-        }
-
-        res.json({ code: generatedCode });
-
-    } catch (error) {
-        console.error('AI Generation Error:', error);
-        res.status(500).json({ error: 'Failed to generate strategy' });
+      });
     }
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `${SYSTEM_PROMPT} \n\nUSER PROMPT: "${prompt}"\n\nJAVASCRIPT BODY: `
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 1024,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API Error: ${errorText} `);
+    }
+
+    const data = await response.json();
+
+    // Extract text from Gemini response structure
+    let generatedCode = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Clean up markdown code blocks if present (despite system prompt)
+    generatedCode = generatedCode.replace(/```javascript/g, '').replace(/```/g, '').trim();
+
+    // Basic Security Sanitization check
+    const dangerousKeywords = ['eval', 'Function', 'import', 'process', 'window', 'document'];
+    if (dangerousKeywords.some(kw => generatedCode.includes(kw))) {
+      return res.status(400).json({ error: 'Generated code failed security check.' });
+    }
+
+    res.json({ code: generatedCode });
+
+  } catch (error) {
+    console.error('AI Generation Error:', error);
+    res.status(500).json({ error: 'Failed to generate strategy' });
+  }
 });
 
 module.exports = router;

@@ -7,368 +7,374 @@ const Order = require('../models/order');
 const Transaction = require('../models/transaction');
 const TransactionRequest = require('../models/transactionRequest');
 const BotConfig = require('../models/botConfig');
-const ActivityLog = require('../models/activityLog');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validator');
 const { Op } = require('sequelize');
 const sequelize = require('../db');
+const walletService = require('../services/walletService');
 
 // Master Overview
 router.get('/overview', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const { ordersLimit = 10, ordersOffset = 0, status, search } = req.query;
+  try {
+    const { ordersLimit = 10, ordersOffset = 0, status, search } = req.query;
 
-        const users = await User.findAll({
-            include: [{ model: Wallet, required: false }]
-        });
+    const users = await User.findAll({
+      include: [{ model: Wallet, required: false }]
+    });
 
-        const ordersWhere = {};
-        if (status && status !== 'ALL') ordersWhere.status = status;
+    const ordersWhere = {};
+    if (status && status !== 'ALL') ordersWhere.status = status;
 
-        const searchInclude = [
-            { model: User, as: 'buyer', attributes: ['id', 'username', 'role'] },
-            { model: User, as: 'middleman', attributes: ['id', 'username', 'role'] }
-        ];
+    const searchInclude = [
+      { model: User, as: 'buyer', attributes: ['id', 'username', 'role'] },
+      { model: User, as: 'middleman', attributes: ['id', 'username', 'role'] }
+    ];
 
-        if (search && search.trim() !== '') {
-            const searchTerm = `%${search.trim().toLowerCase()}%`;
-            ordersWhere[Op.or] = [
-                { id: { [Op.cast]: 'char', [Op.iLike]: searchTerm } },
-                { description: { [Op.iLike]: searchTerm } },
-                { '$buyer.username$': { [Op.iLike]: searchTerm } },
-                { '$middleman.username$': { [Op.iLike]: searchTerm } }
-            ];
-        }
-
-        const orders = await Order.findAll({
-            where: ordersWhere,
-            include: searchInclude,
-            order: [['createdAt', 'DESC']],
-            limit: parseInt(ordersLimit) || 10,
-            offset: parseInt(ordersOffset) || 0,
-            subQuery: false
-        });
-
-        const totalOrders = await Order.count({
-            where: ordersWhere,
-            include: (search && search.trim() !== '') ? searchInclude : [],
-            distinct: true
-        });
-
-        const pendingRequests = await TransactionRequest.count({ where: { status: 'pending' } });
-
-        res.json({
-            users: users.map(u => {
-                const available = u.Wallet ? parseFloat(u.Wallet.available_balance || 0) : 0;
-                const locked = u.Wallet ? parseFloat(u.Wallet.locked_balance || 0) : 0;
-                return {
-                    id: u.id,
-                    username: u.username,
-                    role: u.role,
-                    status: u.status,
-                    available_balance: available.toFixed(2),
-                    locked_balance: locked.toFixed(2),
-                    total_balance: (available + locked).toFixed(2),
-                    is_bot: u.is_bot
-                };
-            }),
-            orders: orders,
-            totalOrders: totalOrders,
-            ordersHasMore: (parseInt(ordersOffset) || 0) + orders.length < totalOrders,
-            pendingRequests: pendingRequests
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (search && search.trim() !== '') {
+      const searchTerm = `%${search.trim().toLowerCase()}%`;
+      ordersWhere[Op.or] = [
+        { id: { [Op.cast]: 'char', [Op.iLike]: searchTerm } },
+        { description: { [Op.iLike]: searchTerm } },
+        { '$buyer.username$': { [Op.iLike]: searchTerm } },
+        { '$middleman.username$': { [Op.iLike]: searchTerm } }
+      ];
     }
+
+    const orders = await Order.findAll({
+      where: ordersWhere,
+      include: searchInclude,
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(ordersLimit) || 10,
+      offset: parseInt(ordersOffset) || 0,
+      subQuery: false
+    });
+
+    const totalOrders = await Order.count({
+      where: ordersWhere,
+      include: (search && search.trim() !== '') ? searchInclude : [],
+      distinct: true
+    });
+
+    const pendingRequests = await TransactionRequest.count({ where: { status: 'pending' } });
+
+    res.json({
+      users: users.map(u => {
+        const available = u.Wallet ? parseFloat(u.Wallet.available_balance || 0) : 0;
+        const locked = u.Wallet ? parseFloat(u.Wallet.locked_balance || 0) : 0;
+        return {
+          id: u.id,
+          username: u.username,
+          role: u.role,
+          status: u.status,
+          available_balance: available.toFixed(2),
+          locked_balance: locked.toFixed(2),
+          total_balance: (available + locked).toFixed(2),
+          is_bot: u.is_bot
+        };
+      }),
+      orders: orders,
+      totalOrders: totalOrders,
+      ordersHasMore: (parseInt(ordersOffset) || 0) + orders.length < totalOrders,
+      pendingRequests: pendingRequests
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Get Transaction Requests (Admin)
 router.get('/transaction-requests', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const { status = 'pending' } = req.query;
-        const requests = await TransactionRequest.findAll({
-            where: { status },
-            include: [{ model: User, as: 'user', attributes: ['id', 'username', 'email'] }],
-            order: [['createdAt', 'DESC']]
-        });
-        res.json(requests);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const { status = 'pending' } = req.query;
+    const requests = await TransactionRequest.findAll({
+      where: { status },
+      include: [{ model: User, as: 'user', attributes: ['id', 'username', 'email'] }],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(requests);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Manual Wallet Management
 router.post('/wallets/:user_id/deposit', authenticateToken, isAdmin, validate('walletTransaction'), async (req, res) => {
-    const transaction = await sequelize.transaction();
-    try {
-        const { amount, target = 'available' } = req.body;
-        const userId = req.params.user_id;
+  const transaction = await sequelize.transaction();
+  try {
+    const { amount, target = 'available' } = req.body;
+    const userId = req.params.user_id;
 
-        let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
-        if (!wallet) wallet = await Wallet.create({ user_id: userId, available_balance: 0, locked_balance: 0 }, { transaction });
+    let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
+    if (!wallet) wallet = await Wallet.create({ user_id: userId, available_balance: 0, locked_balance: 0 }, { transaction });
 
-        const balanceField = target === 'locked' ? 'locked_balance' : 'available_balance';
-        const balanceBefore = parseFloat(wallet[balanceField]);
-        wallet[balanceField] = balanceBefore + parseFloat(amount);
-        await wallet.save({ transaction });
+    const balanceField = target === 'locked' ? 'locked_balance' : 'available_balance';
+    const balanceBefore = parseFloat(wallet[balanceField]);
+    wallet[balanceField] = balanceBefore + parseFloat(amount);
+    await wallet.save({ transaction });
 
-        await Transaction.create({
-            user_id: userId,
-            type: 'DEPOSIT',
-            amount: parseFloat(amount),
-            balance_before: balanceBefore,
-            balance_after: wallet[balanceField],
-            description: `Manual admin deposit (${target})`
-        }, { transaction });
+    await Transaction.create({
+      user_id: userId,
+      type: 'DEPOSIT',
+      amount: parseFloat(amount),
+      balance_before: balanceBefore,
+      balance_after: wallet[balanceField],
+      description: `Manual admin deposit (${target})`
+    }, { transaction });
 
-        await transaction.commit();
+    // Auto-check for welcome bonus eligibility
+    await walletService.checkAndApplyWelcomeBonus(userId, amount, transaction);
 
-        const io = req.app.get('socketio');
-        if (io) io.emit('walletUpdated', { 
-            user_id: userId, 
-            available_balance: wallet.available_balance,
-            locked_balance: wallet.locked_balance 
-        });
+    // Reload the wallet model to reflect the newly updated balance
+    await wallet.reload({ transaction });
 
-        res.json({ message: 'Deposit successful', wallet });
-    } catch (error) {
-        if (transaction) await transaction.rollback();
-        res.status(500).json({ error: error.message });
-    }
+    await transaction.commit();
+
+    const io = req.app.get('socketio');
+    if (io) io.emit('walletUpdated', { 
+      user_id: userId, 
+      available_balance: wallet.available_balance,
+      locked_balance: wallet.locked_balance 
+    });
+
+    res.json({ message: 'Deposit successful', wallet });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.post('/wallets/:user_id/withdraw', authenticateToken, isAdmin, validate('walletTransaction'), async (req, res) => {
-    const transaction = await sequelize.transaction();
-    try {
-        const { amount, target = 'available' } = req.body;
-        const userId = req.params.user_id;
+  const transaction = await sequelize.transaction();
+  try {
+    const { amount, target = 'available' } = req.body;
+    const userId = req.params.user_id;
 
-        const wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
-        const balanceField = target === 'locked' ? 'locked_balance' : 'available_balance';
+    const wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
+    const balanceField = target === 'locked' ? 'locked_balance' : 'available_balance';
         
-        if (!wallet || parseFloat(wallet[balanceField]) < parseFloat(amount)) {
-            throw new Error(`Insufficient ${target} balance`);
-        }
-
-        const balanceBefore = parseFloat(wallet[balanceField]);
-        wallet[balanceField] = balanceBefore - parseFloat(amount);
-        await wallet.save({ transaction });
-
-        await Transaction.create({
-            user_id: userId,
-            type: 'WITHDRAWAL',
-            amount: -parseFloat(amount),
-            balance_before: balanceBefore,
-            balance_after: wallet[balanceField],
-            description: `Manual admin withdrawal (${target})`
-        }, { transaction });
-
-        await transaction.commit();
-
-        const io = req.app.get('socketio');
-        if (io) io.emit('walletUpdated', { 
-            user_id: userId, 
-            available_balance: wallet.available_balance,
-            locked_balance: wallet.locked_balance 
-        });
-
-        res.json({ message: 'Withdrawal successful', wallet });
-    } catch (error) {
-        if (transaction) await transaction.rollback();
-        res.status(500).json({ error: error.message });
+    if (!wallet || parseFloat(wallet[balanceField]) < parseFloat(amount)) {
+      throw new Error(`Insufficient ${target} balance`);
     }
+
+    const balanceBefore = parseFloat(wallet[balanceField]);
+    wallet[balanceField] = balanceBefore - parseFloat(amount);
+    await wallet.save({ transaction });
+
+    await Transaction.create({
+      user_id: userId,
+      type: 'WITHDRAWAL',
+      amount: -parseFloat(amount),
+      balance_before: balanceBefore,
+      balance_after: wallet[balanceField],
+      description: `Manual admin withdrawal (${target})`
+    }, { transaction });
+
+    await transaction.commit();
+
+    const io = req.app.get('socketio');
+    if (io) io.emit('walletUpdated', { 
+      user_id: userId, 
+      available_balance: wallet.available_balance,
+      locked_balance: wallet.locked_balance 
+    });
+
+    res.json({ message: 'Withdrawal successful', wallet });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // User Management
 router.put('/users/:id/bot-status', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const { is_bot } = req.body;
-        const user = await User.findByPk(req.params.id);
+  try {
+    const { is_bot } = req.body;
+    const user = await User.findByPk(req.params.id);
         
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        if (user.role !== 'middleman') return res.status(400).json({ error: 'Only middlemen can be designated as bots' });
-        if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot set self as bot' });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.role !== 'middleman') return res.status(400).json({ error: 'Only middlemen can be designated as bots' });
+    if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot set self as bot' });
 
-        if (is_bot) {
-            // Remove bot status from all other users to ensure only one bot exists
-            await User.update({ is_bot: false }, { where: { is_bot: true } });
-        }
-
-        user.is_bot = is_bot;
-        await user.save();
-        res.json({ message: `Bot status updated successfully`, user });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (is_bot) {
+      // Remove bot status from all other users to ensure only one bot exists
+      await User.update({ is_bot: false }, { where: { is_bot: true } });
     }
+
+    user.is_bot = is_bot;
+    await user.save();
+    res.json({ message: 'Bot status updated successfully', user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.put('/users/:id/status', authenticateToken, isAdmin, validate('updateUserStatus'), async (req, res) => {
-    try {
-        const { status } = req.body;
-        const user = await User.findByPk(req.params.id);
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot modify self' });
+  try {
+    const { status } = req.body;
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot modify self' });
 
-        user.status = status;
-        await user.save();
-        res.json({ message: `User status updated to ${status}`, user });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    user.status = status;
+    await user.save();
+    res.json({ message: `User status updated to ${status}`, user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.delete('/users/:id', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const user = await User.findByPk(req.params.id);
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot delete self' });
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot delete self' });
 
-        await user.destroy();
-        res.json({ message: 'User deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    await user.destroy();
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.post('/wallets/sync', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const results = await orderService.syncWallets();
-        res.json({
-            message: `Synchronization complete. Adjusted ${results.length} wallets.`,
-            details: results
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const results = await orderService.syncWallets();
+    res.json({
+      message: `Synchronization complete. Adjusted ${results.length} wallets.`,
+      details: results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.post('/orders/release-all', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const results = await orderService.completeAllReadyOrders();
+  try {
+    const results = await orderService.completeAllReadyOrders();
         
-        // Emit refresh event or individual completed events
-        const io = req.app.get('socketio');
-        if (io) {
-            // Since we don't have individual results with wallets here easily without refactoring service, 
-            // we'll emit a general orders update and maybe individual orderCompleted if we want.
-            // For now, let's just emit a general update that the admin hub can use to refresh.
-            io.emit('adminOrdersUpdated', { bulk: true, count: results.successful });
+    // Emit refresh event or individual completed events
+    const io = req.app.get('socketio');
+    if (io) {
+      // Since we don't have individual results with wallets here easily without refactoring service, 
+      // we'll emit a general orders update and maybe individual orderCompleted if we want.
+      // For now, let's just emit a general update that the admin hub can use to refresh.
+      io.emit('adminOrdersUpdated', { bulk: true, count: results.successful });
             
-            // We could also loop through results if we returned more info, but for now this is enough for the Admin UI to refresh.
-            // Other users will see their wallets update if they refresh or if we had emitted wallet events.
-            // To be thorough, we really should emit wallet events.
-        }
-        
-        res.json({
-            message: `Bulk release complete. Successfully released ${results.successful} orders.`,
-            results
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+      // We could also loop through results if we returned more info, but for now this is enough for the Admin UI to refresh.
+      // Other users will see their wallets update if they refresh or if we had emitted wallet events.
+      // To be thorough, we really should emit wallet events.
     }
+        
+    res.json({
+      message: `Bulk release complete. Successfully released ${results.successful} orders.`,
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Bot Configuration
 router.get('/bot-config', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        let config = await BotConfig.findOne();
-        if (!config) {
-            config = await BotConfig.create({
-                claim_delay_min: 5,
-                claim_delay_max: 15,
-                release_delay_min: 15,
-                release_delay_max: 20,
-                auto_claim_enabled: true,
-                periodic_scan_enabled: false,
-                scan_interval: 5
-            });
-        }
-
-        const autoClaimService = require('../services/autoClaimService');
-        const botUser = await autoClaimService.getBotUser();
-        
-        const configJson = config.toJSON();
-        configJson.activeBot = botUser ? { id: botUser.id, username: botUser.username } : null;
-
-        res.json(configJson);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    let config = await BotConfig.findOne();
+    if (!config) {
+      config = await BotConfig.create({
+        claim_delay_min: 5,
+        claim_delay_max: 15,
+        release_delay_min: 15,
+        release_delay_max: 20,
+        auto_claim_enabled: true,
+        periodic_scan_enabled: false,
+        scan_interval: 5
+      });
     }
+
+    const autoClaimService = require('../services/autoClaimService');
+    const botUser = await autoClaimService.getBotUser();
+        
+    const configJson = config.toJSON();
+    configJson.activeBot = botUser ? { id: botUser.id, username: botUser.username } : null;
+
+    res.json(configJson);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.put('/bot-config', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const {
-            claim_delay_min,
-            claim_delay_max,
-            release_delay_min,
-            release_delay_max,
-            auto_claim_enabled,
-            periodic_scan_enabled,
-            scan_interval
-        } = req.body;
+  try {
+    const {
+      claim_delay_min,
+      claim_delay_max,
+      release_delay_min,
+      release_delay_max,
+      auto_claim_enabled,
+      periodic_scan_enabled,
+      scan_interval
+    } = req.body;
 
-        let config = await BotConfig.findOne();
-        if (!config) config = await BotConfig.create({});
+    let config = await BotConfig.findOne();
+    if (!config) config = await BotConfig.create({});
 
-        config.claim_delay_min = claim_delay_min ?? config.claim_delay_min;
-        config.claim_delay_max = claim_delay_max ?? config.claim_delay_max;
-        config.release_delay_min = release_delay_min ?? config.release_delay_min;
-        config.release_delay_max = release_delay_max ?? config.release_delay_max;
-        config.auto_claim_enabled = auto_claim_enabled ?? config.auto_claim_enabled;
-        config.periodic_scan_enabled = periodic_scan_enabled ?? config.periodic_scan_enabled;
-        config.scan_interval = scan_interval ?? config.scan_interval;
+    config.claim_delay_min = claim_delay_min ?? config.claim_delay_min;
+    config.claim_delay_max = claim_delay_max ?? config.claim_delay_max;
+    config.release_delay_min = release_delay_min ?? config.release_delay_min;
+    config.release_delay_max = release_delay_max ?? config.release_delay_max;
+    config.auto_claim_enabled = auto_claim_enabled ?? config.auto_claim_enabled;
+    config.periodic_scan_enabled = periodic_scan_enabled ?? config.periodic_scan_enabled;
+    config.scan_interval = scan_interval ?? config.scan_interval;
 
-        await config.save();
+    await config.save();
 
-        // Notify autoClaimService to restart or update its worker
-        const autoClaimService = require('../services/autoClaimService');
-        autoClaimService.updateConfig(config, req.app.get('socketio'));
+    // Notify autoClaimService to restart or update its worker
+    const autoClaimService = require('../services/autoClaimService');
+    autoClaimService.updateConfig(config, req.app.get('socketio'));
 
-        res.json({ message: 'Bot configuration updated successfully', config });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    res.json({ message: 'Bot configuration updated successfully', config });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.post('/bot/run-scan', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const autoClaimService = require('../services/autoClaimService');
-        const result = await autoClaimService.runSingleScan(req.app.get('socketio'));
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const autoClaimService = require('../services/autoClaimService');
+    const result = await autoClaimService.runSingleScan(req.app.get('socketio'));
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.post('/bot/set-active', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const { userId, is_bot } = req.body;
-        if (!userId) return res.status(400).json({ error: 'User ID is required' });
+  try {
+    const { userId, is_bot } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
 
-        const User = require('../models/user');
+    const User = require('../models/user');
         
-        // Remove is_bot from all users if we're setting a single one (to maintain single bot policy)
-        // or just clear the current one if disabling
-        await User.update({ is_bot: false }, { where: { is_bot: true } });
+    // Remove is_bot from all users if we're setting a single one (to maintain single bot policy)
+    // or just clear the current one if disabling
+    await User.update({ is_bot: false }, { where: { is_bot: true } });
         
-        if (is_bot === false) {
-            return res.json({ message: 'System bot disabled' });
-        }
-
-        // Set new bot
-        const user = await User.findByPk(userId);
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        
-        user.is_bot = true;
-        user.role = 'middleman'; // Must be middleman to claim
-        user.status = 'active';
-        await user.save();
-
-        res.json({ message: `User ${user.username} is now the system bot`, bot: { id: user.id, username: user.username } });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (is_bot === false) {
+      return res.json({ message: 'System bot disabled' });
     }
+
+    // Set new bot
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+        
+    user.is_bot = true;
+    user.role = 'middleman'; // Must be middleman to claim
+    user.status = 'active';
+    await user.save();
+
+    res.json({ message: `User ${user.username} is now the system bot`, bot: { id: user.id, username: user.username } });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

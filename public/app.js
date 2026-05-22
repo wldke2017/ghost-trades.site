@@ -6,15 +6,15 @@ const API_BASE = ''; // Base path for API calls
 
 // --- Helper Functions ---
 function splitPhone(phone) {
-    if (!phone) return { code: '254', num: '' };
-    const codes = ['254', '234', '1', '44', '27', '256', '255'];
-    // Sort codes by length descending to match longest first (e.g. 254 before 2)
-    for (let code of codes.sort((a,b) => b.length - a.length)) {
-        if (phone.toString().startsWith(code)) {
-            return { code, num: phone.toString().slice(code.length) };
-        }
+  if (!phone) return { code: '254', num: '' };
+  const codes = ['254', '234', '1', '44', '27', '256', '255'];
+  // Sort codes by length descending to match longest first (e.g. 254 before 2)
+  for (const code of codes.sort((a,b) => b.length - a.length)) {
+    if (phone.toString().startsWith(code)) {
+      return { code, num: phone.toString().slice(code.length) };
     }
-    return { code: '254', num: phone };
+  }
+  return { code: '254', num: phone };
 }
 
 // --- State ---
@@ -23,201 +23,201 @@ currentUser = JSON.parse(localStorage.getItem('userData')) || null;
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Check auth first
-    if (!checkAuthentication()) return;
+  // Check auth first
+  if (!checkAuthentication()) return;
 
-    // Mobile Menu Toggle
-    const mobileBtn = document.getElementById('mobile-menu-toggle');
-    if (mobileBtn) {
-        mobileBtn.addEventListener('click', () => {
-            // For now, toggle a simple visibility or just reuse settings/logout
-            // The user wanted to see settings/logout on phone view.
-            // I'll just open the settings modal as a shortcut or show a toast
-            showToast('Use the icons next to the menu for Settings and Logout', 'info');
-        });
-    }
+  // Mobile Menu Toggle
+  const mobileBtn = document.getElementById('mobile-menu-toggle');
+  if (mobileBtn) {
+    mobileBtn.addEventListener('click', () => {
+      // For now, toggle a simple visibility or just reuse settings/logout
+      // The user wanted to see settings/logout on phone view.
+      // I'll just open the settings modal as a shortcut or show a toast
+      showToast('Use the icons next to the menu for Settings and Logout', 'info');
+    });
+  }
 
-    // Initialize Dashboard
-    updateDashboard();
-    setupSocketRequest();
-    setupEventListeners();
+  // Initialize Dashboard
+  updateDashboard();
+  setupSocketRequest();
+  setupEventListeners();
 });
 
 // Update Dashboard Data
 async function updateDashboard() {
-    try {
-        await Promise.all([
-            fetchUserInfo(),
-            fetchWalletBalance(),
-            fetchTransactions(),
-            refreshOrders(),
-            fetchPersonalStats(),
-            fetchGlobalStats()
-        ]);
-        updateUserDisplay(); // From auth.js
-    } catch (error) {
-        console.error('Dashboard update failed:', error);
-    }
+  try {
+    await Promise.all([
+      fetchUserInfo(),
+      fetchWalletBalance(),
+      fetchTransactions(),
+      refreshOrders(),
+      fetchPersonalStats(),
+      fetchGlobalStats()
+    ]);
+    updateUserDisplay(); // From auth.js
+  } catch (error) {
+    console.error('Dashboard update failed:', error);
+  }
 }
 
 // --- Data Fetching ---
 
 async function fetchUserInfo() {
-    try {
-        const response = await authenticatedFetch('/auth/me');
-        if (response.ok) {
-            const user = await response.json();
-            currentUser = user;
-            localStorage.setItem('userData', JSON.stringify(user));
-            window.currentUserId = user.id;
-            window.currentUsername = user.username;
-            updateUserDisplay();
-        }
-    } catch (error) {
-        console.error('Error fetching user info:', error);
+  try {
+    const response = await authenticatedFetch('/auth/me');
+    if (response.ok) {
+      const user = await response.json();
+      currentUser = user;
+      localStorage.setItem('userData', JSON.stringify(user));
+      window.currentUserId = user.id;
+      window.currentUsername = user.username;
+      updateUserDisplay();
     }
+  } catch (error) {
+    console.error('Error fetching user info:', error);
+  }
 }
 
 async function fetchWalletBalance() {
-    try {
-        const response = await authenticatedFetch('/wallets/me');
-        if (response.ok) {
-            const wallet = await response.json();
-            const availEl = document.getElementById('balance-available');
-            const lockedEl = document.getElementById('balance-locked');
+  try {
+    const response = await authenticatedFetch('/wallets/me');
+    if (response.ok) {
+      const wallet = await response.json();
+      const availEl = document.getElementById('balance-available');
+      const lockedEl = document.getElementById('balance-locked');
 
-            if (availEl) availEl.textContent = formatCurrency(wallet.available_balance);
-            if (lockedEl) lockedEl.textContent = formatCurrency(wallet.locked_balance);
-        }
-    } catch (error) {
-        console.error('Error fetching wallet balance:', error);
+      if (availEl) availEl.textContent = formatCurrency(wallet.available_balance);
+      if (lockedEl) lockedEl.textContent = formatCurrency(wallet.locked_balance);
     }
+  } catch (error) {
+    console.error('Error fetching wallet balance:', error);
+  }
 }
 
 // NEW: Fetch User Stats (Total deposited/withdrawn, real completed orders)
 async function fetchPersonalStats() {
-    try {
-        const response = await authenticatedFetch('/wallets/stats/personal');
-        if (response.ok) {
-            const stats = await response.json();
+  try {
+    const response = await authenticatedFetch('/wallets/stats/personal');
+    if (response.ok) {
+      const stats = await response.json();
 
-            // Update Dashboard Cards
-            const depositedEl = document.getElementById('stat-total-deposited');
-            const withdrawnEl = document.getElementById('stat-total-withdrawn');
-            const earnedEl = document.getElementById('stat-total-earned');
-            const completedEl = document.getElementById('stat-orders-completed');
+      // Update Dashboard Cards
+      const depositedEl = document.getElementById('stat-total-deposited');
+      const withdrawnEl = document.getElementById('stat-total-withdrawn');
+      const earnedEl = document.getElementById('stat-total-earned');
+      const completedEl = document.getElementById('stat-orders-completed');
 
-            if (depositedEl) depositedEl.innerText = formatCurrency(stats.totalDeposited);
-            if (withdrawnEl) withdrawnEl.innerText = formatCurrency(stats.totalWithdrawn);
-            if (earnedEl) earnedEl.innerText = formatCurrency(stats.totalEarned);
-            if (completedEl) completedEl.innerText = stats.ordersDone;
+      if (depositedEl) depositedEl.innerText = formatCurrency(stats.totalDeposited);
+      if (withdrawnEl) withdrawnEl.innerText = formatCurrency(stats.totalWithdrawn);
+      if (earnedEl) earnedEl.innerText = formatCurrency(stats.totalEarned);
+      if (completedEl) completedEl.innerText = stats.ordersDone;
 
-            // Trigger Welcome Bonus if eligible (totalDeposited is 0)
-            const depVal = parseFloat(stats.totalDeposited) || 0;
-            console.log('[Promo] Total Deposited:', depVal, 'Stats Object:', stats);
+      // Trigger Welcome Bonus if eligible (totalDeposited is 0)
+      const depVal = parseFloat(stats.totalDeposited) || 0;
+      console.log('[Promo] Total Deposited:', depVal, 'Stats Object:', stats);
             
-            if (depVal === 0) {
-                console.log('[Promo] User eligible for Welcome Bonus. Showing modal...');
-                showWelcomeBonusModal();
-            }
-        }
-    } catch (e) { console.error('Error fetching personal stats:', e); }
+      if (depVal === 0) {
+        console.log('[Promo] User eligible for Welcome Bonus. Showing modal...');
+        showWelcomeBonusModal();
+      }
+    }
+  } catch (e) { console.error('Error fetching personal stats:', e); }
 }
 
 /**
  * Shows the Welcome Bonus promotion modal
  */
 function showWelcomeBonusModal() {
-    const modal = document.getElementById('welcome-bonus-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        // Add some confetti effect or similar logic here if desired
-    }
+  const modal = document.getElementById('welcome-bonus-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    // Add some confetti effect or similar logic here if desired
+  }
 }
 
 /**
  * Handle "Claim Bonus" button click
  */
 function claimWelcomeBonus() {
-    closeModal('welcome-bonus-modal');
-    openDepositModal(true); // Pass true to suppress the popup shown again
-    // Pre-fill amount with 7 if possible
-    const amtInput = document.getElementById('deposit-amount');
-    if (amtInput) amtInput.value = 7;
+  closeModal('welcome-bonus-modal');
+  openDepositModal(true); // Pass true to suppress the popup shown again
+  // Pre-fill amount with 7 if possible
+  const amtInput = document.getElementById('deposit-amount');
+  if (amtInput) amtInput.value = 7;
 }
 
 // NEW: Global Stats
 async function fetchGlobalStats() {
-    try {
-        const response = await authenticatedFetch('/orders/stats/global');
-        if (response.ok) {
-            const stats = await response.json();
+  try {
+    const response = await authenticatedFetch('/orders/stats/global');
+    if (response.ok) {
+      const stats = await response.json();
 
-            // Update Platform Overview section
-            const createdEl = document.getElementById('global-total-created');
-            const pendingEl = document.getElementById('global-total-pending');
-            const claimedEl = document.getElementById('global-total-claimed');
-            const settledEl = document.getElementById('global-total-settled');
-            const commissionEl = document.getElementById('global-total-commission');
+      // Update Platform Overview section
+      const createdEl = document.getElementById('global-total-created');
+      const pendingEl = document.getElementById('global-total-pending');
+      const claimedEl = document.getElementById('global-total-claimed');
+      const settledEl = document.getElementById('global-total-settled');
+      const commissionEl = document.getElementById('global-total-commission');
 
-            if (createdEl) createdEl.innerText = stats.totalCreated;
-            if (pendingEl) pendingEl.innerText = stats.totalPending;
-            if (claimedEl) claimedEl.innerText = stats.totalClaimed;
-            if (settledEl) settledEl.innerText = stats.totalSettled;
-            if (commissionEl) commissionEl.innerText = formatCurrency(stats.totalCommission);
-        }
-    } catch (e) { console.error('Error global stats:', e); }
+      if (createdEl) createdEl.innerText = stats.totalCreated;
+      if (pendingEl) pendingEl.innerText = stats.totalPending;
+      if (claimedEl) claimedEl.innerText = stats.totalClaimed;
+      if (settledEl) settledEl.innerText = stats.totalSettled;
+      if (commissionEl) commissionEl.innerText = formatCurrency(stats.totalCommission);
+    }
+  } catch (e) { console.error('Error global stats:', e); }
 }
 
 async function fetchTransactions() {
-    try {
-        const [txnRes, reqRes] = await Promise.all([
-            authenticatedFetch('/wallets/history/all?limit=100'),
-            authenticatedFetch('/transaction-requests/my-requests')
-        ]);
+  try {
+    const [txnRes, reqRes] = await Promise.all([
+      authenticatedFetch('/wallets/history/all?limit=100'),
+      authenticatedFetch('/transaction-requests/my-requests')
+    ]);
 
-        if (txnRes.ok && reqRes.ok) {
-            const txnData = await txnRes.json();
-            const reqData = await reqRes.json();
+    if (txnRes.ok && reqRes.ok) {
+      const txnData = await txnRes.json();
+      const reqData = await reqRes.json();
 
-            const tbody = document.getElementById('txn-history-body');
-            tbody.innerHTML = '';
+      const tbody = document.getElementById('txn-history-body');
+      tbody.innerHTML = '';
 
-            // Get pending requests
-            const pending = reqData.filter(r => r.status === 'pending');
+      // Get pending requests
+      const pending = reqData.filter(r => r.status === 'pending');
 
-            // Convert pending requests to a format similar to transactions for display
-            const pendingDisplay = pending.map(p => ({
-                id: `p-${p.id}`,
-                type: p.type.toUpperCase(),
-                amount: p.type === 'deposit' ? parseFloat(p.amount) : -parseFloat(p.amount),
-                status: 'pending',
-                created_at: p.createdAt
-            }));
+      // Convert pending requests to a format similar to transactions for display
+      const pendingDisplay = pending.map(p => ({
+        id: `p-${p.id}`,
+        type: p.type.toUpperCase(),
+        amount: p.type === 'deposit' ? parseFloat(p.amount) : -parseFloat(p.amount),
+        status: 'pending',
+        created_at: p.createdAt
+      }));
 
-            // Merge and sort by date
-            const allItems = [
-                ...pendingDisplay,
-                ...txnData.transactions.map(t => ({ ...t, status: 'completed' }))
-            ].sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt))
-                .slice(0, 100); // Show up to 100 recent items
+      // Merge and sort by date
+      const allItems = [
+        ...pendingDisplay,
+        ...txnData.transactions.map(t => ({ ...t, status: 'completed' }))
+      ].sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt))
+        .slice(0, 100); // Show up to 100 recent items
 
-            if (allItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No transactions yet</td></tr>';
-                return;
-            }
+      if (allItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No transactions yet</td></tr>';
+        return;
+      }
 
-            allItems.forEach(item => {
-                const isPositive = parseFloat(item.amount) > 0;
-                const amountClass = isPositive ? 'text-green-500' : 'text-gray-300';
-                const sign = isPositive ? '+' : '';
-                const isPending = item.status === 'pending';
+      allItems.forEach(item => {
+        const isPositive = parseFloat(item.amount) > 0;
+        const amountClass = isPositive ? 'text-green-500' : 'text-gray-300';
+        const sign = isPositive ? '+' : '';
+        const isPending = item.status === 'pending';
 
-                const timestamp = item.created_at || item.createdAt;
-                const dateStr = timestamp ? new Date(timestamp).toLocaleDateString() : 'N/A';
+        const timestamp = item.created_at || item.createdAt;
+        const dateStr = timestamp ? new Date(timestamp).toLocaleDateString() : 'N/A';
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
                     <td class="p-4 font-medium text-gray-300">${item.type}</td>
                     <td class="p-4 font-bold ${amountClass}">${sign}${formatCurrency(Math.abs(item.amount))}</td>
                     <td class="p-4">
@@ -227,76 +227,76 @@ async function fetchTransactions() {
                     </td>
                     <td class="p-4 text-gray-500">${dateStr}</td>
                 `;
-                tbody.appendChild(tr);
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching transactions:', error);
+        tbody.appendChild(tr);
+      });
     }
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+  }
 }
 
 async function showHistoryModal(type) {
-    const iconEl = document.getElementById('history-modal-icon');
-    const titleEl = document.getElementById('history-modal-title');
-    const tbody = document.getElementById('history-modal-body');
+  const iconEl = document.getElementById('history-modal-icon');
+  const titleEl = document.getElementById('history-modal-title');
+  const tbody = document.getElementById('history-modal-body');
 
-    // Set UI based on type
-    if (type === 'deposit') {
-        if (iconEl) iconEl.className = 'ti ti-plus text-blue-400';
-        if (titleEl) titleEl.innerText = 'Deposit History';
-    } else {
-        if (iconEl) iconEl.className = 'ti ti-minus text-red-400';
-        if (titleEl) titleEl.innerText = 'Withdrawal History';
-    }
+  // Set UI based on type
+  if (type === 'deposit') {
+    if (iconEl) iconEl.className = 'ti ti-plus text-blue-400';
+    if (titleEl) titleEl.innerText = 'Deposit History';
+  } else {
+    if (iconEl) iconEl.className = 'ti ti-minus text-red-400';
+    if (titleEl) titleEl.innerText = 'Withdrawal History';
+  }
 
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500"><i class="ti ti-loader animate-spin text-2xl mb-2 block"></i> Loading history...</td></tr>';
-    openModal('history-modal');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500"><i class="ti ti-loader animate-spin text-2xl mb-2 block"></i> Loading history...</td></tr>';
+  openModal('history-modal');
 
-    try {
-        const [txnRes, reqRes] = await Promise.all([
-            authenticatedFetch(`/wallets/history/all?limit=100&type=${type.toUpperCase()}`),
-            authenticatedFetch('/transaction-requests/my-requests')
-        ]);
+  try {
+    const [txnRes, reqRes] = await Promise.all([
+      authenticatedFetch(`/wallets/history/all?limit=100&type=${type.toUpperCase()}`),
+      authenticatedFetch('/transaction-requests/my-requests')
+    ]);
 
-        if (txnRes.ok && reqRes.ok) {
-            const txnData = await txnRes.json();
-            const reqData = await reqRes.json();
+    if (txnRes.ok && reqRes.ok) {
+      const txnData = await txnRes.json();
+      const reqData = await reqRes.json();
 
-            // Filter pending requests for this type
-            const pending = reqData.filter(r => r.status === 'pending' && r.type.toLowerCase() === type.toLowerCase());
+      // Filter pending requests for this type
+      const pending = reqData.filter(r => r.status === 'pending' && r.type.toLowerCase() === type.toLowerCase());
 
-            const pendingDisplay = pending.map(p => ({
-                id: `p-${p.id}`,
-                type: p.type.toUpperCase(),
-                amount: p.type === 'deposit' ? parseFloat(p.amount) : -parseFloat(p.amount),
-                status: 'pending',
-                created_at: p.createdAt
-            }));
+      const pendingDisplay = pending.map(p => ({
+        id: `p-${p.id}`,
+        type: p.type.toUpperCase(),
+        amount: p.type === 'deposit' ? parseFloat(p.amount) : -parseFloat(p.amount),
+        status: 'pending',
+        created_at: p.createdAt
+      }));
 
-            const allItems = [
-                ...pendingDisplay,
-                ...txnData.transactions.map(t => ({ ...t, status: 'completed' }))
-            ].sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+      const allItems = [
+        ...pendingDisplay,
+        ...txnData.transactions.map(t => ({ ...t, status: 'completed' }))
+      ].sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
 
-            if (allItems.length === 0) {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="p-12 text-center text-gray-600">No ${type} history found</td></tr>`;
-                return;
-            }
+      if (allItems.length === 0) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="p-12 text-center text-gray-600">No ${type} history found</td></tr>`;
+        return;
+      }
 
-            if (tbody) {
-                tbody.innerHTML = '';
-                allItems.forEach(item => {
-                    const isPositive = parseFloat(item.amount) > 0;
-                    const amountClass = isPositive ? 'text-green-500' : 'text-gray-300';
-                    const sign = isPositive ? '+' : '';
-                    const isPending = item.status === 'pending';
+      if (tbody) {
+        tbody.innerHTML = '';
+        allItems.forEach(item => {
+          const isPositive = parseFloat(item.amount) > 0;
+          const amountClass = isPositive ? 'text-green-500' : 'text-gray-300';
+          const sign = isPositive ? '+' : '';
+          const isPending = item.status === 'pending';
 
-                    const timestamp = item.created_at || item.createdAt;
-                    const dateTimeStr = timestamp ? new Date(timestamp).toLocaleString() : 'N/A';
+          const timestamp = item.created_at || item.createdAt;
+          const dateTimeStr = timestamp ? new Date(timestamp).toLocaleString() : 'N/A';
 
-                    const tr = document.createElement('tr');
-                    tr.className = 'border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors';
-                    tr.innerHTML = `
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors';
+          tr.innerHTML = `
                         <td class="p-4 font-medium text-gray-300">
                             <div class="flex flex-col">
                                 <span>${item.type}</span>
@@ -311,71 +311,71 @@ async function showHistoryModal(type) {
                         </td>
                         <td class="p-4 text-xs text-gray-500 text-right">${dateTimeStr}</td>
                     `;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Error fetching history:', error);
-        if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-red-400">Failed to load history</td></tr>';
+          tbody.appendChild(tr);
+        });
+      }
     }
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-red-400">Failed to load history</td></tr>';
+  }
 }
 
 // --- Order Management ---
 
 async function refreshOrders() {
-    await Promise.all([
-        fetchAvailableOrders(),
-        fetchActiveOrders()
-    ]);
+  await Promise.all([
+    fetchAvailableOrders(),
+    fetchActiveOrders()
+  ]);
 }
 
 async function fetchAvailableOrders() {
-    try {
-        // Fetch PENDING orders that are NOT created by me (so I can middleman them)
-        // Usually, buyers create orders. Middlemen claim them.
-        const response = await authenticatedFetch('/orders?status=PENDING');
-        if (response.ok) {
-            const data = await response.json();
-            let orders = data.orders || [];
-            const container = document.getElementById('available-orders-list');
-            container.innerHTML = '';
+  try {
+    // Fetch PENDING orders that are NOT created by me (so I can middleman them)
+    // Usually, buyers create orders. Middlemen claim them.
+    const response = await authenticatedFetch('/orders?status=PENDING');
+    if (response.ok) {
+      const data = await response.json();
+      const orders = data.orders || [];
+      const container = document.getElementById('available-orders-list');
+      container.innerHTML = '';
 
-            const myId = window.currentUserId;
-            // Filter out my own orders if I created them
-            let available = orders.filter(o => o.buyer_id !== myId);
+      const myId = window.currentUserId;
+      // Filter out my own orders if I created them
+      const available = orders.filter(o => o.buyer_id !== myId);
 
-            // Sorting logic
-            const sortMode = document.getElementById('order-sort')?.value || 'newest';
-            if (sortMode === 'price_desc') {
-                available.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
-            } else if (sortMode === 'price_asc') {
-                available.sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount));
-            } else {
-                // newest
-                available.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            }
+      // Sorting logic
+      const sortMode = document.getElementById('order-sort')?.value || 'newest';
+      if (sortMode === 'price_desc') {
+        available.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
+      } else if (sortMode === 'price_asc') {
+        available.sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount));
+      } else {
+        // newest
+        available.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
 
-            console.log('Fetch Available:', { all: orders.length, filtered: available.length, myId, sort: sortMode });
+      console.log('Fetch Available:', { all: orders.length, filtered: available.length, myId, sort: sortMode });
 
-            if (available.length === 0) {
-                // If filters removed all, warn
-                if (orders.length > 0) console.warn('Orders exist but hidden by buyer_id filter.');
+      if (available.length === 0) {
+        // If filters removed all, warn
+        if (orders.length > 0) console.warn('Orders exist but hidden by buyer_id filter.');
 
-                container.innerHTML = `
+        container.innerHTML = `
                     <div class="text-center py-12 opacity-50">
                         <i class="ti ti-search text-4xl text-gray-600 mb-3"></i>
                         <p class="text-gray-500">No new orders found.</p>
                         <p class="text-xs text-gray-600">Check back later for new opportunities.</p>
                     </div>`;
-                return;
-            }
+        return;
+      }
 
-            available.forEach(order => {
-                const earn = (parseFloat(order.amount) * 0.025).toFixed(2); // 2.5% comm
-                const el = document.createElement('div');
-                el.className = 'bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-orange-500/50 transition-colors group';
-                el.innerHTML = `
+      available.forEach(order => {
+        const earn = (parseFloat(order.amount) * 0.025).toFixed(2); // 2.5% comm
+        const el = document.createElement('div');
+        el.className = 'bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-orange-500/50 transition-colors group';
+        el.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
                         <div>
                             <span class="text-xs font-bold text-gray-500">ORDER #${order.id}</span>
@@ -392,52 +392,52 @@ async function fetchAvailableOrders() {
                         </button>
                     </div>
                 `;
-                container.appendChild(el);
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching available orders:', error);
+        container.appendChild(el);
+      });
     }
+  } catch (error) {
+    console.error('Error fetching available orders:', error);
+  }
 }
 
 async function fetchActiveOrders() {
-    try {
-        // Fetch orders where I am the middleman (CLAIMED, etc)
-        const response = await authenticatedFetch('/orders/my-active');
-        if (response.ok) {
-            const orders = await response.json();
-            const container = document.getElementById('my-active-orders-list');
-            const countBadge = document.getElementById('active-orders-count');
-            const completedStat = document.getElementById('stat-orders-completed');
+  try {
+    // Fetch orders where I am the middleman (CLAIMED, etc)
+    const response = await authenticatedFetch('/orders/my-active');
+    if (response.ok) {
+      const orders = await response.json();
+      const container = document.getElementById('my-active-orders-list');
+      const countBadge = document.getElementById('active-orders-count');
+      const completedStat = document.getElementById('stat-orders-completed');
 
-            container.innerHTML = '';
-            if (countBadge) countBadge.innerText = orders.length;
+      container.innerHTML = '';
+      if (countBadge) countBadge.innerText = orders.length;
 
-            if (orders.length === 0) {
-                container.innerHTML = `
+      if (orders.length === 0) {
+        container.innerHTML = `
                     <div class="text-center py-12 opacity-50">
                         <i class="ti ti-clipboard-list text-4xl text-gray-600 mb-3"></i>
                         <p class="text-gray-500">No active orders right now.</p>
                         <p class="text-xs text-gray-600">Claim an order from the list to get started.</p>
                     </div>`;
-                return;
-            }
+        return;
+      }
 
-            orders.forEach(order => {
-                const el = document.createElement('div');
-                el.className = 'bg-gray-800 p-4 rounded-xl border-l-4 border-blue-500 shadow-lg';
-                let actionBtn = '';
+      orders.forEach(order => {
+        const el = document.createElement('div');
+        el.className = 'bg-gray-800 p-4 rounded-xl border-l-4 border-blue-500 shadow-lg';
+        let actionBtn = '';
 
-                if (order.status === 'CLAIMED') {
-                    actionBtn = `<div class="flex flex-col gap-2">
+        if (order.status === 'CLAIMED') {
+          actionBtn = `<div class="flex flex-col gap-2">
                             <button onclick="markReady(${order.id})" class="text-xs font-bold text-blue-400 hover:text-white border border-blue-500/30 px-3 py-1 rounded-lg hover:bg-blue-500 transition-colors">Mark Ready</button>
                             <button onclick="disputeOrder(${order.id})" class="text-xs font-bold text-red-400 hover:text-white border border-red-500/30 px-3 py-1 rounded-lg hover:bg-red-500 transition-colors">Dispute</button>
                         </div>`;
-                } else if (order.status === 'READY_FOR_RELEASE') {
-                    actionBtn = `<span class="text-xs font-bold text-yellow-500 animate-pulse">Waiting for Buyer</span>`;
-                }
+        } else if (order.status === 'READY_FOR_RELEASE') {
+          actionBtn = '<span class="text-xs font-bold text-yellow-500 animate-pulse">Waiting for Buyer</span>';
+        }
 
-                el.innerHTML = `
+        el.innerHTML = `
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-xs font-bold text-blue-400">ACTIVE #${order.id}</span>
                         <span class="text-xs bg-gray-900 px-2 py-1 rounded text-gray-300 font-mono">${order.status}</span>
@@ -447,133 +447,133 @@ async function fetchActiveOrders() {
                         ${actionBtn}
                     </div>
                 `;
-                container.appendChild(el);
-            });
-        }
-    } catch (error) {
-        // Fallback if endpoint doesn't exist yet in mock
-        console.warn('Backend endpoint /orders/my-active might be missing, skipping active orders.');
+        container.appendChild(el);
+      });
     }
+  } catch (error) {
+    // Fallback if endpoint doesn't exist yet in mock
+    console.warn('Backend endpoint /orders/my-active might be missing, skipping active orders.');
+  }
 }
 
 async function claimOrder(orderId) {
-    if (!confirm('Are you sure you want to claim this order? Your collateral will be locked.')) return;
+  if (!confirm('Are you sure you want to claim this order? Your collateral will be locked.')) return;
 
-    try {
-        const response = await authenticatedFetch(`/orders/${orderId}/claim`, { method: 'POST' });
-        const data = await response.json();
+  try {
+    const response = await authenticatedFetch(`/orders/${orderId}/claim`, { method: 'POST' });
+    const data = await response.json();
 
-        if (response.ok) {
-            showToast('Order claimed successfully!', 'success');
-            refreshOrders();
-            fetchWalletBalance();
-        } else {
-            showToast(data.error || 'Failed to claim order', 'error');
-        }
-    } catch (error) {
-        showToast('Error claiming order', 'error');
+    if (response.ok) {
+      showToast('Order claimed successfully!', 'success');
+      refreshOrders();
+      fetchWalletBalance();
+    } else {
+      showToast(data.error || 'Failed to claim order', 'error');
     }
+  } catch (error) {
+    showToast('Error claiming order', 'error');
+  }
 }
 
 async function markReady(orderId) {
-    if (!confirm('Mark this order as ready for release?')) return;
-    try {
-        const response = await authenticatedFetch(`/orders/${orderId}/complete`, { method: 'POST' });
-        const data = await response.json();
-        if (response.ok) {
-            showToast('Order marked as ready!', 'success');
-            refreshOrders();
-        } else {
-            showToast(data.error || 'Action failed', 'error');
-        }
-    } catch (e) { showToast('Connection error', 'error'); }
+  if (!confirm('Mark this order as ready for release?')) return;
+  try {
+    const response = await authenticatedFetch(`/orders/${orderId}/complete`, { method: 'POST' });
+    const data = await response.json();
+    if (response.ok) {
+      showToast('Order marked as ready!', 'success');
+      refreshOrders();
+    } else {
+      showToast(data.error || 'Action failed', 'error');
+    }
+  } catch (e) { showToast('Connection error', 'error'); }
 }
 
 async function disputeOrder(orderId) {
-    if (!confirm('Are you sure you want to dispute this order? This will hold funds for admin review.')) return;
-    try {
-        const response = await authenticatedFetch(`/orders/${orderId}/dispute`, { method: 'POST' });
-        const data = await response.json();
-        if (response.ok) {
-            showToast('Dispute opened successfully', 'warning');
-            refreshOrders();
-        } else {
-            showToast(data.error || 'Failed to open dispute', 'error');
-        }
-    } catch (e) { showToast('Connection error', 'error'); }
+  if (!confirm('Are you sure you want to dispute this order? This will hold funds for admin review.')) return;
+  try {
+    const response = await authenticatedFetch(`/orders/${orderId}/dispute`, { method: 'POST' });
+    const data = await response.json();
+    if (response.ok) {
+      showToast('Dispute opened successfully', 'warning');
+      refreshOrders();
+    } else {
+      showToast(data.error || 'Failed to open dispute', 'error');
+    }
+  } catch (e) { showToast('Connection error', 'error'); }
 }
 
 // --- UI Actions ---
 
 function openModal(id) {
-    document.getElementById(id).classList.remove('hidden');
+  document.getElementById(id).classList.remove('hidden');
 }
 
 function closeModal(id) {
-    document.getElementById(id).classList.add('hidden');
+  document.getElementById(id).classList.add('hidden');
 }
 
 function openSettingsModal() {
-    // Populate with current user data
-    if (currentUser) {
-        document.getElementById('settings-username').value = currentUser.username;
-        document.getElementById('settings-role').value = currentUser.role || 'Middleman';
-        document.getElementById('settings-fullname').value = currentUser.full_name || '';
-        document.getElementById('settings-email').value = currentUser.email || '';
-        document.getElementById('settings-country').value = currentUser.country || '';
+  // Populate with current user data
+  if (currentUser) {
+    document.getElementById('settings-username').value = currentUser.username;
+    document.getElementById('settings-role').value = currentUser.role || 'Middleman';
+    document.getElementById('settings-fullname').value = currentUser.full_name || '';
+    document.getElementById('settings-email').value = currentUser.email || '';
+    document.getElementById('settings-country').value = currentUser.country || '';
         
-        const split = splitPhone(currentUser.mpesa_number || '');
-        document.getElementById('settings-phone-code').value = split.code;
-        document.getElementById('settings-mpesa').value = split.num;
+    const split = splitPhone(currentUser.mpesa_number || '');
+    document.getElementById('settings-phone-code').value = split.code;
+    document.getElementById('settings-mpesa').value = split.num;
 
-        // Verification Status UI
-        const verifySection = document.getElementById('verification-status-section');
-        const verifyBtn = document.getElementById('verify-email-btn');
-        const verifyText = document.getElementById('verification-status-text');
-        const otpSection = document.getElementById('account-otp-section');
+    // Verification Status UI
+    const verifySection = document.getElementById('verification-status-section');
+    const verifyBtn = document.getElementById('verify-email-btn');
+    const verifyText = document.getElementById('verification-status-text');
+    const otpSection = document.getElementById('account-otp-section');
 
-        if (verifySection) {
-            if (currentUser.is_verified) {
-                verifySection.classList.add('hidden'); // Hide if already verified
-            } else {
-                verifySection.classList.remove('hidden');
-                verifyText.textContent = 'Unverified';
-                verifyText.className = 'text-sm font-bold text-red-500';
-                verifyBtn.classList.remove('hidden');
-                otpSection.classList.add('hidden');
-            }
-        }
-
-        const currencyRadio = document.querySelector(`input[name="currency"][value="${currentUser.currency_preference || 'USD'}"]`);
-        if (currencyRadio) currencyRadio.checked = true;
+    if (verifySection) {
+      if (currentUser.is_verified) {
+        verifySection.classList.add('hidden'); // Hide if already verified
+      } else {
+        verifySection.classList.remove('hidden');
+        verifyText.textContent = 'Unverified';
+        verifyText.className = 'text-sm font-bold text-red-500';
+        verifyBtn.classList.remove('hidden');
+        otpSection.classList.add('hidden');
+      }
     }
-    openModal('settings-modal');
+
+    const currencyRadio = document.querySelector(`input[name="currency"][value="${currentUser.currency_preference || 'USD'}"]`);
+    if (currencyRadio) currencyRadio.checked = true;
+  }
+  openModal('settings-modal');
 }
 function openDepositModal(suppressPromo = false) {
-    if (currentUser && currentUser.mpesa_number) {
-        const split = splitPhone(currentUser.mpesa_number);
-        const phoneInput = document.getElementById('deposit-phone');
-        if (phoneInput && split.code === '254') {
-            phoneInput.value = split.num;
-        }
+  if (currentUser && currentUser.mpesa_number) {
+    const split = splitPhone(currentUser.mpesa_number);
+    const phoneInput = document.getElementById('deposit-phone');
+    if (phoneInput && split.code === '254') {
+      phoneInput.value = split.num;
+    }
+  }
+
+  // UI Enhancement: Show Welcome Bonus Banner if user has 0 deposits
+  const depositedStr = document.getElementById('stat-total-deposited')?.innerText || '$0.00';
+  const totalDeposited = parseFloat(depositedStr.replace(/[^0-9.-]+/g, '')) || 0;
+    
+  let promoContainer = document.getElementById('deposit-promo-banner');
+  if (totalDeposited === 0) {
+    // Trigger the full popup if not suppressed
+    if (!suppressPromo) {
+      showWelcomeBonusModal();
     }
 
-    // UI Enhancement: Show Welcome Bonus Banner if user has 0 deposits
-    const depositedStr = document.getElementById('stat-total-deposited')?.innerText || '$0.00';
-    const totalDeposited = parseFloat(depositedStr.replace(/[^0-9.-]+/g, "")) || 0;
-    
-    let promoContainer = document.getElementById('deposit-promo-banner');
-    if (totalDeposited === 0) {
-        // Trigger the full popup if not suppressed
-        if (!suppressPromo) {
-            showWelcomeBonusModal();
-        }
-
-        if (!promoContainer) {
-            promoContainer = document.createElement('div');
-            promoContainer.id = 'deposit-promo-banner';
-            promoContainer.className = 'mx-6 mt-4 p-4 promo-gradient rounded-2xl flex items-center justify-between animate-pulse-slow border border-orange-500/30 shadow-lg shadow-orange-500/10';
-            promoContainer.innerHTML = `
+    if (!promoContainer) {
+      promoContainer = document.createElement('div');
+      promoContainer.id = 'deposit-promo-banner';
+      promoContainer.className = 'mx-6 mt-4 p-4 promo-gradient rounded-2xl flex items-center justify-between animate-pulse-slow border border-orange-500/30 shadow-lg shadow-orange-500/10';
+      promoContainer.innerHTML = `
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center text-orange-500">
                         <i class="ti ti-gift text-2xl"></i>
@@ -585,661 +585,632 @@ function openDepositModal(suppressPromo = false) {
                 </div>
                 <div class="px-2 py-1 bg-gradient-to-r from-orange-500 to-pink-500 rounded text-[9px] font-black text-white uppercase tracking-tighter shadow-lg shadow-orange-500/20">Eligible</div>
             `;
-            const depositModal = document.getElementById('deposit-modal');
-            const modalHeader = depositModal?.querySelector('.border-b');
-            if (modalHeader) modalHeader.after(promoContainer);
-        }
-    } else if (promoContainer) {
-        promoContainer.remove();
+      const depositModal = document.getElementById('deposit-modal');
+      const modalHeader = depositModal?.querySelector('.border-b');
+      if (modalHeader) modalHeader.after(promoContainer);
     }
+  } else if (promoContainer) {
+    promoContainer.remove();
+  }
 
-    openModal('deposit-modal');
+  openModal('deposit-modal');
 }
 
 function openWithdrawModal() {
-    // Calculate USD preview immediately
-    const bal = document.getElementById('balance-available')?.innerText || '$0.00';
-    document.getElementById('withdraw-available-balance').innerText = bal;
+  // Calculate USD preview immediately
+  const bal = document.getElementById('balance-available')?.innerText || '$0.00';
+  document.getElementById('withdraw-available-balance').innerText = bal;
 
-    // Verification Restriction check
-    const restrictMsg = document.getElementById('withdraw-restricted-msg');
-    const withdrawBtn = document.getElementById('withdraw-confirm-btn') || document.querySelector('button[onclick="requestWithdrawal()"]');
+  // Verification Restriction check
+  const restrictMsg = document.getElementById('withdraw-restricted-msg');
+  const withdrawBtn = document.getElementById('withdraw-confirm-btn') || document.querySelector('button[onclick="requestWithdrawal()"]');
 
-    if (restrictMsg && withdrawBtn) {
-        if (currentUser && currentUser.is_verified) {
-            restrictMsg.classList.add('hidden');
-            withdrawBtn.disabled = false;
-            withdrawBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        } else {
-            restrictMsg.classList.remove('hidden');
-            withdrawBtn.disabled = true;
-            withdrawBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        }
+  if (restrictMsg && withdrawBtn) {
+    if (currentUser && currentUser.is_verified) {
+      restrictMsg.classList.add('hidden');
+      withdrawBtn.disabled = false;
+      withdrawBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+      restrictMsg.classList.remove('hidden');
+      withdrawBtn.disabled = true;
+      withdrawBtn.classList.add('opacity-50', 'cursor-not-allowed');
     }
+  }
 
-    // Pre-fill phone number if available
-    if (currentUser && currentUser.mpesa_number) {
-        const split = splitPhone(currentUser.mpesa_number);
-        const codeInput = document.getElementById('withdraw-phone-code');
-        const phoneInput = document.getElementById('withdraw-phone');
-        if (codeInput) codeInput.value = split.code;
-        if (phoneInput) phoneInput.value = split.num;
-    }
+  // Pre-fill phone number if available
+  if (currentUser && currentUser.mpesa_number) {
+    const split = splitPhone(currentUser.mpesa_number);
+    const codeInput = document.getElementById('withdraw-phone-code');
+    const phoneInput = document.getElementById('withdraw-phone');
+    if (codeInput) codeInput.value = split.code;
+    if (phoneInput) phoneInput.value = split.num;
+  }
 
-    openModal('withdraw-modal');
+  openModal('withdraw-modal');
 }
 
 // Verification Flow Functions
 async function requestAccountVerification() {
-    console.log('[Verify] Requesting OTP. Current Email:', currentUser?.email);
+  console.log('[Verify] Requesting OTP. Current Email:', currentUser?.email);
     
-    // If email is missing, try to fetch it first from the server
-    if (!currentUser || !currentUser.email) {
-        console.warn('[Verify] Email missing from local state. Fetching fresh profile...');
-        showToast('Refreshing profile...', 'info');
-        await fetchUserInfo(); // This refreshes currentUser from /auth/me
-    }
+  // If email is missing, try to fetch it first from the server
+  if (!currentUser || !currentUser.email) {
+    console.warn('[Verify] Email missing from local state. Fetching fresh profile...');
+    showToast('Refreshing profile...', 'info');
+    await fetchUserInfo(); // This refreshes currentUser from /auth/me
+  }
 
-    if (!currentUser || !currentUser.email) {
-        console.error('[Verify] No email found after refresh.');
-        return showToast('Unable to find your email address. Please contact support.', 'error');
-    }
+  if (!currentUser || !currentUser.email) {
+    console.error('[Verify] No email found after refresh.');
+    return showToast('Unable to find your email address. Please contact support.', 'error');
+  }
 
-    try {
-        const response = await authenticatedFetch('/auth/resend-otp', {
-            method: 'POST',
-            body: JSON.stringify({ email: currentUser.email })
-        });
+  try {
+    const response = await authenticatedFetch('/auth/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email: currentUser.email })
+    });
         
-        const data = await response.json();
-        console.log('[Verify] OTP Request Status:', response.status);
+    const data = await response.json();
+    console.log('[Verify] OTP Request Status:', response.status);
 
-        if (response.ok) {
-            showToast('Verification code sent to ' + currentUser.email, 'success');
-            document.getElementById('account-otp-section').classList.remove('hidden');
-            document.getElementById('verify-email-btn').textContent = 'Resend Code';
-        } else {
-            showToast(data.error || 'Failed to send code', 'error');
-        }
-    } catch (e) { 
-        console.error('[Verify] Network error:', e);
-        showToast('Connection error. Is the server running?', 'error'); 
+    if (response.ok) {
+      showToast('Verification code sent to ' + currentUser.email, 'success');
+      document.getElementById('account-otp-section').classList.remove('hidden');
+      document.getElementById('verify-email-btn').textContent = 'Resend Code';
+    } else {
+      showToast(data.error || 'Failed to send code', 'error');
     }
+  } catch (e) { 
+    console.error('[Verify] Network error:', e);
+    showToast('Connection error. Is the server running?', 'error'); 
+  }
 }
 
 async function submitAccountVerification() {
-    const code = document.getElementById('account-otp-code').value;
-    console.log('[Verify] Submitting OTP:', code);
-    if (!code || code.length < 6) return showToast('Please enter the 6-digit code', 'error');
+  const code = document.getElementById('account-otp-code').value;
+  console.log('[Verify] Submitting OTP:', code);
+  if (!code || code.length < 6) return showToast('Please enter the 6-digit code', 'error');
 
-    try {
-        const response = await authenticatedFetch('/auth/verify-otp', {
-            method: 'POST',
-            body: JSON.stringify({ email: currentUser.email, otp_code: code })
-        });
+  try {
+    const response = await authenticatedFetch('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email: currentUser.email, otp_code: code })
+    });
 
-        const data = await response.json();
-        console.log('[Verify] Verify Response:', { status: response.status, data });
+    const data = await response.json();
+    console.log('[Verify] Verify Response:', { status: response.status, data });
 
-        if (response.ok) {
-            showToast('Account verified successfully!', 'success');
+    if (response.ok) {
+      showToast('Account verified successfully!', 'success');
             
-            // Update local state and global vars
-            currentUser.is_verified = true;
-            localStorage.setItem('userData', JSON.stringify(currentUser));
-            if (typeof window !== 'undefined') {
-                window.currentUserVerified = true;
-            }
+      // Update local state and global vars
+      currentUser.is_verified = true;
+      localStorage.setItem('userData', JSON.stringify(currentUser));
+      if (typeof window !== 'undefined') {
+        window.currentUserVerified = true;
+      }
 
-            // Refresh UI
-            updateUserDisplay();
-            openSettingsModal(); // Refresh the settings modal view
+      // Refresh UI
+      updateUserDisplay();
+      openSettingsModal(); // Refresh the settings modal view
             
-            // Clean up
-            document.getElementById('account-otp-code').value = '';
-            document.getElementById('account-otp-section').classList.add('hidden');
-        } else {
-            showToast(data.error || 'Verification failed', 'error');
-        }
-    } catch (e) { 
-        console.error('[Verify] Connection error during submission:', e);
-        showToast('Connection error', 'error'); 
+      // Clean up
+      document.getElementById('account-otp-code').value = '';
+      document.getElementById('account-otp-section').classList.add('hidden');
+    } else {
+      showToast(data.error || 'Verification failed', 'error');
     }
+  } catch (e) { 
+    console.error('[Verify] Connection error during submission:', e);
+    showToast('Connection error', 'error'); 
+  }
 }
 
 
 // Deposit Logic
 async function initiateDeposit() {
-    const amount = document.getElementById('deposit-amount').value;
-    const phoneCode = document.getElementById('deposit-phone-code').value;
-    const phoneNum = document.getElementById('deposit-phone').value.trim();
-    const phone = phoneCode + phoneNum;
+  const amount = document.getElementById('deposit-amount').value;
+  const phoneCode = document.getElementById('deposit-phone-code').value;
+  const phoneNum = document.getElementById('deposit-phone').value.trim();
+  const phone = phoneCode + phoneNum;
 
-    if (!amount || !phoneNum) return showToast('Please enter amount and phone', 'error');
+  if (!amount || !phoneNum) return showToast('Please enter amount and phone', 'error');
 
-    const statusDiv = document.getElementById('deposit-status');
-    statusDiv.classList.remove('hidden');
+  const statusDiv = document.getElementById('deposit-status');
+  statusDiv.classList.remove('hidden');
 
-    try {
-        // Convert KES to USD for backend if needed, but backend expects Amount (usually local currency for STK)
-        // Usually STK Push takes amount in KES.
-        const response = await authenticatedFetch('/api/stkpush', {
-            method: 'POST',
-            body: JSON.stringify({ amount, phoneNumber: phone })
-        });
+  try {
+    // Convert KES to USD for backend if needed, but backend expects Amount (usually local currency for STK)
+    // Usually STK Push takes amount in KES.
+    const response = await authenticatedFetch('/api/stkpush', {
+      method: 'POST',
+      body: JSON.stringify({ amount, phoneNumber: phone })
+    });
 
-        const data = await response.json();
-        statusDiv.classList.add('hidden');
+    const data = await response.json();
+    statusDiv.classList.add('hidden');
 
-        if (response.ok) {
-            showToast(data.message || 'STK Push sent!', 'success');
-            closeModal('deposit-modal');
-        } else {
-            showToast(data.error || 'Deposit failed', 'error');
-        }
-    } catch (error) {
-        statusDiv.classList.add('hidden');
-        showToast('Connection error', 'error');
+    if (response.ok) {
+      showToast(data.message || 'STK Push sent!', 'success');
+      closeModal('deposit-modal');
+    } else {
+      showToast(data.error || 'Deposit failed', 'error');
     }
+  } catch (error) {
+    statusDiv.classList.add('hidden');
+    showToast('Connection error', 'error');
+  }
 }
 
 // Withdraw Logic
 async function requestWithdrawal() {
-    const amount = document.getElementById('withdraw-amount').value;
-    const phoneCode = document.getElementById('withdraw-phone-code').value;
-    const phoneNum = document.getElementById('withdraw-phone').value.trim();
-    const phone = phoneCode + phoneNum;
-    const notes = document.getElementById('withdraw-notes')?.value || '';
+  const amount = document.getElementById('withdraw-amount').value;
+  const phoneCode = document.getElementById('withdraw-phone-code').value;
+  const phoneNum = document.getElementById('withdraw-phone').value.trim();
+  const phone = phoneCode + phoneNum;
+  const notes = document.getElementById('withdraw-notes')?.value || '';
 
-    if (!amount || !phoneNum) return showToast('Please enter amount and phone number', 'error');
-    if (!phoneNum || phoneNum.length < 7) {
-        return showToast('Please enter a valid phone number', 'error');
+  if (!amount || !phoneNum) return showToast('Please enter amount and phone number', 'error');
+  if (!phoneNum || phoneNum.length < 7) {
+    return showToast('Please enter a valid phone number', 'error');
+  }
+
+  try {
+    const response = await authenticatedFetch('/transaction-requests/withdrawal', {
+      method: 'POST',
+      body: JSON.stringify({ amount, phone, notes })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      showToast('Withdrawal request submitted! Waiting for approval.', 'success');
+      closeModal('withdraw-modal');
+      if (typeof updateDashboard === 'function') updateDashboard();
+    } else {
+      showToast(data.error || 'Failed to submit withdrawal request', 'error');
     }
-
-    try {
-        const response = await authenticatedFetch('/transaction-requests/withdrawal', {
-            method: 'POST',
-            body: JSON.stringify({ amount, phone, notes })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-            showToast('Withdrawal request submitted! Waiting for approval.', 'success');
-            closeModal('withdraw-modal');
-            if (typeof updateDashboard === 'function') updateDashboard();
-        } else {
-            showToast(data.error || 'Failed to submit withdrawal request', 'error');
-        }
-    } catch (error) {
-        console.error('Error requesting withdrawal:', error);
-        showToast('Connection error', 'error');
-    }
+  } catch (error) {
+    console.error('Error requesting withdrawal:', error);
+    showToast('Connection error', 'error');
+  }
 }
 
 
 async function updateProfileSettings() {
-    const fullName = document.getElementById('settings-fullname').value;
-    const email = document.getElementById('settings-email').value;
-    const country = document.getElementById('settings-country').value;
-    const currency = document.querySelector('input[name="currency"]:checked')?.value;
+  const fullName = document.getElementById('settings-fullname').value;
+  const email = document.getElementById('settings-email').value;
+  const country = document.getElementById('settings-country').value;
+  const currency = document.querySelector('input[name="currency"]:checked')?.value;
     
-    const phoneCode = document.getElementById('settings-phone-code').value;
-    const phoneNum = document.getElementById('settings-mpesa').value.trim().replace(/\D/g, '');
-    const mpesa_formatted = phoneCode + phoneNum;
+  const phoneCode = document.getElementById('settings-phone-code').value;
+  const phoneNum = document.getElementById('settings-mpesa').value.trim().replace(/\D/g, '');
+  const mpesa_formatted = phoneCode + phoneNum;
 
-    try {
-        const response = await authenticatedFetch('/users/profile', {
-            method: 'PUT',
-            body: JSON.stringify({
-                full_name: fullName,
-                email: email,
-                mpesa_number: mpesa_formatted,
-                country: country,
-                currency_preference: currency
-            })
-        });
+  try {
+    const response = await authenticatedFetch('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify({
+        full_name: fullName,
+        email: email,
+        mpesa_number: mpesa_formatted,
+        country: country,
+        currency_preference: currency
+      })
+    });
 
-        if (response.ok) {
-            const data = await response.json();
-            currentUser = { ...currentUser, ...data.user };
-            localStorage.setItem('userData', JSON.stringify(currentUser));
-            showToast('Profile updated successfully!', 'success');
-            updateCurrencyLabels();
-            updateDashboard(); // Refresh UI
-            closeModal('settings-modal');
-        } else {
-            const data = await response.json();
-            showToast(data.error || 'Failed to update profile', 'error');
-        }
-    } catch (error) {
-        showToast('Failed to save settings', 'error');
+    if (response.ok) {
+      const data = await response.json();
+      currentUser = { ...currentUser, ...data.user };
+      localStorage.setItem('userData', JSON.stringify(currentUser));
+      showToast('Profile updated successfully!', 'success');
+      updateCurrencyLabels();
+      updateDashboard(); // Refresh UI
+      closeModal('settings-modal');
+    } else {
+      const data = await response.json();
+      showToast(data.error || 'Failed to update profile', 'error');
     }
+  } catch (error) {
+    showToast('Failed to save settings', 'error');
+  }
 }
 
 async function requestPasswordChangeOTP() {
-    const currentPassword = document.getElementById('settings-current-password').value;
-    const newPassword = document.getElementById('settings-new-password').value;
+  const currentPassword = document.getElementById('settings-current-password').value;
+  const newPassword = document.getElementById('settings-new-password').value;
 
-    if (!currentPassword || !newPassword) {
-        return showToast('Both password fields are required', 'error');
+  if (!currentPassword || !newPassword) {
+    return showToast('Both password fields are required', 'error');
+  }
+  if (newPassword.length < 6) {
+    return showToast('New password must be at least 6 characters', 'error');
+  }
+
+  try {
+    const response = await authenticatedFetch('/users/change-password/request', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      showToast('Verification code sent to your email!', 'success');
+      // Show step 2
+      document.getElementById('pw-step-1').classList.add('hidden');
+      document.getElementById('pw-step-2').classList.remove('hidden');
+    } else {
+      showToast(data.error || 'Failed to send code', 'error');
     }
-    if (newPassword.length < 6) {
-        return showToast('New password must be at least 6 characters', 'error');
-    }
-
-    try {
-        const response = await authenticatedFetch('/users/change-password/request', {
-            method: 'POST',
-            body: JSON.stringify({ currentPassword })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-            showToast('Verification code sent to your email!', 'success');
-            // Show step 2
-            document.getElementById('pw-step-1').classList.add('hidden');
-            document.getElementById('pw-step-2').classList.remove('hidden');
-        } else {
-            showToast(data.error || 'Failed to send code', 'error');
-        }
-    } catch (e) { showToast('Connection error', 'error'); }
+  } catch (e) { showToast('Connection error', 'error'); }
 }
 
 async function verifyPasswordChangeOTP() {
-    const currentPassword = document.getElementById('settings-current-password').value;
-    const newPassword = document.getElementById('settings-new-password').value;
-    const otp_code = document.getElementById('settings-otp-code').value;
+  const currentPassword = document.getElementById('settings-current-password').value;
+  const newPassword = document.getElementById('settings-new-password').value;
+  const otp_code = document.getElementById('settings-otp-code').value;
 
-    if (!otp_code || otp_code.length < 6) {
-        return showToast('Please enter the 6-digit verification code', 'error');
+  if (!otp_code || otp_code.length < 6) {
+    return showToast('Please enter the 6-digit verification code', 'error');
+  }
+
+  try {
+    const response = await authenticatedFetch('/users/change-password/verify', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword, otp_code })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      showToast('Password updated successfully!', 'success');
+      // Reset UI
+      document.getElementById('settings-current-password').value = '';
+      document.getElementById('settings-new-password').value = '';
+      document.getElementById('settings-otp-code').value = '';
+      document.getElementById('pw-step-2').classList.add('hidden');
+      document.getElementById('pw-step-1').classList.remove('hidden');
+      document.getElementById('password-change-section').classList.add('hidden');
+    } else {
+      showToast(data.error || 'Failed to change password', 'error');
     }
-
-    try {
-        const response = await authenticatedFetch('/users/change-password/verify', {
-            method: 'POST',
-            body: JSON.stringify({ currentPassword, newPassword, otp_code })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-            showToast('Password updated successfully!', 'success');
-            // Reset UI
-            document.getElementById('settings-current-password').value = '';
-            document.getElementById('settings-new-password').value = '';
-            document.getElementById('settings-otp-code').value = '';
-            document.getElementById('pw-step-2').classList.add('hidden');
-            document.getElementById('pw-step-1').classList.remove('hidden');
-            document.getElementById('password-change-section').classList.add('hidden');
-        } else {
-            showToast(data.error || 'Failed to change password', 'error');
-        }
-    } catch (e) { showToast('Connection error', 'error'); }
+  } catch (e) { showToast('Connection error', 'error'); }
 }
 
 // --- Socket.IO ---
 function setupSocketRequest() {
-    socket = io();
-    socket.on('connect', () => {
-        console.log('Connected to socket');
-        if (window.currentUserId) {
-            socket.emit('register', window.currentUserId);
-        }
-    });
+  socket = io();
+  socket.on('connect', () => {
+    console.log('Connected to socket');
+    if (window.currentUserId) {
+      socket.emit('register', window.currentUserId);
+    }
+  });
 
-    socket.on('orderCreated', order => {
-        showToast(`New ${formatCurrency(order.amount)} order available!`, 'info');
-        fetchAvailableOrders();
-    });
+  socket.on('orderCreated', order => {
+    showToast(`New ${formatCurrency(order.amount)} order available!`, 'info');
+    fetchAvailableOrders();
+  });
 
-    socket.on('walletUpdated', data => {
-        if (data.user_id == window.currentUserId) {
-            fetchWalletBalance();
-        }
-    });
+  socket.on('walletUpdated', data => {
+    if (data.user_id == window.currentUserId) {
+      fetchWalletBalance();
+    }
+  });
 
-    socket.on('support_ticket_created', data => {
-        showToast('New Support Ticket Created', 'info');
-        if(!document.getElementById('support-modal').classList.contains('hidden')){
-            fetchSupportTickets();
-        }
-    });
+  socket.on('support_ticket_created', data => {
+    showToast('New Support Ticket Created', 'info');
+    if(!document.getElementById('support-modal').classList.contains('hidden')){
+      fetchSupportTickets();
+    }
+  });
     
-    socket.on('support_ticket_updated', data => {
-        if(!document.getElementById('support-modal').classList.contains('hidden')){
-            fetchSupportTickets();
-        }
-    });
+  socket.on('support_ticket_updated', data => {
+    if(!document.getElementById('support-modal').classList.contains('hidden')){
+      fetchSupportTickets();
+    }
+  });
     
-    socket.on('support_message', msg => {
-        if (currentTicketId == msg.ticket_id) {
-            appendChatMessage(msg);
-        } else {
-            showToast('New message from Support', 'info');
-        }
-    });
+  socket.on('support_message', msg => {
+    if (currentTicketId == msg.ticket_id) {
+      appendChatMessage(msg);
+    } else {
+      showToast('New message from Support', 'info');
+    }
+  });
 }
 
 // --- Utils ---
 function setupEventListeners() {
-    // Calculators for modals
-    document.getElementById('deposit-amount').addEventListener('input', e => {
-        const usd = (e.target.value / EXCHANGE_RATE).toFixed(2);
-        document.getElementById('deposit-usd-preview').innerText = `$${usd}`;
-    });
+  // Calculators for modals
+  document.getElementById('deposit-amount').addEventListener('input', e => {
+    const usd = (e.target.value / EXCHANGE_RATE).toFixed(2);
+    document.getElementById('deposit-usd-preview').innerText = `$${usd}`;
+  });
 
-    document.getElementById('agent-deposit-amount')?.addEventListener('input', e => {
-        const usd = (e.target.value / EXCHANGE_RATE).toFixed(2);
-        const previewEl = document.getElementById('agent-deposit-usd-preview');
-        if (previewEl) previewEl.innerText = `$${usd}`;
-        validateAgentDepositForm();
-    });
+  document.getElementById('agent-deposit-amount')?.addEventListener('input', e => {
+    const usd = (e.target.value / EXCHANGE_RATE).toFixed(2);
+    const previewEl = document.getElementById('agent-deposit-usd-preview');
+    if (previewEl) previewEl.innerText = `$${usd}`;
+    validateAgentDepositForm();
+  });
 
-    document.getElementById('withdraw-amount').addEventListener('input', e => {
-        const kes = (e.target.value * EXCHANGE_RATE).toFixed(0);
-        document.getElementById('withdraw-kes-preview').innerText = kes;
-    });
+  document.getElementById('withdraw-amount').addEventListener('input', e => {
+    const kes = (e.target.value * EXCHANGE_RATE).toFixed(0);
+    document.getElementById('withdraw-kes-preview').innerText = kes;
+  });
 
-    // Agent Deposit Validation
-    document.getElementById('agent-mpesa-message')?.addEventListener('input', validateAgentDepositForm);
+  // Agent Deposit Validation
+  document.getElementById('agent-mpesa-message')?.addEventListener('input', validateAgentDepositForm);
 }
 
 
 // Update header username
 function updateUserDisplay() {
-    if (typeof window !== 'undefined' && window.currentUsername) {
-        const usernameEl = document.getElementById('header-username');
-        if (usernameEl) {
-            // Note: we keep the original structure from index.html
-            const badge = document.getElementById('header-verified-badge');
-            if (currentUser && currentUser.is_verified) {
-                if (badge) badge.classList.remove('hidden');
-            } else {
-                if (badge) badge.classList.add('hidden');
-            }
-            // Update node text if needed, but here we just update name
-            // The first child is the text node in our new structure
-            usernameEl.childNodes[0].textContent = window.currentUsername + ' ';
-        }
+  if (typeof window !== 'undefined' && window.currentUsername) {
+    const usernameEl = document.getElementById('header-username');
+    if (usernameEl) {
+      // Note: we keep the original structure from index.html
+      const badge = document.getElementById('header-verified-badge');
+      if (currentUser && currentUser.is_verified) {
+        if (badge) badge.classList.remove('hidden');
+      } else {
+        if (badge) badge.classList.add('hidden');
+      }
+      // Update node text if needed, but here we just update name
+      // The first child is the text node in our new structure
+      usernameEl.childNodes[0].textContent = window.currentUsername + ' ';
     }
+  }
 }
 
 // Deposit Tab Switching
 function switchDepositTab(tab) {
-    // Hide all
-    const contents = ['mpesa', 'agent', 'crypto', 'card'];
-    contents.forEach(c => {
-        const el = document.getElementById(`deposit-${c}-content`);
-        if (el) el.classList.add('hidden');
-    });
+  // Hide all
+  const contents = ['mpesa', 'agent', 'crypto', 'card'];
+  contents.forEach(c => {
+    const el = document.getElementById(`deposit-${c}-content`);
+    if (el) el.classList.add('hidden');
+  });
 
-    // Reset styles
-    ['mpesa', 'agent', 'crypto', 'card'].forEach(t => {
-        const el = document.getElementById(`tab-${t}`);
-        if (el) {
-            el.classList.remove('text-green-500', 'border-green-500', 'text-blue-500', 'border-blue-500', 'text-orange-500', 'border-orange-500', 'border-b-2', 'text-gray-500');
-            el.classList.add('text-gray-500');
-            el.style.borderBottom = 'none';
-        }
-    });
-
-    // Show selected
-    const activeContent = document.getElementById(`deposit-${tab}-content`);
-    if (activeContent) activeContent.classList.remove('hidden');
-
-    const activeBtn = document.getElementById(`tab-${tab}`);
-    if (activeBtn) {
-        activeBtn.classList.remove('text-gray-500');
-        activeBtn.classList.add('border-b-2');
-        
-        if (tab === 'mpesa') {
-            activeBtn.classList.add('text-green-500', 'border-green-500');
-        } else if (tab === 'crypto') {
-            activeBtn.classList.add('text-blue-500', 'border-blue-500');
-        } else if (tab === 'card') {
-            activeBtn.classList.add('text-blue-400', 'border-blue-400', 'italic');
-        } else {
-            activeBtn.classList.add('text-orange-500', 'border-orange-500');
-        }
+  // Reset styles
+  ['mpesa', 'agent', 'crypto', 'card'].forEach(t => {
+    const el = document.getElementById(`tab-${t}`);
+    if (el) {
+      el.classList.remove('text-green-500', 'border-green-500', 'text-blue-500', 'border-blue-500', 'text-orange-500', 'border-orange-500', 'border-b-2', 'text-gray-500');
+      el.classList.add('text-gray-500');
+      el.style.borderBottom = 'none';
     }
+  });
+
+  // Show selected
+  const activeContent = document.getElementById(`deposit-${tab}-content`);
+  if (activeContent) activeContent.classList.remove('hidden');
+
+  const activeBtn = document.getElementById(`tab-${tab}`);
+  if (activeBtn) {
+    activeBtn.classList.remove('text-gray-500');
+    activeBtn.classList.add('border-b-2');
+        
+    if (tab === 'mpesa') {
+      activeBtn.classList.add('text-green-500', 'border-green-500');
+    } else if (tab === 'crypto') {
+      activeBtn.classList.add('text-blue-500', 'border-blue-500');
+    } else if (tab === 'card') {
+      activeBtn.classList.add('text-blue-400', 'border-blue-400', 'italic');
+    } else {
+      activeBtn.classList.add('text-orange-500', 'border-orange-500');
+    }
+  }
 }
 
 async function initiateCardDeposit() {
-    const amount = document.getElementById('card-deposit-amount').value;
-    if (!amount || amount <= 0) return showToast('Please enter a valid amount', 'error');
+  const amount = document.getElementById('card-deposit-amount').value;
+  if (!amount || amount <= 0) return showToast('Please enter a valid amount', 'error');
 
-    try {
-        showToast('Initiating secure payment...', 'info');
-        const response = await authenticatedFetch('/api/deposits/card-initiate', { 
-            method: 'POST',
-            body: JSON.stringify({ amount: parseFloat(amount) })
-        });
+  try {
+    showToast('Initiating secure payment...', 'info');
+    const response = await authenticatedFetch('/api/deposits/card-initiate', { 
+      method: 'POST',
+      body: JSON.stringify({ amount: parseFloat(amount) })
+    });
 
-        const data = await response.json();
-        if (response.ok && data.link) {
-            window.location.href = data.link; // Redirect to Flutterwave checkout
-        } else {
-            showToast(data.error || 'Failed to initiate card payment', 'error');
-        }
-    } catch (e) { 
-        console.error('Card deposit error:', e);
-        showToast('Connection error', 'error'); 
+    const data = await response.json();
+    if (response.ok && data.link) {
+      window.location.href = data.link; // Redirect to Flutterwave checkout
+    } else {
+      showToast(data.error || 'Failed to initiate card payment', 'error');
     }
+  } catch (e) { 
+    console.error('Card deposit error:', e);
+    showToast('Connection error', 'error'); 
+  }
 }
 
 // Agent Search Mock
 function searchAgent() {
-    const input = document.getElementById('agent-search-input').value.toLowerCase();
-    const resultArea = document.getElementById('agent-result');
-    const actionArea = document.getElementById('agent-action-area');
+  const input = document.getElementById('agent-search-input').value.toLowerCase();
+  const resultArea = document.getElementById('agent-result');
+  const actionArea = document.getElementById('agent-action-area');
 
-    if (input.includes('allan') || input.includes('kariba')) {
-        resultArea.classList.remove('hidden');
-        actionArea.classList.remove('hidden');
-        showToast('Agent Found: ALLAN KARIBA');
-    } else {
-        resultArea.classList.add('hidden');
-        actionArea.classList.add('hidden');
-        showToast('Agent not found. Try "Allan"', 'error');
-    }
+  if (input.includes('allan') || input.includes('kariba')) {
+    resultArea.classList.remove('hidden');
+    actionArea.classList.remove('hidden');
+    showToast('Agent Found: ALLAN KARIBA');
+  } else {
+    resultArea.classList.add('hidden');
+    actionArea.classList.add('hidden');
+    showToast('Agent not found. Try "Allan"', 'error');
+  }
 }
 
 // Confirm Manual Deposit
 async function confirmManualDeposit(method) {
-    const formData = new FormData();
-    let amount = 0;
+  const formData = new FormData();
+  let amount = 0;
 
-    if (method === 'Agent Deposit') {
-        const amountInput = document.getElementById('agent-deposit-amount');
-        amount = amountInput ? amountInput.value : 0;
-        const message = document.getElementById('agent-mpesa-message').value.trim();
-        const screenshotFile = document.getElementById('agent-deposit-screenshot').files[0];
+  if (method === 'Agent Deposit') {
+    const amountInput = document.getElementById('agent-deposit-amount');
+    amount = amountInput ? amountInput.value : 0;
+    const message = document.getElementById('agent-mpesa-message').value.trim();
+    const screenshotFile = document.getElementById('agent-deposit-screenshot').files[0];
 
-        if (!amount || amount <= 0) return showToast('Please enter a valid amount sent.', 'error');
-        if (!message && !screenshotFile) return showToast('Please provide an M-Pesa message or upload a screenshot.', 'error');
+    if (!amount || amount <= 0) return showToast('Please enter a valid amount sent.', 'error');
+    if (!message && !screenshotFile) return showToast('Please provide an M-Pesa message or upload a screenshot.', 'error');
 
-        formData.append('amount', amount);
-        formData.append('notes', message || 'Manual Agent Deposit');
-        if (screenshotFile) formData.append('screenshot', screenshotFile);
+    formData.append('amount', amount);
+    formData.append('notes', message || 'Manual Agent Deposit');
+    if (screenshotFile) formData.append('screenshot', screenshotFile);
 
-        const agentName = document.querySelector('#selected-agent-view p.font-bold')?.innerText || 'Unknown';
-        formData.append('metadata', JSON.stringify({ method: 'Agent', agent: agentName, currency: 'KES' }));
+    const agentName = document.querySelector('#selected-agent-view p.font-bold')?.innerText || 'Unknown';
+    formData.append('metadata', JSON.stringify({ method: 'Agent', agent: agentName, currency: 'KES' }));
 
-    } else if (method === 'Crypto Deposit') {
-        const amountInput = document.getElementById('crypto-amount');
-        amount = amountInput ? amountInput.value : 0;
-        const txid = document.getElementById('crypto-txid').value.trim();
+  } else if (method === 'Crypto Deposit') {
+    const amountInput = document.getElementById('crypto-amount');
+    amount = amountInput ? amountInput.value : 0;
+    const txid = document.getElementById('crypto-txid').value.trim();
 
-        if (!amount || amount <= 0) return showToast('Please enter a valid USD amount sent.', 'error');
-        if (!txid) return showToast('Please enter the Transaction Hash (TXID).', 'error');
+    if (!amount || amount <= 0) return showToast('Please enter a valid USD amount sent.', 'error');
+    if (!txid) return showToast('Please enter the Transaction Hash (TXID).', 'error');
 
-        formData.append('amount', amount);
-        formData.append('notes', `Crypto Deposit (TXID: ${txid})`);
-        formData.append('metadata', JSON.stringify({ method: 'Crypto', network: 'TRC20', txid: txid, currency: 'USD' }));
+    formData.append('amount', amount);
+    formData.append('notes', `Crypto Deposit (TXID: ${txid})`);
+    formData.append('metadata', JSON.stringify({ method: 'Crypto', network: 'TRC20', txid: txid, currency: 'USD' }));
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/transaction-requests/deposit`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      showToast('Deposit request submitted! Waiting for review.', 'success');
+      closeModal('deposit-modal');
+      clearAgentSelection();
+    } else {
+      showToast(data.error || 'Failed to submit request', 'error');
     }
+  } catch (error) {
+    console.error('Error submitting deposit:', error);
+    showToast('Connection error', 'error');
+  }
 
-    try {
-        const response = await fetch(`${API_BASE}/transaction-requests/deposit`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            },
-            body: formData
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-            showToast('Deposit request submitted! Waiting for review.', 'success');
-            closeModal('deposit-modal');
-            clearAgentSelection();
-        } else {
-            showToast(data.error || 'Failed to submit request', 'error');
-        }
-    } catch (error) {
-        console.error('Error submitting deposit:', error);
-        showToast('Connection error', 'error');
-    }
-
-}
-
-
-// Dispute Order
-async function disputeOrder(orderId) {
-    if (!confirm('Are you sure you want to dispute this order?')) return;
-
-    try {
-        const response = await authenticatedFetch(`/orders/${orderId}/dispute`, {
-            method: 'POST'
-        });
-
-        if (response.ok) {
-            showToast('Order disputed successfully', 'success');
-            fetchActiveOrders(); // Refresh list
-        } else {
-            const data = await response.json();
-            showToast(data.message || 'Failed to dispute order', 'error');
-        }
-    } catch (error) {
-        console.error('Error disputing order:', error);
-        showToast('Error disputing order', 'error');
-    }
-}
-
-function updateUserDisplay() {
-    if (!currentUser) return;
-    const nameEl = document.getElementById('header-username');
-    if (nameEl) nameEl.textContent = currentUser.full_name || currentUser.username;
 }
 
 function selectAgent(name, phone) {
-    document.getElementById('agent-phone-display').innerText = phone;
-    document.getElementById('selected-agent-view').classList.remove('hidden');
-    showToast('Agent ' + name + ' selected');
+  document.getElementById('agent-phone-display').innerText = phone;
+  document.getElementById('selected-agent-view').classList.remove('hidden');
+  showToast('Agent ' + name + ' selected');
 }
 
 function clearAgentSelection() {
-    document.getElementById('selected-agent-view').classList.add('hidden');
-    document.getElementById('agent-mpesa-message').value = '';
-    document.getElementById('agent-deposit-amount').value = '';
-    document.getElementById('agent-deposit-screenshot').value = '';
-    document.getElementById('file-name-label').innerText = 'Choose Screenshot';
-    validateAgentDepositForm();
+  document.getElementById('selected-agent-view').classList.add('hidden');
+  document.getElementById('agent-mpesa-message').value = '';
+  document.getElementById('agent-deposit-amount').value = '';
+  document.getElementById('agent-deposit-screenshot').value = '';
+  document.getElementById('file-name-label').innerText = 'Choose Screenshot';
+  validateAgentDepositForm();
 }
 
 
 function copyToClipboard(elementId) {
-    const el = document.getElementById(elementId);
-    const text = el ? el.innerText : '';
-    if (text) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('Copied to clipboard!');
-        });
-    }
+  const el = document.getElementById(elementId);
+  const text = el ? el.innerText : '';
+  if (text) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Copied to clipboard!');
+    });
+  }
 }
 
 function updateFileName(input) {
-    const label = document.getElementById('file-name-label');
-    if (input.files && input.files[0]) {
-        label.innerText = input.files[0].name;
-        label.classList.add('text-orange-500');
-    } else {
-        label.innerText = 'Choose Screenshot';
-        label.classList.remove('text-orange-500');
-    }
-    validateAgentDepositForm();
+  const label = document.getElementById('file-name-label');
+  if (input.files && input.files[0]) {
+    label.innerText = input.files[0].name;
+    label.classList.add('text-orange-500');
+  } else {
+    label.innerText = 'Choose Screenshot';
+    label.classList.remove('text-orange-500');
+  }
+  validateAgentDepositForm();
 }
 
 function validateAgentDepositForm() {
-    const amount = document.getElementById('agent-deposit-amount')?.value;
-    const message = document.getElementById('agent-mpesa-message')?.value.trim();
-    const screenshot = document.getElementById('agent-deposit-screenshot')?.files[0];
-    const btn = document.getElementById('agent-pay-btn');
+  const amount = document.getElementById('agent-deposit-amount')?.value;
+  const message = document.getElementById('agent-mpesa-message')?.value.trim();
+  const screenshot = document.getElementById('agent-deposit-screenshot')?.files[0];
+  const btn = document.getElementById('agent-pay-btn');
 
-    if (!btn) return;
+  if (!btn) return;
 
-    const hasProof = message || screenshot;
-    const hasAmount = amount && amount > 0;
+  const hasProof = message || screenshot;
+  const hasAmount = amount && amount > 0;
 
-    if (hasProof && hasAmount) {
-        btn.disabled = false;
-        btn.classList.remove('opacity-50', 'cursor-not-allowed');
-    } else {
-        btn.disabled = true;
-        btn.classList.add('opacity-50', 'cursor-not-allowed');
-    }
+  if (hasProof && hasAmount) {
+    btn.disabled = false;
+    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+  } else {
+    btn.disabled = true;
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
+  }
 }
 
 // --- Support System Logic ---
 let currentTicketId = null;
 
 function openSupportModal() {
-    openModal('support-modal');
-    showTicketList();
+  openModal('support-modal');
+  showTicketList();
 }
 
 function showTicketList() {
-    document.getElementById('support-view-list').classList.remove('hidden');
-    document.getElementById('support-view-new').classList.add('hidden');
-    document.getElementById('support-view-chat').classList.add('hidden');
-    document.getElementById('back-to-tickets-btn').classList.add('hidden');
+  document.getElementById('support-view-list').classList.remove('hidden');
+  document.getElementById('support-view-new').classList.add('hidden');
+  document.getElementById('support-view-chat').classList.add('hidden');
+  document.getElementById('back-to-tickets-btn').classList.add('hidden');
     
-    if (socket && currentTicketId) {
-        socket.emit('leave_ticket', currentTicketId);
-        currentTicketId = null;
-    }
+  if (socket && currentTicketId) {
+    socket.emit('leave_ticket', currentTicketId);
+    currentTicketId = null;
+  }
 
-    fetchSupportTickets();
+  fetchSupportTickets();
 }
 
 function showNewTicketForm() {
-    document.getElementById('support-view-list').classList.add('hidden');
-    document.getElementById('support-view-new').classList.remove('hidden');
-    document.getElementById('support-view-chat').classList.add('hidden');
-    document.getElementById('back-to-tickets-btn').classList.remove('hidden');
-    document.getElementById('new-ticket-subject').value = '';
-    document.getElementById('new-ticket-message').value = '';
-    document.getElementById('new-ticket-image').value = '';
+  document.getElementById('support-view-list').classList.add('hidden');
+  document.getElementById('support-view-new').classList.remove('hidden');
+  document.getElementById('support-view-chat').classList.add('hidden');
+  document.getElementById('back-to-tickets-btn').classList.remove('hidden');
+  document.getElementById('new-ticket-subject').value = '';
+  document.getElementById('new-ticket-message').value = '';
+  document.getElementById('new-ticket-image').value = '';
 }
 
 async function fetchSupportTickets() {
-    try {
-        const res = await authenticatedFetch('/api/support');
-        if (res.ok) {
-            const tickets = await res.json();
-            const container = document.getElementById('support-ticket-list');
-            container.innerHTML = '';
+  try {
+    const res = await authenticatedFetch('/api/support');
+    if (res.ok) {
+      const tickets = await res.json();
+      const container = document.getElementById('support-ticket-list');
+      container.innerHTML = '';
             
-            if (tickets.length === 0) {
-                container.innerHTML = `
+      if (tickets.length === 0) {
+        container.innerHTML = `
                     <div class="text-center py-12 opacity-50">
                         <i class="ti ti-message-circle-off text-4xl text-gray-600 mb-3"></i>
                         <p class="text-xs text-gray-500">No support tickets found.</p>
                     </div>`;
-                return;
-            }
+        return;
+      }
 
-            tickets.forEach(ticket => {
-                const statusColor = ticket.status === 'open' ? 'text-green-500 bg-green-500/10' : 'text-gray-500 bg-gray-500/10';
-                container.innerHTML += `
+      tickets.forEach(ticket => {
+        const statusColor = ticket.status === 'open' ? 'text-green-500 bg-green-500/10' : 'text-gray-500 bg-gray-500/10';
+        container.innerHTML += `
                     <div onclick="openTicketChat(${ticket.id})" class="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-orange-500/50 transition-all cursor-pointer">
                         <div class="flex justify-between items-start mb-2">
                             <h5 class="text-sm font-bold text-white">${ticket.subject}</h5>
@@ -1248,85 +1219,85 @@ async function fetchSupportTickets() {
                         <p class="text-xs text-gray-400">Created: ${new Date(ticket.createdAt).toLocaleString()}</p>
                     </div>
                 `;
-            });
-        }
-    } catch (e) {
-        console.error('Fetch tickets error:', e);
+      });
     }
+  } catch (e) {
+    console.error('Fetch tickets error:', e);
+  }
 }
 
 async function submitNewTicket() {
-    const subject = document.getElementById('new-ticket-subject').value.trim();
-    const message = document.getElementById('new-ticket-message').value.trim();
-    const fileInput = document.getElementById('new-ticket-image');
+  const subject = document.getElementById('new-ticket-subject').value.trim();
+  const message = document.getElementById('new-ticket-message').value.trim();
+  const fileInput = document.getElementById('new-ticket-image');
 
-    if (!subject) return showToast('Subject is required', 'error');
+  if (!subject) return showToast('Subject is required', 'error');
 
-    let image_base64 = null;
-    if (fileInput.files.length > 0) {
-        image_base64 = await toBase64(fileInput.files[0]);
+  let image_base64 = null;
+  if (fileInput.files.length > 0) {
+    image_base64 = await toBase64(fileInput.files[0]);
+  }
+
+  try {
+    const res = await authenticatedFetch('/api/support', {
+      method: 'POST',
+      body: JSON.stringify({ subject, initial_message: message, image_base64 })
+    });
+    if (res.ok) {
+      const ticket = await res.json();
+      showToast('Ticket created', 'success');
+      openTicketChat(ticket.id);
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Failed to create ticket', 'error');
     }
-
-    try {
-        const res = await authenticatedFetch('/api/support', {
-            method: 'POST',
-            body: JSON.stringify({ subject, initial_message: message, image_base64 })
-        });
-        if (res.ok) {
-            const ticket = await res.json();
-            showToast('Ticket created', 'success');
-            openTicketChat(ticket.id);
-        } else {
-            const err = await res.json();
-            showToast(err.error || 'Failed to create ticket', 'error');
-        }
-    } catch (e) {
-        showToast('Connection error', 'error');
-    }
+  } catch (e) {
+    showToast('Connection error', 'error');
+  }
 }
 
 async function openTicketChat(ticketId) {
-    document.getElementById('support-view-list').classList.add('hidden');
-    document.getElementById('support-view-new').classList.add('hidden');
-    document.getElementById('support-view-chat').classList.remove('hidden');
-    document.getElementById('support-view-chat').classList.add('flex');
-    document.getElementById('back-to-tickets-btn').classList.remove('hidden');
+  document.getElementById('support-view-list').classList.add('hidden');
+  document.getElementById('support-view-new').classList.add('hidden');
+  document.getElementById('support-view-chat').classList.remove('hidden');
+  document.getElementById('support-view-chat').classList.add('flex');
+  document.getElementById('back-to-tickets-btn').classList.remove('hidden');
 
-    currentTicketId = ticketId;
-    if (socket) socket.emit('join_ticket', ticketId);
+  currentTicketId = ticketId;
+  if (socket) socket.emit('join_ticket', ticketId);
 
-    try {
-        const res = await authenticatedFetch('/api/support/' + ticketId + '/messages');
-        if (res.ok) {
-            const data = await res.json();
-            const container = document.getElementById('support-chat-messages');
-            container.innerHTML = '';
+  try {
+    const res = await authenticatedFetch('/api/support/' + ticketId + '/messages');
+    if (res.ok) {
+      const data = await res.json();
+      const container = document.getElementById('support-chat-messages');
+      container.innerHTML = '';
             
-            if (data.ticket.status === 'closed') {
-                document.getElementById('support-chat-input-area').classList.add('hidden');
-            } else {
-                document.getElementById('support-chat-input-area').classList.remove('hidden');
-            }
+      if (data.ticket.status === 'closed') {
+        document.getElementById('support-chat-input-area').classList.add('hidden');
+      } else {
+        document.getElementById('support-chat-input-area').classList.remove('hidden');
+      }
 
-            data.messages.forEach(msg => appendChatMessage(msg));
-            setTimeout(() => container.scrollTop = container.scrollHeight, 100);
-        }
-    } catch (e) {
-        showToast('Error loading messages', 'error');
+      data.messages.forEach(msg => appendChatMessage(msg));
+      setTimeout(() => container.scrollTop = container.scrollHeight, 100);
     }
+  } catch (e) {
+    showToast('Error loading messages', 'error');
+  }
 }
 
 function appendChatMessage(msg) {
-    const container = document.getElementById('support-chat-messages');
-    const isMe = msg.sender_id === window.currentUserId;
-    const alignClass = isMe ? 'self-end bg-orange-500 text-white rounded-br-sm' : 'self-start bg-gray-800 border border-gray-700 text-gray-200 rounded-bl-sm';
+  const container = document.getElementById('support-chat-messages');
+  const isMe = msg.sender_id === window.currentUserId;
+  const alignClass = isMe ? 'self-end bg-orange-500 text-white rounded-br-sm' : 'self-start bg-gray-800 border border-gray-700 text-gray-200 rounded-bl-sm';
     
-    let imgHtml = '';
-    if (msg.attachment_path) {
-        imgHtml = `<img src="${msg.attachment_path}" class="max-w-xs mt-2 rounded-lg border border-gray-600/50 cursor-pointer" onclick="window.open(this.src, '_blank')">`;
-    }
+  let imgHtml = '';
+  if (msg.attachment_path) {
+    imgHtml = `<img src="${msg.attachment_path}" class="max-w-xs mt-2 rounded-lg border border-gray-600/50 cursor-pointer" onclick="window.open(this.src, '_blank')">`;
+  }
 
-    container.innerHTML += `
+  container.innerHTML += `
         <div class="flex flex-col w-fit max-w-[80%] ${alignClass} px-4 py-2 mt-2 rounded-2xl shadow-md space-y-1">
             ${!isMe ? `<span class="text-[10px] font-bold text-gray-400 mb-1 leading-none">${msg.sender?.role === 'admin' ? 'Support Admin' : msg.sender?.username}</span>` : ''}
             ${msg.message ? `<p class="text-sm whitespace-pre-wrap leading-tight">${escapeHTML(msg.message)}</p>` : ''}
@@ -1334,82 +1305,82 @@ function appendChatMessage(msg) {
             <span class="text-[9px] opacity-70 text-right mt-1 leading-none inline-block">${new Date(msg.createdAt).toLocaleTimeString()}</span>
         </div>
     `;
-    setTimeout(() => {
-       const wrapper = document.getElementById('support-chat-messages');
-       wrapper.scrollTop = wrapper.scrollHeight;
-    }, 100);
+  setTimeout(() => {
+    const wrapper = document.getElementById('support-chat-messages');
+    wrapper.scrollTop = wrapper.scrollHeight;
+  }, 100);
 }
 
 let pendingChatImageBase64 = null;
 
 async function handleChatImageSelect(event) {
-    const file = event.target.files[0];
-    if (file) {
-        pendingChatImageBase64 = await toBase64(file);
-        document.getElementById('chat-image-preview-name').innerText = file.name;
-        document.getElementById('chat-image-preview-img').src = pendingChatImageBase64;
-        document.getElementById('chat-image-preview-img').classList.remove('hidden');
-        document.getElementById('chat-image-preview-container').classList.remove('hidden');
-        document.getElementById('support-chat-input').focus();
-    }
+  const file = event.target.files[0];
+  if (file) {
+    pendingChatImageBase64 = await toBase64(file);
+    document.getElementById('chat-image-preview-name').innerText = file.name;
+    document.getElementById('chat-image-preview-img').src = pendingChatImageBase64;
+    document.getElementById('chat-image-preview-img').classList.remove('hidden');
+    document.getElementById('chat-image-preview-container').classList.remove('hidden');
+    document.getElementById('support-chat-input').focus();
+  }
 }
 
 function clearChatImagePreview() {
-    pendingChatImageBase64 = null;
-    document.getElementById('chat-file-input').value = '';
-    document.getElementById('chat-image-preview-container').classList.add('hidden');
+  pendingChatImageBase64 = null;
+  document.getElementById('chat-file-input').value = '';
+  document.getElementById('chat-image-preview-container').classList.add('hidden');
 }
 
 function handleChatEnter(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendChatMessage();
-    }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
 }
 
 async function sendChatMessage() {
-    const inputEl = document.getElementById('support-chat-input');
-    const message = inputEl.value.trim();
+  const inputEl = document.getElementById('support-chat-input');
+  const message = inputEl.value.trim();
     
-    if (!message && !pendingChatImageBase64) return;
-    if (!currentTicketId) return;
+  if (!message && !pendingChatImageBase64) return;
+  if (!currentTicketId) return;
 
-    try {
-        const res = await authenticatedFetch('/api/support/' + currentTicketId + '/messages', {
-            method: 'POST',
-            body: JSON.stringify({ message, image_base64: pendingChatImageBase64 })
-        });
+  try {
+    const res = await authenticatedFetch('/api/support/' + currentTicketId + '/messages', {
+      method: 'POST',
+      body: JSON.stringify({ message, image_base64: pendingChatImageBase64 })
+    });
         
-        if (res.ok) {
-            inputEl.value = '';
-            clearChatImagePreview();
-        } else {
-            const err = await res.json();
-            showToast(err.error || 'Failed to send message', 'error');
-        }
-    } catch (e) {
-        showToast('Connection error', 'error');
+    if (res.ok) {
+      inputEl.value = '';
+      clearChatImagePreview();
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Failed to send message', 'error');
     }
+  } catch (e) {
+    showToast('Connection error', 'error');
+  }
 }
 
 function toBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
 }
 
 function escapeHTML(str) {
-    if(!str) return '';
-    return str.replace(/[&<>'"]/g, 
-        tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag] || tag)
-    );
+  if(!str) return '';
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '\'': '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
 }

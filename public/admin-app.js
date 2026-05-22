@@ -11,519 +11,519 @@ let isLoadingOrders = false;
 
 // Initialize Socket.io and check admin access
 document.addEventListener('DOMContentLoaded', () => {
-    checkAdminAuthentication();
-    initializeSocket();
-    initializeDarkMode();
+  checkAdminAuthentication();
+  initializeSocket();
+  initializeDarkMode();
 });
 
 function checkAdminAuthentication() {
-    const authToken = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('userData');
+  const authToken = localStorage.getItem('authToken');
+  const userData = localStorage.getItem('userData');
 
-    if (!authToken || !userData) {
+  if (!authToken || !userData) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  try {
+    const user = JSON.parse(userData);
+
+    // Redirect non-admin users back to index.html
+    if (user.role !== 'admin') {
+      showToast('Unauthorized access. Redirecting...', 'error');
+      setTimeout(() => {
         window.location.href = 'index.html';
-        return;
+      }, 1500);
+      return;
     }
 
-    try {
-        const user = JSON.parse(userData);
+    currentUserId = user.id;
+    currentUserRole = user.role;
+    currentUsername = user.username;
 
-        // Redirect non-admin users back to index.html
-        if (user.role !== 'admin') {
-            showToast('Unauthorized access. Redirecting...', 'error');
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1500);
-            return;
-        }
-
-        currentUserId = user.id;
-        currentUserRole = user.role;
-        currentUsername = user.username;
-
-        updateUserDisplay();
-        updateAdminDashboard();
-    } catch (error) {
-        console.error('Error parsing user data:', error);
-        window.location.href = 'index.html';
-    }
+    updateUserDisplay();
+    updateAdminDashboard();
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    window.location.href = 'index.html';
+  }
 }
 
 function initializeSocket() {
-    socket = io();
+  socket = io();
 
-    socket.on('connect', () => {
-        console.log('Connected to WebSocket');
-        showToast('Connected to real-time updates', 'info');
-        if (currentUserId) {
-            socket.emit('register', currentUserId);
-        }
-    });
+  socket.on('connect', () => {
+    console.log('Connected to WebSocket');
+    showToast('Connected to real-time updates', 'info');
+    if (currentUserId) {
+      socket.emit('register', currentUserId);
+    }
+  });
 
-    socket.on('orderCreated', (order) => {
-        console.log('New order created:', order);
-        showToast(`New order #${order.id} created!`, 'info');
-        updateAdminDashboard();
-    });
+  socket.on('orderCreated', (order) => {
+    console.log('New order created:', order);
+    showToast(`New order #${order.id} created!`, 'info');
+    updateAdminDashboard();
+  });
 
-    socket.on('orderClaimed', (order) => {
-        console.log('Order claimed:', order);
-        showToast(`Order #${order.id} has been claimed!`, 'info');
-        updateAdminDashboard();
-    });
+  socket.on('orderClaimed', (order) => {
+    console.log('Order claimed:', order);
+    showToast(`Order #${order.id} has been claimed!`, 'info');
+    updateAdminDashboard();
+  });
 
-    socket.on('orderCompleted', (order) => {
-        console.log('Order completed:', order);
-        showToast(`Order #${order.id} completed!`, 'success');
-        updateAdminDashboard();
-    });
+  socket.on('orderCompleted', (order) => {
+    console.log('Order completed:', order);
+    showToast(`Order #${order.id} completed!`, 'success');
+    updateAdminDashboard();
+  });
 
-    socket.on('newTransactionRequest', (data) => {
-        console.log('New transaction request:', data);
-        const amount = parseFloat(data.amount);
-        const isKes = data.metadata && data.metadata.currency === 'KES';
-        const displayAmount = isKes ? `Ksh ${amount.toFixed(2)}` : formatCurrency(amount);
+  socket.on('newTransactionRequest', (data) => {
+    console.log('New transaction request:', data);
+    const amount = parseFloat(data.amount);
+    const isKes = data.metadata && data.metadata.currency === 'KES';
+    const displayAmount = isKes ? `Ksh ${amount.toFixed(2)}` : formatCurrency(amount);
 
-        showToast(`New ${data.type} request from ${data.username} for ${displayAmount}`, 'info');
-        loadTransactionRequests();
-    });
+    showToast(`New ${data.type} request from ${data.username} for ${displayAmount}`, 'info');
+    loadTransactionRequests();
+  });
 
-    socket.on('walletUpdated', (data) => {
-        console.log('Wallet updated:', data);
-        // Refresh user management to show updated balances
-        loadMasterOverview();
-    });
+  socket.on('walletUpdated', (data) => {
+    console.log('Wallet updated:', data);
+    // Refresh user management to show updated balances
+    loadMasterOverview();
+  });
 
-    socket.on('orderReadyForRelease', (order) => {
-        console.log('Order ready for release:', order);
-        showToast(`Order #${order.id} is ready for release!`, 'info');
-        updateAdminDashboard();
-    });
+  socket.on('orderReadyForRelease', (order) => {
+    console.log('Order ready for release:', order);
+    showToast(`Order #${order.id} is ready for release!`, 'info');
+    updateAdminDashboard();
+  });
 
-    socket.on('orderCancelled', (order) => {
-        console.log('Order cancelled:', order);
-        showToast(`Order #${order.id} has been cancelled`, 'info');
-        updateAdminDashboard();
-    });
+  socket.on('orderCancelled', (order) => {
+    console.log('Order cancelled:', order);
+    showToast(`Order #${order.id} has been cancelled`, 'info');
+    updateAdminDashboard();
+  });
 
-    socket.on('adminOrdersUpdated', (data) => {
-        console.log('Admin orders updated bulk:', data);
-        if (data.bulk) {
-            showToast(`Bulk Release: ${data.count} orders finalized!`, 'success');
-        }
-        updateAdminDashboard();
-    });
+  socket.on('adminOrdersUpdated', (data) => {
+    console.log('Admin orders updated bulk:', data);
+    if (data.bulk) {
+      showToast(`Bulk Release: ${data.count} orders finalized!`, 'success');
+    }
+    updateAdminDashboard();
+  });
 
-    socket.on('transactionRequestReviewed', (data) => {
-        console.log('Transaction request reviewed:', data);
-        // Refresh to show updated state
-        loadMasterOverview();
-    });
+  socket.on('transactionRequestReviewed', (data) => {
+    console.log('Transaction request reviewed:', data);
+    // Refresh to show updated state
+    loadMasterOverview();
+  });
 
-    socket.on('botScanPerformed', (data) => {
-        console.log('Bot scan performed:', data);
-        const lastScanEl = document.getElementById('bot-last-scan');
-        if (lastScanEl) {
-            lastScanEl.innerText = new Date(data.timestamp).toLocaleTimeString();
-        }
-    });
+  socket.on('botScanPerformed', (data) => {
+    console.log('Bot scan performed:', data);
+    const lastScanEl = document.getElementById('bot-last-scan');
+    if (lastScanEl) {
+      lastScanEl.innerText = new Date(data.timestamp).toLocaleTimeString();
+    }
+  });
 
-    socket.on('disconnect', () => {
-        console.log('Disconnected from WebSocket');
-    });
+  socket.on('disconnect', () => {
+    console.log('Disconnected from WebSocket');
+  });
 
-    // Support sockets
-    socket.on('support_ticket_created', data => {
-        showToast(`New Support Ticket #${data.ticket_id} created!`, 'info');
-        fetchAdminSupportTickets();
-    });
+  // Support sockets
+  socket.on('support_ticket_created', data => {
+    showToast(`New Support Ticket #${data.ticket_id} created!`, 'info');
+    fetchAdminSupportTickets();
+  });
     
-    socket.on('support_ticket_updated', data => {
-        fetchAdminSupportTickets();
-    });
+  socket.on('support_ticket_updated', data => {
+    fetchAdminSupportTickets();
+  });
     
-    socket.on('support_message', msg => {
-        if (currentAdminTicketId == msg.ticket_id) {
-            appendAdminChatMessage(msg);
-        } else {
-            showToast('New support message received', 'info');
-        }
-        fetchAdminSupportTickets();
-    });
+  socket.on('support_message', msg => {
+    if (currentAdminTicketId == msg.ticket_id) {
+      appendAdminChatMessage(msg);
+    } else {
+      showToast('New support message received', 'info');
+    }
+    fetchAdminSupportTickets();
+  });
 }
 
 // Dark Mode Functions
 function initializeDarkMode() {
-    const isDark = localStorage.getItem('darkMode') === 'true';
-    if (isDark) {
-        document.documentElement.classList.add('dark');
-    }
+  const isDark = localStorage.getItem('darkMode') === 'true';
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+  }
 }
 
 function toggleDarkMode() {
-    const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('darkMode', isDark);
-    showToast(isDark ? 'Dark mode enabled' : 'Light mode enabled', 'info');
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('darkMode', isDark);
+  showToast(isDark ? 'Dark mode enabled' : 'Light mode enabled', 'info');
 }
 
 // Bulk Order Functions
 let bulkOrdersCache = [];
 
 function toggleBulkSection() {
-    const container = document.getElementById('bulk-form-container');
-    const icon = document.getElementById('bulk-toggle-icon');
-    if (container) container.classList.toggle('hidden');
-    if (icon) icon.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+  const container = document.getElementById('bulk-form-container');
+  const icon = document.getElementById('bulk-toggle-icon');
+  if (container) container.classList.toggle('hidden');
+  if (icon) icon.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 
 function generateRandomAmounts(count, total, min, max) {
-    if (min * count > total || max * count < total) return null;
+  if (min * count > total || max * count < total) return null;
 
-    let amounts = [];
+  let amounts = [];
 
-    // 1. Coverage: Ensure we hit every "whole dollar" segment if possible
-    const floorMin = Math.floor(min);
-    const floorMax = Math.floor(max);
-    const segments = [];
-    for (let i = floorMin; i <= floorMax; i++) {
-        segments.push(i);
+  // 1. Coverage: Ensure we hit every "whole dollar" segment if possible
+  const floorMin = Math.floor(min);
+  const floorMax = Math.floor(max);
+  const segments = [];
+  for (let i = floorMin; i <= floorMax; i++) {
+    segments.push(i);
+  }
+
+  // Shuffle segments to assign them to random order slots
+  const shuffledSegments = [...segments].sort(() => Math.random() - 0.5);
+
+  // Pick unique segment values for the first few orders
+  for (let i = 0; i < Math.min(count - 1, shuffledSegments.length); i++) {
+    const seg = shuffledSegments[i];
+    const sMin = Math.max(min, seg);
+    const sMax = Math.min(max, seg + 0.99);
+    // Random value in this segment's range
+    amounts.push(sMin + (Math.random() * (sMax - sMin)));
+  }
+
+  // 2. Fill the rest with random values in full range
+  while (amounts.length < count) {
+    amounts.push(min + Math.random() * (max - min));
+  }
+
+  // 3. Balancing & Jitter: Reach target sum while maintaining uniqueness
+  // We iterate to spread the values and hit the sum
+  const iterations = count * 50;
+  for (let i = 0; i < iterations; i++) {
+    const idx1 = Math.floor(Math.random() * count);
+    const idx2 = Math.floor(Math.random() * count);
+    if (idx1 === idx2) continue;
+
+    const maxMove = Math.min(amounts[idx1] - min, max - amounts[idx2]);
+    if (maxMove > 0) {
+      const jitter = Math.random() * maxMove * 0.4;
+      amounts[idx1] -= jitter;
+      amounts[idx2] += jitter;
     }
+  }
 
-    // Shuffle segments to assign them to random order slots
-    const shuffledSegments = [...segments].sort(() => Math.random() - 0.5);
+  // 4. Force rounding and exact sum correction
+  amounts = amounts.map(v => Math.round(v * 100) / 100);
+  // Ensure all are within bounds after rounding
+  amounts = amounts.map(v => Math.max(min, Math.min(max, v)));
 
-    // Pick unique segment values for the first few orders
-    for (let i = 0; i < Math.min(count - 1, shuffledSegments.length); i++) {
-        const seg = shuffledSegments[i];
-        const sMin = Math.max(min, seg);
-        const sMax = Math.min(max, seg + 0.99);
-        // Random value in this segment's range
-        amounts.push(sMin + (Math.random() * (sMax - sMin)));
+  const currentSum = amounts.reduce((a, b) => a + b, 0);
+  let diff = Math.round((total - currentSum) * 100) / 100;
+
+  // Distribute remaining cents while maintaining uniqueness
+  let safety = 0;
+  while (Math.abs(diff) > 0.001 && safety < 2000) {
+    const step = diff > 0 ? 0.01 : -0.01;
+    const idx = Math.floor(Math.random() * count);
+
+    const candidate = Math.round((amounts[idx] + step) * 100) / 100;
+
+    // Uniqueness check: Is this candidate value already in the list?
+    if (candidate >= min && candidate <= max && !amounts.includes(candidate)) {
+      amounts[idx] = candidate;
+      diff = Math.round((diff - step) * 100) / 100;
     }
+    safety++;
+  }
 
-    // 2. Fill the rest with random values in full range
-    while (amounts.length < count) {
-        amounts.push(min + Math.random() * (max - min));
-    }
-
-    // 3. Balancing & Jitter: Reach target sum while maintaining uniqueness
-    // We iterate to spread the values and hit the sum
-    const iterations = count * 50;
-    for (let i = 0; i < iterations; i++) {
-        const idx1 = Math.floor(Math.random() * count);
-        const idx2 = Math.floor(Math.random() * count);
-        if (idx1 === idx2) continue;
-
-        const maxMove = Math.min(amounts[idx1] - min, max - amounts[idx2]);
-        if (maxMove > 0) {
-            const jitter = Math.random() * maxMove * 0.4;
-            amounts[idx1] -= jitter;
-            amounts[idx2] += jitter;
-        }
-    }
-
-    // 4. Force rounding and exact sum correction
-    amounts = amounts.map(v => Math.round(v * 100) / 100);
-    // Ensure all are within bounds after rounding
-    amounts = amounts.map(v => Math.max(min, Math.min(max, v)));
-
-    let currentSum = amounts.reduce((a, b) => a + b, 0);
-    let diff = Math.round((total - currentSum) * 100) / 100;
-
-    // Distribute remaining cents while maintaining uniqueness
-    let safety = 0;
-    while (Math.abs(diff) > 0.001 && safety < 2000) {
-        const step = diff > 0 ? 0.01 : -0.01;
-        const idx = Math.floor(Math.random() * count);
-
-        const candidate = Math.round((amounts[idx] + step) * 100) / 100;
-
-        // Uniqueness check: Is this candidate value already in the list?
-        if (candidate >= min && candidate <= max && !amounts.includes(candidate)) {
-            amounts[idx] = candidate;
-            diff = Math.round((diff - step) * 100) / 100;
-        }
-        safety++;
-    }
-
-    // Final shuffle to not have the "coverage" orders always at the start
-    return amounts.sort(() => Math.random() - 0.5);
+  // Final shuffle to not have the "coverage" orders always at the start
+  return amounts.sort(() => Math.random() - 0.5);
 }
 
 function previewBulkOrders() {
-    const count = parseInt(document.getElementById('bulk-count').value);
-    const total = parseFloat(document.getElementById('bulk-total').value);
-    const min = parseFloat(document.getElementById('bulk-min').value);
-    const max = parseFloat(document.getElementById('bulk-max').value);
+  const count = parseInt(document.getElementById('bulk-count').value);
+  const total = parseFloat(document.getElementById('bulk-total').value);
+  const min = parseFloat(document.getElementById('bulk-min').value);
+  const max = parseFloat(document.getElementById('bulk-max').value);
 
-    if (!count || !total || !min || !max) {
-        showToast('Please fill all fields', 'error');
-        return;
+  if (!count || !total || !min || !max) {
+    showToast('Please fill all fields', 'error');
+    return;
+  }
+
+  if (min * count > total) {
+    showToast(`Impossible! Minimum ${min} * ${count} = ${min * count} > Total ${total}`, 'error');
+    return;
+  }
+
+  if (max * count < total) {
+    showToast(`Impossible! Maximum ${max} * ${count} = ${max * count} < Total ${total}`, 'error');
+    return;
+  }
+
+  // Try generation (retry up to 5 times)
+  let amounts = null;
+  for (let i = 0; i < 5; i++) {
+    const candidate = generateRandomAmounts(count, total, min, max);
+    const valid = candidate.every(a => a >= min && a <= max);
+    if (valid) {
+      amounts = candidate;
+      break;
     }
+  }
 
-    if (min * count > total) {
-        showToast(`Impossible! Minimum ${min} * ${count} = ${min * count} > Total ${total}`, 'error');
-        return;
-    }
+  // Fallback if random fails: uniform distribution
+  if (!amounts) {
+    showToast('Random distribution failed constraints. Using uniform distribution.', 'warning');
+    const avg = total / count;
+    amounts = new Array(count).fill(avg);
+  }
 
-    if (max * count < total) {
-        showToast(`Impossible! Maximum ${max} * ${count} = ${max * count} < Total ${total}`, 'error');
-        return;
-    }
+  bulkOrdersCache = amounts.map(amount => ({
+    amount: parseFloat(amount.toFixed(2)),
+    description: 'Bulk Order - Random Gen'
+  }));
 
-    // Try generation (retry up to 5 times)
-    let amounts = null;
-    for (let i = 0; i < 5; i++) {
-        const candidate = generateRandomAmounts(count, total, min, max);
-        const valid = candidate.every(a => a >= min && a <= max);
-        if (valid) {
-            amounts = candidate;
-            break;
-        }
-    }
+  const previewList = document.getElementById('bulk-preview-list');
+  previewList.innerHTML = '';
 
-    // Fallback if random fails: uniform distribution
-    if (!amounts) {
-        showToast('Random distribution failed constraints. Using uniform distribution.', 'warning');
-        const avg = total / count;
-        amounts = new Array(count).fill(avg);
-    }
+  bulkOrdersCache.forEach((order, index) => {
+    const div = document.createElement('div');
+    div.className = 'flex justify-between text-sm';
+    div.innerHTML = `<span>Order #${index + 1}</span> <span class="font-mono font-bold">$${order.amount.toFixed(2)}</span>`;
+    previewList.appendChild(div);
+  });
 
-    bulkOrdersCache = amounts.map(amount => ({
-        amount: parseFloat(amount.toFixed(2)),
-        description: `Bulk Order - Random Gen`
-    }));
-
-    const previewList = document.getElementById('bulk-preview-list');
-    previewList.innerHTML = '';
-
-    bulkOrdersCache.forEach((order, index) => {
-        const div = document.createElement('div');
-        div.className = 'flex justify-between text-sm';
-        div.innerHTML = `<span>Order #${index + 1}</span> <span class="font-mono font-bold">$${order.amount.toFixed(2)}</span>`;
-        previewList.appendChild(div);
-    });
-
-    document.getElementById('bulk-preview-sum').textContent = bulkOrdersCache.reduce((a, o) => a + o.amount, 0).toFixed(2);
-    document.getElementById('bulk-preview').classList.remove('hidden');
+  document.getElementById('bulk-preview-sum').textContent = bulkOrdersCache.reduce((a, o) => a + o.amount, 0).toFixed(2);
+  document.getElementById('bulk-preview').classList.remove('hidden');
 }
 
 async function submitBulkOrders() {
-    if (bulkOrdersCache.length === 0) {
-        showToast('Please preview orders first', 'error');
-        return;
-    }
+  if (bulkOrdersCache.length === 0) {
+    showToast('Please preview orders first', 'error');
+    return;
+  }
 
-    try {
-        const response = await authenticatedFetch('/orders/bulk', {
-            method: 'POST',
-            body: JSON.stringify({ orders: bulkOrdersCache })
-        });
+  try {
+    const response = await authenticatedFetch('/orders/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ orders: bulkOrdersCache })
+    });
 
-        if (response.ok) {
-            showToast('Batch created successfully!', 'success');
-            document.getElementById('bulk-form-container').classList.add('hidden');
-            bulkOrdersCache = [];
-            // Refresh logic
-            refreshData();
-        } else {
-            const data = await response.json();
-            showToast(data.error || 'Failed to create bulk orders', 'error');
-        }
-    } catch (error) {
-        console.error(error);
-        showToast('Server error', 'error');
+    if (response.ok) {
+      showToast('Batch created successfully!', 'success');
+      document.getElementById('bulk-form-container').classList.add('hidden');
+      bulkOrdersCache = [];
+      // Refresh logic
+      refreshData();
+    } else {
+      const data = await response.json();
+      showToast(data.error || 'Failed to create bulk orders', 'error');
     }
+  } catch (error) {
+    console.error(error);
+    showToast('Server error', 'error');
+  }
 }
 function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+  const toast = document.createElement('div');
+  const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
 
-    toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 flex items-center space-x-3 max-w-md pointer-events-auto`;
-    toast.innerHTML = `
+  toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 flex items-center space-x-3 max-w-md pointer-events-auto`;
+  toast.innerHTML = `
         <i class="ti ti-${type === 'success' ? 'check' : type === 'error' ? 'x' : 'info-circle'} text-2xl"></i>
         <span class="font-medium">${message}</span>
     `;
 
-    const container = document.getElementById('toast-container');
-    if (container) {
-        container.appendChild(toast);
-    } else {
-        // Create container if missing
-        const newContainer = document.createElement('div');
-        newContainer.id = 'toast-container';
-        newContainer.className = 'fixed top-4 right-4 z-50 flex flex-col space-y-4';
-        document.body.appendChild(newContainer);
-        newContainer.appendChild(toast);
-    }
+  const container = document.getElementById('toast-container');
+  if (container) {
+    container.appendChild(toast);
+  } else {
+    // Create container if missing
+    const newContainer = document.createElement('div');
+    newContainer.id = 'toast-container';
+    newContainer.className = 'fixed top-4 right-4 z-50 flex flex-col space-y-4';
+    document.body.appendChild(newContainer);
+    newContainer.appendChild(toast);
+  }
 
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 // Confirmation Dialog
 function showConfirmDialog(title, message, callback) {
-    document.getElementById('confirm-title').textContent = title;
-    document.getElementById('confirm-message').textContent = message;
-    document.getElementById('confirm-dialog').classList.remove('hidden');
-    confirmCallback = callback;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-dialog').classList.remove('hidden');
+  confirmCallback = callback;
 
-    document.getElementById('confirm-action-btn').onclick = () => {
-        if (confirmCallback) confirmCallback();
-        closeConfirmDialog();
-    };
+  document.getElementById('confirm-action-btn').onclick = () => {
+    if (confirmCallback) confirmCallback();
+    closeConfirmDialog();
+  };
 }
 
 function closeConfirmDialog() {
-    document.getElementById('confirm-dialog').classList.add('hidden');
-    confirmCallback = null;
+  document.getElementById('confirm-dialog').classList.add('hidden');
+  confirmCallback = null;
 }
 
 function updateUserDisplay() {
-    const userDisplay = document.getElementById('current-user-display');
-    if (userDisplay && currentUsername) {
-        userDisplay.textContent = currentUsername;
-    }
+  const userDisplay = document.getElementById('current-user-display');
+  if (userDisplay && currentUsername) {
+    userDisplay.textContent = currentUsername;
+  }
 }
 
 async function updateAdminDashboard() {
-    if (!currentUserId) return;
+  if (!currentUserId) return;
 
-    // Default load: All orders, no search
-    await loadMasterOverview();
-    await loadTransactionRequests();
-    await loadDisputes();
-    await fetchAdminSupportTickets();
-    await fetchBotConfig();
-    updateSystemHealthCards();
-    updateUserDisplay();
-    updateCurrencyLabels();
+  // Default load: All orders, no search
+  await loadMasterOverview();
+  await loadTransactionRequests();
+  await loadDisputes();
+  await fetchAdminSupportTickets();
+  await fetchBotConfig();
+  updateSystemHealthCards();
+  updateUserDisplay();
+  updateCurrencyLabels();
 }
 
 let filterTimeout = null;
 function filterAdminOrders() {
-    // Clear existing timeout for debouncing search
-    if (filterTimeout) clearTimeout(filterTimeout);
+  // Clear existing timeout for debouncing search
+  if (filterTimeout) clearTimeout(filterTimeout);
 
-    // Debounce to avoid too many API calls while typing
-    filterTimeout = setTimeout(async () => {
-        ordersOffset = 0; // Reset pagination
-        ordersHasMore = true;
-        await loadMasterOverview(false); // Force fresh load
-    }, 400);
+  // Debounce to avoid too many API calls while typing
+  filterTimeout = setTimeout(async () => {
+    ordersOffset = 0; // Reset pagination
+    ordersHasMore = true;
+    await loadMasterOverview(false); // Force fresh load
+  }, 400);
 }
 
 async function loadMasterOverview(loadMore = false) {
-    if (isLoadingOrders && loadMore) return;
-    isLoadingOrders = true;
+  if (isLoadingOrders && loadMore) return;
+  isLoadingOrders = true;
 
-    try {
-        const limit = 10;
-        const offset = loadMore ? ordersOffset : 0;
+  try {
+    const limit = 10;
+    const offset = loadMore ? ordersOffset : 0;
 
-        // Get filter values from UI
-        const status = document.getElementById('admin-order-filter')?.value || 'ALL';
-        const search = document.getElementById('admin-order-search')?.value || '';
+    // Get filter values from UI
+    const status = document.getElementById('admin-order-filter')?.value || 'ALL';
+    const search = document.getElementById('admin-order-search')?.value || '';
 
-        let url = `/admin/overview?ordersLimit=${limit}&ordersOffset=${offset}`;
-        if (status !== 'ALL') url += `&status=${status}`;
-        if (search.trim() !== '') url += `&search=${encodeURIComponent(search.trim())}`;
+    let url = `/admin/overview?ordersLimit=${limit}&ordersOffset=${offset}`;
+    if (status !== 'ALL') url += `&status=${status}`;
+    if (search.trim() !== '') url += `&search=${encodeURIComponent(search.trim())}`;
 
-        const response = await authenticatedFetch(url);
+    const response = await authenticatedFetch(url);
 
-        if (!response.ok) {
-            console.error('Failed to load master overview');
-            return;
-        }
-
-        const data = await response.json();
-
-        if (loadMore) {
-            // Append new orders to existing ones
-            masterOverview = {
-                ...data,
-                orders: [...(masterOverview?.orders || []), ...(data.orders || [])]
-            };
-            ordersOffset += limit;
-        } else {
-            // Fresh load
-            masterOverview = data;
-            ordersOffset = limit;
-        }
-
-        ordersHasMore = data.ordersHasMore;
-
-        // Display God-Mode Orders
-        displayGodModeOrders();
-
-        // Display User Management
-        displayUserManagement();
-
-    } catch (error) {
-        console.error('Error loading master overview:', error);
-    } finally {
-        isLoadingOrders = false;
+    if (!response.ok) {
+      console.error('Failed to load master overview');
+      return;
     }
+
+    const data = await response.json();
+
+    if (loadMore) {
+      // Append new orders to existing ones
+      masterOverview = {
+        ...data,
+        orders: [...(masterOverview?.orders || []), ...(data.orders || [])]
+      };
+      ordersOffset += limit;
+    } else {
+      // Fresh load
+      masterOverview = data;
+      ordersOffset = limit;
+    }
+
+    ordersHasMore = data.ordersHasMore;
+
+    // Display God-Mode Orders
+    displayGodModeOrders();
+
+    // Display User Management
+    displayUserManagement();
+
+  } catch (error) {
+    console.error('Error loading master overview:', error);
+  } finally {
+    isLoadingOrders = false;
+  }
 }
 
 function displayGodModeOrders() {
-    const ordersBody = document.getElementById('god-mode-orders-body');
-    const emptyState = document.getElementById('empty-god-orders');
+  const ordersBody = document.getElementById('god-mode-orders-body');
+  const emptyState = document.getElementById('empty-god-orders');
 
-    if (!ordersBody) {
-        console.warn('god-mode-orders-body element not found');
-        return;
-    }
+  if (!ordersBody) {
+    console.warn('god-mode-orders-body element not found');
+    return;
+  }
 
-    ordersBody.innerHTML = '';
+  ordersBody.innerHTML = '';
 
-    if (!masterOverview || !masterOverview.orders || masterOverview.orders.length === 0) {
-        if (emptyState) {
-            emptyState.classList.remove('hidden');
-        }
-        return;
-    }
-
+  if (!masterOverview || !masterOverview.orders || masterOverview.orders.length === 0) {
     if (emptyState) {
-        emptyState.classList.add('hidden');
+      emptyState.classList.remove('hidden');
     }
+    return;
+  }
 
-    const statusColors = {
-        'PENDING': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-        'CLAIMED': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-        'COMPLETED': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-        'DISPUTED': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-        'CANCELLED': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-    };
+  if (emptyState) {
+    emptyState.classList.add('hidden');
+  }
 
-    masterOverview.orders.forEach(order => {
-        const row = document.createElement('tr');
-        row.className = 'border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition';
+  const statusColors = {
+    'PENDING': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'CLAIMED': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'COMPLETED': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'DISPUTED': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    'CANCELLED': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+  };
 
-        const actions = [];
+  masterOverview.orders.forEach(order => {
+    const row = document.createElement('tr');
+    row.className = 'border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition';
 
-        if (order.status === 'CLAIMED' || order.status === 'READY_FOR_RELEASE') {
-            actions.push(`
+    const actions = [];
+
+    if (order.status === 'CLAIMED' || order.status === 'READY_FOR_RELEASE') {
+      actions.push(`
                 <button onclick="adminReleaseOrder(${order.id})"
                         class="px-3 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700 transition">
                     <i class="ti ti-check"></i> Release
                 </button>
             `);
-        }
+    }
 
-        if (order.status !== 'COMPLETED' && order.status !== 'CANCELLED') {
-            actions.push(`
+    if (order.status !== 'COMPLETED' && order.status !== 'CANCELLED') {
+      actions.push(`
                 <button onclick="adminCancelOrder(${order.id})"
                         class="px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 transition">
                     <i class="ti ti-x"></i> Cancel
                 </button>
             `);
-        }
+    }
 
-        row.innerHTML = `
+    row.innerHTML = `
             <td class="py-3 px-4 font-semibold text-gray-900 dark:text-white">#${order.id}</td>
             <td class="py-3 px-4 font-bold text-gray-900 dark:text-white">${formatCurrency(order.amount)}</td>
             <td class="py-3 px-4">
@@ -538,15 +538,15 @@ function displayGodModeOrders() {
                 </div>
             </td>
         `;
-        ordersBody.appendChild(row);
-    });
+    ordersBody.appendChild(row);
+  });
 
-    // Add Load More button if there are more orders
-    const loadMoreContainer = document.getElementById('admin-orders-load-more');
-    if (loadMoreContainer) {
-        if (ordersHasMore) {
-            loadMoreContainer.classList.remove('hidden');
-            loadMoreContainer.innerHTML = `
+  // Add Load More button if there are more orders
+  const loadMoreContainer = document.getElementById('admin-orders-load-more');
+  if (loadMoreContainer) {
+    if (ordersHasMore) {
+      loadMoreContainer.classList.remove('hidden');
+      loadMoreContainer.innerHTML = `
                 <div class="text-center py-4">
                     <button onclick="loadMoreAdminOrders()"
                             class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition flex items-center space-x-2 mx-auto">
@@ -555,53 +555,53 @@ function displayGodModeOrders() {
                     </button>
                 </div>
             `;
-        } else {
-            loadMoreContainer.classList.add('hidden');
-        }
+    } else {
+      loadMoreContainer.classList.add('hidden');
     }
+  }
 }
 
 async function loadMoreAdminOrders() {
-    await loadMasterOverview(true);
+  await loadMasterOverview(true);
 }
 
 function displayUserManagement() {
-    const usersBody = document.getElementById('user-management-body');
+  const usersBody = document.getElementById('user-management-body');
 
-    if (!usersBody) {
-        console.warn('user-management-body element not found');
-        return;
-    }
+  if (!usersBody) {
+    console.warn('user-management-body element not found');
+    return;
+  }
 
-    usersBody.innerHTML = '';
+  usersBody.innerHTML = '';
 
-    if (!masterOverview || !masterOverview.users) return;
+  if (!masterOverview || !masterOverview.users) return;
 
-    const roleColors = {
-        'admin': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-        'middleman': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-        'buyer': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-    };
+  const roleColors = {
+    'admin': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    'middleman': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'buyer': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+  };
 
-    const statusColors = {
-        'active': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-        'disabled': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-        'blocked': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-    };
+  const statusColors = {
+    'active': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'disabled': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'blocked': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+  };
 
-    masterOverview.users.forEach(user => {
-        const row = document.createElement('tr');
-        row.className = 'border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition';
+  masterOverview.users.forEach(user => {
+    const row = document.createElement('tr');
+    row.className = 'border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition';
 
-        const isCurrentUser = user.id === currentUserId;
-        const botBtn = user.role === 'middleman' ? `
+    const isCurrentUser = user.id === currentUserId;
+    const botBtn = user.role === 'middleman' ? `
             <button onclick="toggleBotStatus(${user.id}, ${!user.is_bot}, '${user.username}')"
                     class="px-2 py-1 ${user.is_bot ? 'bg-indigo-600 hover:bg-indigo-700 ring-2 ring-indigo-300' : 'bg-gray-500 hover:bg-gray-600 shadow-sm'} text-white rounded text-[10px] uppercase font-black transition flex items-center gap-1 group">
                 <i class="ti ti-robot ${user.is_bot ? 'animate-bounce' : ''}"></i> ${user.is_bot ? 'Active Bot' : 'Tag as Bot'}
             </button>
         ` : '';
 
-        row.innerHTML = `
+    row.innerHTML = `
             <td class="py-3 px-4 font-semibold text-gray-900 dark:text-white">${user.username}</td>
             <td class="py-3 px-4">
                 <span class="inline-block px-2 py-1 rounded text-xs font-semibold ${roleColors[user.role]}">${user.role.toUpperCase()}</span>
@@ -636,111 +636,111 @@ function displayUserManagement() {
                 </div>
             </td>
         `;
-        usersBody.appendChild(row);
-    });
+    usersBody.appendChild(row);
+  });
 }
 
 async function toggleBotStatus(userId, isBot, username) {
-    const confirmation = isBot 
-        ? `Are you sure you want to designate ${username} as the official system bot? They will perform all automated claims.` 
-        : `Are you sure you want to STOP ${username} from being the system bot? No automated claims will occur until a new bot is tagged.`;
+  const confirmation = isBot 
+    ? `Are you sure you want to designate ${username} as the official system bot? They will perform all automated claims.` 
+    : `Are you sure you want to STOP ${username} from being the system bot? No automated claims will occur until a new bot is tagged.`;
 
-    if (!confirm(confirmation)) return;
+  if (!confirm(confirmation)) return;
 
-    try {
-        const response = await authenticatedFetch('/admin/bot/set-active', {
-            method: 'POST',
-            body: JSON.stringify({ userId, is_bot: isBot })
-        });
+  try {
+    const response = await authenticatedFetch('/admin/bot/set-active', {
+      method: 'POST',
+      body: JSON.stringify({ userId, is_bot: isBot })
+    });
 
-        if (response.ok) {
-            showToast(isBot ? `${username} is now the system bot` : 'System bot disabled', 'success');
-            await loadMasterOverview();
-            fetchBotConfig(); // Refresh bot configuration display
-        } else {
-            const data = await response.json();
-            showToast(data.error || 'Failed to update bot status', 'error');
-        }
-    } catch (error) {
-        console.error('Error updating bot status:', error);
-        showToast('System error updating bot status', 'error');
+    if (response.ok) {
+      showToast(isBot ? `${username} is now the system bot` : 'System bot disabled', 'success');
+      await loadMasterOverview();
+      fetchBotConfig(); // Refresh bot configuration display
+    } else {
+      const data = await response.json();
+      showToast(data.error || 'Failed to update bot status', 'error');
     }
+  } catch (error) {
+    console.error('Error updating bot status:', error);
+    showToast('System error updating bot status', 'error');
+  }
 }
 
 function updateSystemHealthCards() {
-    if (!masterOverview) return;
+  if (!masterOverview) return;
 
-    // Update stats for admin.html
-    const totalUsersEl = document.getElementById('stat-total-users');
-    const activeOrdersEl = document.getElementById('stat-active-orders');
-    const pendingRequestsEl = document.getElementById('stat-pending-requests');
-    const totalBalanceEl = document.getElementById('stat-total-balance');
+  // Update stats for admin.html
+  const totalUsersEl = document.getElementById('stat-total-users');
+  const activeOrdersEl = document.getElementById('stat-active-orders');
+  const pendingRequestsEl = document.getElementById('stat-pending-requests');
+  const totalBalanceEl = document.getElementById('stat-total-balance');
 
-    if (totalUsersEl) {
-        totalUsersEl.textContent = masterOverview.users ? masterOverview.users.length : 0;
-    }
+  if (totalUsersEl) {
+    totalUsersEl.textContent = masterOverview.users ? masterOverview.users.length : 0;
+  }
 
-    if (activeOrdersEl && masterOverview.orders) {
-        const activeOrders = masterOverview.orders.filter(o => o.status === 'CLAIMED' || o.status === 'READY_FOR_RELEASE').length;
-        activeOrdersEl.textContent = activeOrders;
-    }
+  if (activeOrdersEl && masterOverview.orders) {
+    const activeOrders = masterOverview.orders.filter(o => o.status === 'CLAIMED' || o.status === 'READY_FOR_RELEASE').length;
+    activeOrdersEl.textContent = activeOrders;
+  }
 
-    if (pendingRequestsEl && masterOverview.pendingRequests !== undefined) {
-        pendingRequestsEl.textContent = masterOverview.pendingRequests;
-    }
+  if (pendingRequestsEl && masterOverview.pendingRequests !== undefined) {
+    pendingRequestsEl.textContent = masterOverview.pendingRequests;
+  }
 
-    if (totalBalanceEl && masterOverview.users) {
-        const totalBalance = masterOverview.users.reduce((sum, u) => {
-            return sum + parseFloat(u.available_balance || 0) + parseFloat(u.locked_balance || 0);
-        }, 0);
-        totalBalanceEl.textContent = formatCurrency(totalBalance);
-    }
+  if (totalBalanceEl && masterOverview.users) {
+    const totalBalance = masterOverview.users.reduce((sum, u) => {
+      return sum + parseFloat(u.available_balance || 0) + parseFloat(u.locked_balance || 0);
+    }, 0);
+    totalBalanceEl.textContent = formatCurrency(totalBalance);
+  }
 
-    // Legacy support for index.html elements (if they exist)
-    const totalEscrowEl = document.getElementById('total-escrow-volume');
-    const activeDisputesEl = document.getElementById('active-disputes');
-    const systemLiquidityEl = document.getElementById('system-liquidity');
+  // Legacy support for index.html elements (if they exist)
+  const totalEscrowEl = document.getElementById('total-escrow-volume');
+  const activeDisputesEl = document.getElementById('active-disputes');
+  const systemLiquidityEl = document.getElementById('system-liquidity');
 
-    if (totalEscrowEl && masterOverview.orders) {
-        const totalEscrow = masterOverview.orders
-            .filter(o => o.status === 'CLAIMED')
-            .reduce((sum, o) => sum + parseFloat(o.amount), 0);
-        totalEscrowEl.textContent = formatCurrency(totalEscrow);
-    }
+  if (totalEscrowEl && masterOverview.orders) {
+    const totalEscrow = masterOverview.orders
+      .filter(o => o.status === 'CLAIMED')
+      .reduce((sum, o) => sum + parseFloat(o.amount), 0);
+    totalEscrowEl.textContent = formatCurrency(totalEscrow);
+  }
 
-    if (activeDisputesEl && masterOverview.orders) {
-        const disputes = masterOverview.orders.filter(o => o.status === 'DISPUTED').length;
-        activeDisputesEl.textContent = disputes;
-    }
+  if (activeDisputesEl && masterOverview.orders) {
+    const disputes = masterOverview.orders.filter(o => o.status === 'DISPUTED').length;
+    activeDisputesEl.textContent = disputes;
+  }
 
-    if (systemLiquidityEl && masterOverview.users) {
-        const liquidity = masterOverview.users
-            .reduce((sum, u) => sum + parseFloat(u.available_balance), 0);
-        systemLiquidityEl.textContent = formatCurrency(liquidity);
-    }
+  if (systemLiquidityEl && masterOverview.users) {
+    const liquidity = masterOverview.users
+      .reduce((sum, u) => sum + parseFloat(u.available_balance), 0);
+    systemLiquidityEl.textContent = formatCurrency(liquidity);
+  }
 }
 
 async function loadTransactionRequests() {
-    try {
-        const response = await authenticatedFetch('/admin/transaction-requests?status=pending');
+  try {
+    const response = await authenticatedFetch('/admin/transaction-requests?status=pending');
 
-        if (!response.ok) {
-            throw new Error('Failed to load transaction requests');
-        }
+    if (!response.ok) {
+      throw new Error('Failed to load transaction requests');
+    }
 
-        const requests = await response.json();
+    const requests = await response.json();
 
-        const listContainer = document.getElementById('transaction-requests-list');
-        const emptyState = document.getElementById('empty-transaction-requests');
+    const listContainer = document.getElementById('transaction-requests-list');
+    const emptyState = document.getElementById('empty-transaction-requests');
 
-        if (requests.length === 0) {
-            listContainer.classList.add('hidden');
-            emptyState.classList.remove('hidden');
-        } else {
-            listContainer.classList.remove('hidden');
-            emptyState.classList.add('hidden');
+    if (requests.length === 0) {
+      listContainer.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+    } else {
+      listContainer.classList.remove('hidden');
+      emptyState.classList.add('hidden');
 
-            listContainer.innerHTML = requests.map(req => `
+      listContainer.innerHTML = requests.map(req => `
                 <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center space-x-3">
@@ -755,29 +755,29 @@ async function loadTransactionRequests() {
                         </div>
                         <div class="text-right">
                             ${(() => {
-                    const isKes = req.metadata && req.metadata.currency === 'KES';
-                    const amount = parseFloat(req.amount);
-                    const adminPref = getUserCurrency();
+    const isKes = req.metadata && req.metadata.currency === 'KES';
+    const amount = parseFloat(req.amount);
+    const adminPref = getUserCurrency();
 
-                    if (isKes) {
-                        const usdVal = (amount / EXCHANGE_RATE).toFixed(2);
-                        const kesVal = amount.toFixed(2);
+    if (isKes) {
+      const usdVal = (amount / EXCHANGE_RATE).toFixed(2);
+      const kesVal = amount.toFixed(2);
 
-                        if (adminPref === 'KES') {
-                            return `
+      if (adminPref === 'KES') {
+        return `
                                             <p class="text-3xl font-bold text-gray-900 dark:text-white">Ksh ${kesVal}</p>
                                             <p class="text-sm text-gray-500 font-medium">≈ $${usdVal} USD</p>
                                         `;
-                        } else {
-                            return `
+      } else {
+        return `
                                             <p class="text-3xl font-bold text-gray-900 dark:text-white">$${usdVal}</p>
                                             <p class="text-sm text-gray-500 font-medium">≈ Ksh ${kesVal} KES</p>
                                         `;
-                        }
-                    } else {
-                        return `<p class="text-3xl font-bold text-gray-900 dark:text-white">${formatCurrency(amount)}</p>`;
-                    }
-                })()}
+      }
+    } else {
+      return `<p class="text-3xl font-bold text-gray-900 dark:text-white">${formatCurrency(amount)}</p>`;
+    }
+  })()}
                         </div>
                     </div>
                     
@@ -822,276 +822,276 @@ async function loadTransactionRequests() {
                     </div>
                 </div>
             `).join('');
-        }
-    } catch (error) {
-        console.error('Error loading transaction requests:', error);
     }
+  } catch (error) {
+    console.error('Error loading transaction requests:', error);
+  }
 }
 
 async function reviewTransactionRequest(requestId, action) {
-    const actionText = action === 'approve' ? 'approve' : 'reject';
-    const adminNotes = prompt(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)} this request?\n\nOptional admin notes:`);
+  const actionText = action === 'approve' ? 'approve' : 'reject';
+  const adminNotes = prompt(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)} this request?\n\nOptional admin notes:`);
 
-    if (adminNotes === null) return; // User cancelled
+  if (adminNotes === null) return; // User cancelled
 
-    try {
-        const response = await authenticatedFetch(`/transaction-requests/${requestId}/review`, {
-            method: 'POST',
-            body: JSON.stringify({ action, admin_notes: adminNotes })
-        });
+  try {
+    const response = await authenticatedFetch(`/transaction-requests/${requestId}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ action, admin_notes: adminNotes })
+    });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Review failed');
-        }
-
-        const result = await response.json();
-        showToast(`Request ${actionText}d successfully!`, 'success');
-
-        // Refresh data
-        await loadTransactionRequests();
-        await loadMasterOverview();
-        updateSystemHealthCards();
-    } catch (error) {
-        console.error('Review error:', error);
-        showToast('Failed to review request: ' + error.message, 'error');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Review failed');
     }
+
+    const result = await response.json();
+    showToast(`Request ${actionText}d successfully!`, 'success');
+
+    // Refresh data
+    await loadTransactionRequests();
+    await loadMasterOverview();
+    updateSystemHealthCards();
+  } catch (error) {
+    console.error('Review error:', error);
+    showToast('Failed to review request: ' + error.message, 'error');
+  }
 }
 
 async function createNewOrder() {
-    const amount = document.getElementById('order-amount').value;
-    const description = document.getElementById('order-description').value || 'No description provided';
+  const amount = document.getElementById('order-amount').value;
+  const description = document.getElementById('order-description').value || 'No description provided';
 
-    if (!amount || amount <= 0) {
-        showToast('Please enter a valid amount', 'error');
-        return;
-    }
+  if (!amount || amount <= 0) {
+    showToast('Please enter a valid amount', 'error');
+    return;
+  }
 
-    showConfirmDialog(
-        'Create Order',
-        `Create an escrow order for $${amount}? This order will be assigned to you as the buyer.`,
-        async () => {
-            try {
-                const response = await authenticatedFetch('/orders', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        amount: parseFloat(amount),
-                        description: description
-                    }),
-                });
+  showConfirmDialog(
+    'Create Order',
+    `Create an escrow order for $${amount}? This order will be assigned to you as the buyer.`,
+    async () => {
+      try {
+        const response = await authenticatedFetch('/orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: parseFloat(amount),
+            description: description
+          }),
+        });
 
-                const result = await response.json();
+        const result = await response.json();
 
-                if (response.ok) {
-                    showToast('Order created successfully!', 'success');
-                    document.getElementById('order-amount').value = '';
-                    document.getElementById('order-description').value = '';
-                    updateAdminDashboard();
-                } else {
-                    showToast(result.error || 'Failed to create order', 'error');
-                }
-            } catch (error) {
-                console.error('Error creating order:', error);
-                showToast('Error creating order: ' + error.message, 'error');
-            }
+        if (response.ok) {
+          showToast('Order created successfully!', 'success');
+          document.getElementById('order-amount').value = '';
+          document.getElementById('order-description').value = '';
+          updateAdminDashboard();
+        } else {
+          showToast(result.error || 'Failed to create order', 'error');
         }
-    );
+      } catch (error) {
+        console.error('Error creating order:', error);
+        showToast('Error creating order: ' + error.message, 'error');
+      }
+    }
+  );
 }
 
 async function adminReleaseOrder(orderId) {
-    showConfirmDialog(
-        'Release Order',
-        `Complete order #${orderId}? The middleman will receive their collateral back plus 2.5% commission.`,
-        async () => {
-            try {
-                const response = await authenticatedFetch(`/orders/${orderId}/release`, {
-                    method: 'POST',
-                });
+  showConfirmDialog(
+    'Release Order',
+    `Complete order #${orderId}? The middleman will receive their collateral back plus 2.5% commission.`,
+    async () => {
+      try {
+        const response = await authenticatedFetch(`/orders/${orderId}/release`, {
+          method: 'POST',
+        });
 
-                const result = await response.json();
+        const result = await response.json();
 
-                if (response.ok) {
-                    showToast(result.message || 'Order completed successfully!', 'success');
-                    updateAdminDashboard();
-                } else {
-                    showToast(result.error || 'Failed to complete order', 'error');
-                }
-            } catch (error) {
-                console.error('Error completing order:', error);
-                showToast('Error completing order: ' + error.message, 'error');
-            }
+        if (response.ok) {
+          showToast(result.message || 'Order completed successfully!', 'success');
+          updateAdminDashboard();
+        } else {
+          showToast(result.error || 'Failed to complete order', 'error');
         }
-    );
+      } catch (error) {
+        console.error('Error completing order:', error);
+        showToast('Error completing order: ' + error.message, 'error');
+      }
+    }
+  );
 }
 
 async function adminCancelOrder(orderId) {
-    showConfirmDialog(
-        'Cancel Order',
-        `Are you sure you want to cancel order #${orderId}? If the order was claimed, the collateral will be returned to the middleman.`,
-        async () => {
-            try {
-                const response = await authenticatedFetch(`/orders/${orderId}/cancel`, {
-                    method: 'POST',
-                });
+  showConfirmDialog(
+    'Cancel Order',
+    `Are you sure you want to cancel order #${orderId}? If the order was claimed, the collateral will be returned to the middleman.`,
+    async () => {
+      try {
+        const response = await authenticatedFetch(`/orders/${orderId}/cancel`, {
+          method: 'POST',
+        });
 
-                const result = await response.json();
+        const result = await response.json();
 
-                if (response.ok) {
-                    showToast('Order cancelled successfully!', 'success');
-                    updateAdminDashboard();
-                } else {
-                    showToast(result.error || 'Failed to cancel order', 'error');
-                }
-            } catch (error) {
-                console.error('Error cancelling order:', error);
-                showToast('Error cancelling order: ' + error.message, 'error');
-            }
+        if (response.ok) {
+          showToast('Order cancelled successfully!', 'success');
+          updateAdminDashboard();
+        } else {
+          showToast(result.error || 'Failed to cancel order', 'error');
         }
-    );
+      } catch (error) {
+        console.error('Error cancelling order:', error);
+        showToast('Error cancelling order: ' + error.message, 'error');
+      }
+    }
+  );
 }
 
 // Balance Adjustment Modal Functions
 function showDepositModal(userId, username) {
-    balanceModalData = { userId, username, type: 'deposit' };
-    document.getElementById('balance-modal-title').textContent = 'Manual Deposit';
-    document.getElementById('balance-username').textContent = username;
-    document.getElementById('balance-amount').value = '';
-    document.getElementById('balance-adjustment-modal').classList.remove('hidden');
+  balanceModalData = { userId, username, type: 'deposit' };
+  document.getElementById('balance-modal-title').textContent = 'Manual Deposit';
+  document.getElementById('balance-username').textContent = username;
+  document.getElementById('balance-amount').value = '';
+  document.getElementById('balance-adjustment-modal').classList.remove('hidden');
 
-    document.getElementById('balance-submit-btn').onclick = () => submitBalanceAdjustment();
+  document.getElementById('balance-submit-btn').onclick = () => submitBalanceAdjustment();
 }
 
 function showWithdrawModal(userId, username, availableBalance) {
-    balanceModalData = { userId, username, type: 'withdraw', availableBalance };
-    document.getElementById('balance-modal-title').textContent = 'Manual Withdrawal';
-    document.getElementById('balance-username').textContent = username;
-    document.getElementById('balance-amount').value = '';
-    document.getElementById('balance-adjustment-modal').classList.remove('hidden');
+  balanceModalData = { userId, username, type: 'withdraw', availableBalance };
+  document.getElementById('balance-modal-title').textContent = 'Manual Withdrawal';
+  document.getElementById('balance-username').textContent = username;
+  document.getElementById('balance-amount').value = '';
+  document.getElementById('balance-adjustment-modal').classList.remove('hidden');
 
-    document.getElementById('balance-submit-btn').onclick = () => submitBalanceAdjustment();
+  document.getElementById('balance-submit-btn').onclick = () => submitBalanceAdjustment();
 }
 
 function closeBalanceModal() {
-    document.getElementById('balance-adjustment-modal').classList.add('hidden');
-    balanceModalData = null;
+  document.getElementById('balance-adjustment-modal').classList.add('hidden');
+  balanceModalData = null;
 }
 
 async function submitBalanceAdjustment() {
-    if (!balanceModalData) return;
+  if (!balanceModalData) return;
 
-    const amount = parseFloat(document.getElementById('balance-amount').value);
-    const target = document.getElementById('balance-target').value;
+  const amount = parseFloat(document.getElementById('balance-amount').value);
+  const target = document.getElementById('balance-target').value;
 
-    if (!amount || amount <= 0) {
-        showToast('Please enter a valid amount', 'error');
-        return;
+  if (!amount || amount <= 0) {
+    showToast('Please enter a valid amount', 'error');
+    return;
+  }
+
+  if (balanceModalData.type === 'withdraw' && target === 'available' && amount > balanceModalData.availableBalance) {
+    showToast('Withdrawal amount exceeds available balance', 'error');
+    return;
+  }
+
+  try {
+    const endpoint = balanceModalData.type === 'deposit'
+      ? `/admin/wallets/${balanceModalData.userId}/deposit`
+      : `/admin/wallets/${balanceModalData.userId}/withdraw`;
+
+    const response = await authenticatedFetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({
+        amount,
+        target,
+        notes: `Admin Manual ${balanceModalData.type} (${target}): ${currentUsername}`
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Operation failed');
     }
 
-    if (balanceModalData.type === 'withdraw' && target === 'available' && amount > balanceModalData.availableBalance) {
-        showToast('Withdrawal amount exceeds available balance', 'error');
-        return;
-    }
+    const result = await response.json();
+    showToast(`${balanceModalData.type === 'deposit' ? 'Deposit' : 'Withdrawal'} successful!`, 'success');
 
-    try {
-        const endpoint = balanceModalData.type === 'deposit'
-            ? `/admin/wallets/${balanceModalData.userId}/deposit`
-            : `/admin/wallets/${balanceModalData.userId}/withdraw`;
+    closeBalanceModal();
 
-        const response = await authenticatedFetch(endpoint, {
-            method: 'POST',
-            body: JSON.stringify({
-                amount,
-                target,
-                notes: `Admin Manual ${balanceModalData.type} (${target}): ${currentUsername}`
-            })
-        });
+    // Refresh admin dashboard to show updated balances
+    await updateAdminDashboard();
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Operation failed');
-        }
-
-        const result = await response.json();
-        showToast(`${balanceModalData.type === 'deposit' ? 'Deposit' : 'Withdrawal'} successful!`, 'success');
-
-        closeBalanceModal();
-
-        // Refresh admin dashboard to show updated balances
-        await updateAdminDashboard();
-
-        // The server already emits walletUpdated event via WebSocket
-        // which will update the user's dashboard in real-time
-    } catch (error) {
-        console.error('Balance adjustment error:', error);
-        showToast('Failed to adjust balance: ' + error.message, 'error');
-    }
+    // The server already emits walletUpdated event via WebSocket
+    // which will update the user's dashboard in real-time
+  } catch (error) {
+    console.error('Balance adjustment error:', error);
+    showToast('Failed to adjust balance: ' + error.message, 'error');
+  }
 }
 
 async function syncAllWallets() {
-    showConfirmDialog(
-        'Synchronize All Wallets',
-        'This will recalculate all users\' locked balances based on their active orders. This fixes "ghost" locked funds that may occur if orders were improperly cleared. Proceed?',
-        async () => {
-            try {
-                const response = await authenticatedFetch('/admin/wallets/sync', {
-                    method: 'POST'
-                });
+  showConfirmDialog(
+    'Synchronize All Wallets',
+    'This will recalculate all users\' locked balances based on their active orders. This fixes "ghost" locked funds that may occur if orders were improperly cleared. Proceed?',
+    async () => {
+      try {
+        const response = await authenticatedFetch('/admin/wallets/sync', {
+          method: 'POST'
+        });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Sync failed');
-                }
-
-                const result = await response.json();
-                showToast(result.message, 'success');
-                
-                // Refresh dashboard
-                await updateAdminDashboard();
-            } catch (error) {
-                console.error('Sync error:', error);
-                showToast('Failed to sync wallets: ' + error.message, 'error');
-            }
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Sync failed');
         }
-    );
+
+        const result = await response.json();
+        showToast(result.message, 'success');
+                
+        // Refresh dashboard
+        await updateAdminDashboard();
+      } catch (error) {
+        console.error('Sync error:', error);
+        showToast('Failed to sync wallets: ' + error.message, 'error');
+      }
+    }
+  );
 }
 
 // Logout function
 function logout() {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    showToast('Logged out successfully', 'info');
-    window.location.href = 'index.html';
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('userData');
+  showToast('Logged out successfully', 'info');
+  window.location.href = 'index.html';
 }
 
 // Order Details Modal (reuse from app.js)
 function showOrderDetails(orderId) {
-    // This would need to be implemented or imported
-    showToast('Order details not implemented in admin dashboard', 'info');
+  // This would need to be implemented or imported
+  showToast('Order details not implemented in admin dashboard', 'info');
 }
 
 async function loadDisputes() {
-    try {
-        const response = await authenticatedFetch('/admin/overview');
-        const data = await response.json();
+  try {
+    const response = await authenticatedFetch('/admin/overview');
+    const data = await response.json();
 
-        const disputesList = document.getElementById('disputes-list');
-        const emptyDisputes = document.getElementById('empty-disputes');
+    const disputesList = document.getElementById('disputes-list');
+    const emptyDisputes = document.getElementById('empty-disputes');
 
-        const disputedOrders = data.orders.filter(o => o.status === 'DISPUTED');
-        disputesList.innerHTML = '';
+    const disputedOrders = data.orders.filter(o => o.status === 'DISPUTED');
+    disputesList.innerHTML = '';
 
-        if (disputedOrders.length === 0) {
-            disputesList.classList.add('hidden');
-            emptyDisputes.classList.remove('hidden');
-        } else {
-            disputesList.classList.remove('hidden');
-            emptyDisputes.classList.add('hidden');
+    if (disputedOrders.length === 0) {
+      disputesList.classList.add('hidden');
+      emptyDisputes.classList.remove('hidden');
+    } else {
+      disputesList.classList.remove('hidden');
+      emptyDisputes.classList.add('hidden');
 
-            disputedOrders.forEach(order => {
-                const disputeCard = document.createElement('div');
-                disputeCard.className = 'bg-gradient-to-r from-red-900 to-orange-900 rounded-lg p-4 border border-red-700';
+      disputedOrders.forEach(order => {
+        const disputeCard = document.createElement('div');
+        disputeCard.className = 'bg-gradient-to-r from-red-900 to-orange-900 rounded-lg p-4 border border-red-700';
 
-                disputeCard.innerHTML = `
+        disputeCard.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center space-x-3">
                             <div class="w-12 h-12 bg-red-100 dark:bg-red-800 rounded-lg flex items-center justify-center">
@@ -1126,256 +1126,256 @@ async function loadDisputes() {
                         </button>
                     </div>
                 `;
-                disputesList.appendChild(disputeCard);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading disputes:', error);
+        disputesList.appendChild(disputeCard);
+      });
     }
+  } catch (error) {
+    console.error('Error loading disputes:', error);
+  }
 }
 
 async function resolveDispute(orderId, winner) {
-    const winnerText = winner === 'middleman' ? 'Middleman (Worker)' : 'Buyer (Admin)';
-    const message = winner === 'middleman'
-        ? `Award this dispute to the Middleman? They will receive their collateral back plus 2.5% commission.`
-        : `Award this dispute to the Buyer? The Middleman will get their collateral back but no commission will be paid.`;
+  const winnerText = winner === 'middleman' ? 'Middleman (Worker)' : 'Buyer (Admin)';
+  const message = winner === 'middleman'
+    ? 'Award this dispute to the Middleman? They will receive their collateral back plus 2.5% commission.'
+    : 'Award this dispute to the Buyer? The Middleman will get their collateral back but no commission will be paid.';
 
-    showConfirmDialog(
-        `Resolve Dispute - Order #${orderId}`,
-        message,
-        async () => {
-            try {
-                const response = await authenticatedFetch(`/orders/${orderId}/resolve`, {
-                    method: 'POST',
-                    body: JSON.stringify({ winner })
-                });
+  showConfirmDialog(
+    `Resolve Dispute - Order #${orderId}`,
+    message,
+    async () => {
+      try {
+        const response = await authenticatedFetch(`/orders/${orderId}/resolve`, {
+          method: 'POST',
+          body: JSON.stringify({ winner })
+        });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to resolve dispute');
-                }
-
-                const result = await response.json();
-                showToast(result.message, 'success');
-                updateAdminDashboard();
-            } catch (error) {
-                console.error('Error resolving dispute:', error);
-                showToast('Failed to resolve dispute: ' + error.message, 'error');
-            }
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to resolve dispute');
         }
-    );
+
+        const result = await response.json();
+        showToast(result.message, 'success');
+        updateAdminDashboard();
+      } catch (error) {
+        console.error('Error resolving dispute:', error);
+        showToast('Failed to resolve dispute: ' + error.message, 'error');
+      }
+    }
+  );
 }
 
 
 // Add event listeners for live preview
 document.addEventListener('DOMContentLoaded', () => {
-    // ... existing code ...
+  // ... existing code ...
 
-    // Add bulk order preview listeners
-    ['bulk-order-count', 'bulk-total-amount', 'bulk-min-amount', 'bulk-max-amount'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('input', updateBulkPreview);
-        }
-    });
+  // Add bulk order preview listeners
+  ['bulk-order-count', 'bulk-total-amount', 'bulk-min-amount', 'bulk-max-amount'].forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.addEventListener('input', updateBulkPreview);
+    }
+  });
 });
 
 // Helper function to make authenticated requests
 
 // User Management Functions
 async function updateUserStatus(userId, status) {
-    const statusMessages = {
-        'active': 'Activate this user? They will regain full access to their account.',
-        'disabled': 'Disable this user? They will be unable to login or perform any actions.',
-        'blocked': 'BLOCK this user? This is a serious action for violating terms.'
-    };
+  const statusMessages = {
+    'active': 'Activate this user? They will regain full access to their account.',
+    'disabled': 'Disable this user? They will be unable to login or perform any actions.',
+    'blocked': 'BLOCK this user? This is a serious action for violating terms.'
+  };
 
-    showConfirmDialog(
-        `${status.toUpperCase()} User`,
-        statusMessages[status] || `Change user status to ${status}?`,
-        async () => {
-            try {
-                const response = await authenticatedFetch(`/admin/users/${userId}/status`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ status })
-                });
+  showConfirmDialog(
+    `${status.toUpperCase()} User`,
+    statusMessages[status] || `Change user status to ${status}?`,
+    async () => {
+      try {
+        const response = await authenticatedFetch(`/admin/users/${userId}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status })
+        });
 
-                if (response.ok) {
-                    showToast(`User status updated to ${status}`, 'success');
-                    await loadMasterOverview(); // Refresh the list
-                } else {
-                    const data = await response.json();
-                    showToast(data.error || 'Failed to update user status', 'error');
-                }
-            } catch (error) {
-                console.error('Error updating user status:', error);
-                showToast('Server error during status update', 'error');
-            }
+        if (response.ok) {
+          showToast(`User status updated to ${status}`, 'success');
+          await loadMasterOverview(); // Refresh the list
+        } else {
+          const data = await response.json();
+          showToast(data.error || 'Failed to update user status', 'error');
         }
-    );
+      } catch (error) {
+        console.error('Error updating user status:', error);
+        showToast('Server error during status update', 'error');
+      }
+    }
+  );
 }
 
 async function deleteUser(userId, username) {
-    showConfirmDialog(
-        'PERMANENTLY DELETE USER',
-        `Are you absolutely sure you want to delete ${username}? This action CANNOT be undone and all their data will be lost.`,
-        async () => {
-            try {
-                const response = await authenticatedFetch(`/admin/users/${userId}`, {
-                    method: 'DELETE'
-                });
+  showConfirmDialog(
+    'PERMANENTLY DELETE USER',
+    `Are you absolutely sure you want to delete ${username}? This action CANNOT be undone and all their data will be lost.`,
+    async () => {
+      try {
+        const response = await authenticatedFetch(`/admin/users/${userId}`, {
+          method: 'DELETE'
+        });
 
-                if (response.ok) {
-                    showToast('User deleted successfully', 'success');
-                    await loadMasterOverview(); // Refresh the list
-                } else {
-                    const data = await response.json();
-                    showToast(data.error || 'Failed to delete user', 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting user:', error);
-                showToast('Server error during user deletion', 'error');
-            }
+        if (response.ok) {
+          showToast('User deleted successfully', 'success');
+          await loadMasterOverview(); // Refresh the list
+        } else {
+          const data = await response.json();
+          showToast(data.error || 'Failed to delete user', 'error');
         }
-    );
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        showToast('Server error during user deletion', 'error');
+      }
+    }
+  );
 }
 
 // --- Bot Configuration Logic ---
 async function fetchBotConfig() {
-    try {
-        const res = await authenticatedFetch('/admin/bot-config');
-        if (res.ok) {
-            const config = await res.json();
-            document.getElementById('bot-claim-min').value = config.claim_delay_min;
-            document.getElementById('bot-claim-max').value = config.claim_delay_max;
-            document.getElementById('bot-release-min').value = config.release_delay_min;
-            document.getElementById('bot-release-max').value = config.release_delay_max;
-            document.getElementById('bot-auto-claim-toggle').checked = config.auto_claim_enabled;
-            document.getElementById('bot-periodic-scan-toggle').checked = config.periodic_scan_enabled;
-            document.getElementById('bot-scan-interval').value = config.scan_interval;
+  try {
+    const res = await authenticatedFetch('/admin/bot-config');
+    if (res.ok) {
+      const config = await res.json();
+      document.getElementById('bot-claim-min').value = config.claim_delay_min;
+      document.getElementById('bot-claim-max').value = config.claim_delay_max;
+      document.getElementById('bot-release-min').value = config.release_delay_min;
+      document.getElementById('bot-release-max').value = config.release_delay_max;
+      document.getElementById('bot-auto-claim-toggle').checked = config.auto_claim_enabled;
+      document.getElementById('bot-periodic-scan-toggle').checked = config.periodic_scan_enabled;
+      document.getElementById('bot-scan-interval').value = config.scan_interval;
 
-            // Update status labels
-            const botAccEl = document.getElementById('bot-account-name');
-            if (botAccEl) {
-                botAccEl.innerText = config.activeBot ? config.activeBot.username : 'NONE (Assign a Bot Below)';
-                if (!config.activeBot) {
-                    botAccEl.classList.add('text-red-400');
-                    botAccEl.classList.remove('text-indigo-400');
-                } else {
-                    botAccEl.classList.remove('text-red-400');
-                    botAccEl.classList.add('text-indigo-400');
-                }
-            }
-
-            const statusText = document.getElementById('bot-status-text');
-            const statusDot = document.getElementById('bot-status-dot');
-            if (config.periodic_scan_enabled || config.auto_claim_enabled) {
-                statusText.innerText = 'Active';
-                statusText.classList.remove('text-gray-400');
-                statusText.classList.add('text-indigo-400');
-                statusDot.classList.remove('bg-gray-600');
-                statusDot.classList.add('bg-indigo-500', 'animate-pulse');
-            } else {
-                statusText.innerText = 'Inactive';
-                statusText.classList.remove('text-indigo-400', 'text-emerald-400');
-                statusText.classList.add('text-gray-400');
-                statusDot.classList.remove('bg-indigo-500', 'bg-emerald-500', 'animate-pulse');
-                statusDot.classList.add('bg-gray-600');
-            }
+      // Update status labels
+      const botAccEl = document.getElementById('bot-account-name');
+      if (botAccEl) {
+        botAccEl.innerText = config.activeBot ? config.activeBot.username : 'NONE (Assign a Bot Below)';
+        if (!config.activeBot) {
+          botAccEl.classList.add('text-red-400');
+          botAccEl.classList.remove('text-indigo-400');
+        } else {
+          botAccEl.classList.remove('text-red-400');
+          botAccEl.classList.add('text-indigo-400');
         }
-    } catch (e) {
-        console.error('Fetch bot config error:', e);
+      }
+
+      const statusText = document.getElementById('bot-status-text');
+      const statusDot = document.getElementById('bot-status-dot');
+      if (config.periodic_scan_enabled || config.auto_claim_enabled) {
+        statusText.innerText = 'Active';
+        statusText.classList.remove('text-gray-400');
+        statusText.classList.add('text-indigo-400');
+        statusDot.classList.remove('bg-gray-600');
+        statusDot.classList.add('bg-indigo-500', 'animate-pulse');
+      } else {
+        statusText.innerText = 'Inactive';
+        statusText.classList.remove('text-indigo-400', 'text-emerald-400');
+        statusText.classList.add('text-gray-400');
+        statusDot.classList.remove('bg-indigo-500', 'bg-emerald-500', 'animate-pulse');
+        statusDot.classList.add('bg-gray-600');
+      }
     }
+  } catch (e) {
+    console.error('Fetch bot config error:', e);
+  }
 }
 
 async function runManualBotScan() {
-    const btn = document.getElementById('run-bot-scan-btn');
-    const originalContent = btn.innerHTML;
+  const btn = document.getElementById('run-bot-scan-btn');
+  const originalContent = btn.innerHTML;
     
-    try {
-        btn.disabled = true;
-        btn.innerHTML = '<div class="btn-loader h-4 w-4"></div> Scanning...';
+  try {
+    btn.disabled = true;
+    btn.innerHTML = '<div class="btn-loader h-4 w-4"></div> Scanning...';
         
-        const response = await authenticatedFetch('/admin/bot/run-scan', {
-            method: 'POST'
-        });
+    const response = await authenticatedFetch('/admin/bot/run-scan', {
+      method: 'POST'
+    });
         
-        const result = await response.json();
+    const result = await response.json();
         
-        if (result.success) {
-            showToast(result.message, 'success');
-        } else {
-            showToast(result.message, 'info');
-        }
-        
-        document.getElementById('bot-last-scan').innerText = new Date().toLocaleTimeString();
-    } catch (error) {
-        showToast('Failed to run manual scan', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
+    if (result.success) {
+      showToast(result.message, 'success');
+    } else {
+      showToast(result.message, 'info');
     }
+        
+    document.getElementById('bot-last-scan').innerText = new Date().toLocaleTimeString();
+  } catch (error) {
+    showToast('Failed to run manual scan', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalContent;
+  }
 }
 
 async function saveBotConfig() {
-    const btn = document.getElementById('save-bot-config-btn');
-    const originalText = btn.innerText;
-    btn.disabled = true;
-    btn.innerText = 'Saving...';
+  const btn = document.getElementById('save-bot-config-btn');
+  const originalText = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = 'Saving...';
 
-    const config = {
-        claim_delay_min: parseInt(document.getElementById('bot-claim-min').value),
-        claim_delay_max: parseInt(document.getElementById('bot-claim-max').value),
-        release_delay_min: parseInt(document.getElementById('bot-release-min').value),
-        release_delay_max: parseInt(document.getElementById('bot-release-max').value),
-        auto_claim_enabled: document.getElementById('bot-auto-claim-toggle').checked,
-        periodic_scan_enabled: document.getElementById('bot-periodic-scan-toggle').checked,
-        scan_interval: parseInt(document.getElementById('bot-scan-interval').value)
-    };
+  const config = {
+    claim_delay_min: parseInt(document.getElementById('bot-claim-min').value),
+    claim_delay_max: parseInt(document.getElementById('bot-claim-max').value),
+    release_delay_min: parseInt(document.getElementById('bot-release-min').value),
+    release_delay_max: parseInt(document.getElementById('bot-release-max').value),
+    auto_claim_enabled: document.getElementById('bot-auto-claim-toggle').checked,
+    periodic_scan_enabled: document.getElementById('bot-periodic-scan-toggle').checked,
+    scan_interval: parseInt(document.getElementById('bot-scan-interval').value)
+  };
 
-    try {
-        const res = await authenticatedFetch('/admin/bot-config', {
-            method: 'PUT',
-            body: JSON.stringify(config)
-        });
+  try {
+    const res = await authenticatedFetch('/admin/bot-config', {
+      method: 'PUT',
+      body: JSON.stringify(config)
+    });
 
-        if (res.ok) {
-            showToast('Bot configuration saved!', 'success');
-            fetchBotConfig(); // Refresh status indicators
-        } else {
-            const err = await res.json();
-            showToast(err.error || 'Failed to save config', 'error');
-        }
-    } catch (e) {
-        showToast('Connection error', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerText = originalText;
+    if (res.ok) {
+      showToast('Bot configuration saved!', 'success');
+      fetchBotConfig(); // Refresh status indicators
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Failed to save config', 'error');
     }
+  } catch (e) {
+    showToast('Connection error', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = originalText;
+  }
 }
 
 // --- Admin Support System Logic ---
 let currentAdminTicketId = null;
 
 async function fetchAdminSupportTickets() {
-    try {
-        const res = await authenticatedFetch('/api/support/admin/tickets');
-        if (res.ok) {
-            const tickets = await res.json();
-            const container = document.getElementById('admin-support-list');
-            const emptyState = document.getElementById('empty-support-tickets');
+  try {
+    const res = await authenticatedFetch('/api/support/admin/tickets');
+    if (res.ok) {
+      const tickets = await res.json();
+      const container = document.getElementById('admin-support-list');
+      const emptyState = document.getElementById('empty-support-tickets');
             
-            container.innerHTML = '';
+      container.innerHTML = '';
             
-            if (tickets.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
+      if (tickets.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
 
-            tickets.forEach(ticket => {
-                const statusColor = ticket.status === 'open' ? 'text-green-500 bg-green-500/10' : 'text-gray-500 bg-gray-500/10';
-                container.innerHTML += `
+      tickets.forEach(ticket => {
+        const statusColor = ticket.status === 'open' ? 'text-green-500 bg-green-500/10' : 'text-gray-500 bg-gray-500/10';
+        container.innerHTML += `
                     <div onclick="openAdminTicketChat(${ticket.id}, '${escapeHTML(ticket.subject)}', '${ticket.user?.username || 'Unknown User'}')" class="bg-gray-700 p-4 rounded-xl border border-gray-600 hover:border-cyan-500/50 transition-all cursor-pointer">
                         <div class="flex justify-between items-start mb-2">
                             <h5 class="text-sm font-bold text-white">#${ticket.id} - ${escapeHTML(ticket.subject)}</h5>
@@ -1387,60 +1387,60 @@ async function fetchAdminSupportTickets() {
                         </div>
                     </div>
                 `;
-            });
-        }
-    } catch (e) {
-        console.error('Fetch admin tickets error:', e);
+      });
     }
+  } catch (e) {
+    console.error('Fetch admin tickets error:', e);
+  }
 }
 
 async function openAdminTicketChat(ticketId, subject, username) {
-    document.getElementById('admin-support-modal').classList.remove('hidden');
-    document.getElementById('admin-support-ticket-subject').innerText = '#' + ticketId + ' - ' + subject;
-    document.getElementById('admin-support-ticket-user').innerText = 'User: ' + username;
+  document.getElementById('admin-support-modal').classList.remove('hidden');
+  document.getElementById('admin-support-ticket-subject').innerText = '#' + ticketId + ' - ' + subject;
+  document.getElementById('admin-support-ticket-user').innerText = 'User: ' + username;
     
-    if (socket && currentAdminTicketId) {
-        socket.emit('leave_ticket', currentAdminTicketId);
-    }
+  if (socket && currentAdminTicketId) {
+    socket.emit('leave_ticket', currentAdminTicketId);
+  }
 
-    currentAdminTicketId = ticketId;
-    if (socket) socket.emit('join_ticket', ticketId);
+  currentAdminTicketId = ticketId;
+  if (socket) socket.emit('join_ticket', ticketId);
 
-    try {
-        const res = await authenticatedFetch('/api/support/' + ticketId + '/messages');
-        if (res.ok) {
-            const data = await res.json();
-            const container = document.getElementById('admin-support-chat-messages');
-            container.innerHTML = '';
+  try {
+    const res = await authenticatedFetch('/api/support/' + ticketId + '/messages');
+    if (res.ok) {
+      const data = await res.json();
+      const container = document.getElementById('admin-support-chat-messages');
+      container.innerHTML = '';
             
-            const closeBtn = document.getElementById('admin-close-ticket-btn');
-            if (data.ticket.status === 'closed') {
-                document.getElementById('admin-support-chat-input-area').classList.add('hidden');
-                closeBtn.classList.add('hidden');
-            } else {
-                document.getElementById('admin-support-chat-input-area').classList.remove('hidden');
-                closeBtn.classList.remove('hidden');
-            }
+      const closeBtn = document.getElementById('admin-close-ticket-btn');
+      if (data.ticket.status === 'closed') {
+        document.getElementById('admin-support-chat-input-area').classList.add('hidden');
+        closeBtn.classList.add('hidden');
+      } else {
+        document.getElementById('admin-support-chat-input-area').classList.remove('hidden');
+        closeBtn.classList.remove('hidden');
+      }
 
-            data.messages.forEach(msg => appendAdminChatMessage(msg));
-            setTimeout(() => container.scrollTop = container.scrollHeight, 100);
-        }
-    } catch (e) {
-        showToast('Error loading messages', 'error');
+      data.messages.forEach(msg => appendAdminChatMessage(msg));
+      setTimeout(() => container.scrollTop = container.scrollHeight, 100);
     }
+  } catch (e) {
+    showToast('Error loading messages', 'error');
+  }
 }
 
 function appendAdminChatMessage(msg) {
-    const container = document.getElementById('admin-support-chat-messages');
-    const isMe = msg.sender_id === currentUserId;
-    const alignClass = isMe ? 'self-end bg-cyan-600 text-white rounded-br-sm' : 'self-start bg-gray-700 border border-gray-600 text-gray-200 rounded-bl-sm';
+  const container = document.getElementById('admin-support-chat-messages');
+  const isMe = msg.sender_id === currentUserId;
+  const alignClass = isMe ? 'self-end bg-cyan-600 text-white rounded-br-sm' : 'self-start bg-gray-700 border border-gray-600 text-gray-200 rounded-bl-sm';
     
-    let imgHtml = '';
-    if (msg.attachment_path) {
-        imgHtml = `<img src="${msg.attachment_path}" class="max-w-xs mt-2 rounded-lg border border-gray-500/50 cursor-pointer" onclick="window.open(this.src, '_blank')">`;
-    }
+  let imgHtml = '';
+  if (msg.attachment_path) {
+    imgHtml = `<img src="${msg.attachment_path}" class="max-w-xs mt-2 rounded-lg border border-gray-500/50 cursor-pointer" onclick="window.open(this.src, '_blank')">`;
+  }
 
-    container.innerHTML += `
+  container.innerHTML += `
         <div class="flex flex-col w-fit max-w-[80%] ${alignClass} px-4 py-2 mt-2 rounded-2xl shadow-md space-y-1">
             ${!isMe ? `<span class="text-[10px] font-bold text-gray-400 mb-1 leading-none">${msg.sender?.username}</span>` : ''}
             ${msg.message ? `<p class="text-sm whitespace-pre-wrap leading-tight">${escapeHTML(msg.message)}</p>` : ''}
@@ -1448,151 +1448,151 @@ function appendAdminChatMessage(msg) {
             <span class="text-[9px] opacity-70 text-right mt-1 leading-none inline-block">${new Date(msg.createdAt).toLocaleTimeString()}</span>
         </div>
     `;
-    setTimeout(() => {
-       const wrapper = document.getElementById('admin-support-chat-messages');
-       wrapper.scrollTop = wrapper.scrollHeight;
-    }, 100);
+  setTimeout(() => {
+    const wrapper = document.getElementById('admin-support-chat-messages');
+    wrapper.scrollTop = wrapper.scrollHeight;
+  }, 100);
 }
 
 let pendingAdminChatImageBase64 = null;
 
 async function handleAdminChatImageSelect(event) {
-    const file = event.target.files[0];
-    if (file) {
-        pendingAdminChatImageBase64 = await toBase64(file);
-        document.getElementById('admin-chat-image-preview-name').innerText = file.name;
-        document.getElementById('admin-chat-image-preview-img').src = pendingAdminChatImageBase64;
-        document.getElementById('admin-chat-image-preview-img').classList.remove('hidden');
-        document.getElementById('admin-chat-image-preview-container').classList.remove('hidden');
-        document.getElementById('admin-support-chat-input').focus();
-    }
+  const file = event.target.files[0];
+  if (file) {
+    pendingAdminChatImageBase64 = await toBase64(file);
+    document.getElementById('admin-chat-image-preview-name').innerText = file.name;
+    document.getElementById('admin-chat-image-preview-img').src = pendingAdminChatImageBase64;
+    document.getElementById('admin-chat-image-preview-img').classList.remove('hidden');
+    document.getElementById('admin-chat-image-preview-container').classList.remove('hidden');
+    document.getElementById('admin-support-chat-input').focus();
+  }
 }
 
 function clearAdminChatImagePreview() {
-    pendingAdminChatImageBase64 = null;
-    document.getElementById('admin-chat-file-input').value = '';
-    document.getElementById('admin-chat-image-preview-container').classList.add('hidden');
+  pendingAdminChatImageBase64 = null;
+  document.getElementById('admin-chat-file-input').value = '';
+  document.getElementById('admin-chat-image-preview-container').classList.add('hidden');
 }
 
 function handleAdminChatEnter(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendAdminChatMessage();
-    }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendAdminChatMessage();
+  }
 }
 
 async function sendAdminChatMessage() {
-    const inputEl = document.getElementById('admin-support-chat-input');
-    const message = inputEl.value.trim();
+  const inputEl = document.getElementById('admin-support-chat-input');
+  const message = inputEl.value.trim();
     
-    if (!message && !pendingAdminChatImageBase64) return;
-    if (!currentAdminTicketId) return;
+  if (!message && !pendingAdminChatImageBase64) return;
+  if (!currentAdminTicketId) return;
 
-    try {
-        const res = await authenticatedFetch('/api/support/' + currentAdminTicketId + '/messages', {
-            method: 'POST',
-            body: JSON.stringify({ message, image_base64: pendingAdminChatImageBase64 })
-        });
+  try {
+    const res = await authenticatedFetch('/api/support/' + currentAdminTicketId + '/messages', {
+      method: 'POST',
+      body: JSON.stringify({ message, image_base64: pendingAdminChatImageBase64 })
+    });
         
-        if (res.ok) {
-            inputEl.value = '';
-            clearAdminChatImagePreview();
-        } else {
-            const err = await res.json();
-            showToast(err.error || 'Failed to send message', 'error');
-        }
-    } catch (e) {
-        showToast('Connection error', 'error');
+    if (res.ok) {
+      inputEl.value = '';
+      clearAdminChatImagePreview();
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Failed to send message', 'error');
     }
+  } catch (e) {
+    showToast('Connection error', 'error');
+  }
 }
 
 async function closeAdminTicket() {
-    if (!currentAdminTicketId) return;
-    if (!confirm('Are you sure you want to close this ticket?')) return;
+  if (!currentAdminTicketId) return;
+  if (!confirm('Are you sure you want to close this ticket?')) return;
 
-    try {
-        const res = await authenticatedFetch('/api/support/admin/tickets/' + currentAdminTicketId + '/close', {
-            method: 'POST'
-        });
+  try {
+    const res = await authenticatedFetch('/api/support/admin/tickets/' + currentAdminTicketId + '/close', {
+      method: 'POST'
+    });
         
-        if (res.ok) {
-            showToast('Ticket closed', 'success');
-            document.getElementById('admin-support-chat-input-area').classList.add('hidden');
-            document.getElementById('admin-close-ticket-btn').classList.add('hidden');
-            fetchAdminSupportTickets();
-        } else {
-            showToast('Failed to close ticket', 'error');
-        }
-    } catch (e) {
-        showToast('Connection error', 'error');
+    if (res.ok) {
+      showToast('Ticket closed', 'success');
+      document.getElementById('admin-support-chat-input-area').classList.add('hidden');
+      document.getElementById('admin-close-ticket-btn').classList.add('hidden');
+      fetchAdminSupportTickets();
+    } else {
+      showToast('Failed to close ticket', 'error');
     }
+  } catch (e) {
+    showToast('Connection error', 'error');
+  }
 }
 
 function toBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
 }
 
 function escapeHTML(str) {
-    if(!str) return '';
-    return str.replace(/[&<>'"]/g, 
-        tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag] || tag)
-    );
+  if(!str) return '';
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '\'': '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
 }
 
 /**
  * Bulk release all claimed/ready orders
  */
 async function releaseAllOrders() {
-    showConfirmDialog(
-        'Bulk Release Orders',
-        'Are you sure you want to release ALL orders currently in CLAIMED or READY_FOR_RELEASE status? This will complete the orders and pay commissions to middlemen.',
-        async () => {
-            try {
-                showToast('Starting bulk release...', 'info');
+  showConfirmDialog(
+    'Bulk Release Orders',
+    'Are you sure you want to release ALL orders currently in CLAIMED or READY_FOR_RELEASE status? This will complete the orders and pay commissions to middlemen.',
+    async () => {
+      try {
+        showToast('Starting bulk release...', 'info');
                 
-                const response = await authenticatedFetch('/admin/orders/release-all', {
-                    method: 'POST'
-                });
+        const response = await authenticatedFetch('/admin/orders/release-all', {
+          method: 'POST'
+        });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to bulk release orders');
-                }
-
-                const result = await response.json();
-                showToast(`Successfully processed ${result.results.processed} orders.`, 'success');
-                
-                if (result.results.failed > 0) {
-                    showToast(`${result.results.successful} released, ${result.results.failed} failed.`, 'warning');
-                    console.error('Bulk release errors:', result.results.errors);
-                }
-
-                // Refresh dashboard
-                updateAdminDashboard();
-            } catch (error) {
-                console.error('Error in bulk release:', error);
-                showToast(error.message, 'error');
-            }
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to bulk release orders');
         }
-    );
+
+        const result = await response.json();
+        showToast(`Successfully processed ${result.results.processed} orders.`, 'success');
+                
+        if (result.results.failed > 0) {
+          showToast(`${result.results.successful} released, ${result.results.failed} failed.`, 'warning');
+          console.error('Bulk release errors:', result.results.errors);
+        }
+
+        // Refresh dashboard
+        updateAdminDashboard();
+      } catch (error) {
+        console.error('Error in bulk release:', error);
+        showToast(error.message, 'error');
+      }
+    }
+  );
 }
 
 // Initializations
 document.addEventListener('DOMContentLoaded', () => {
-    // Bot Scan Button
-    const runBtn = document.getElementById('run-bot-scan-btn');
-    if (runBtn) {
-        runBtn.addEventListener('click', runManualBotScan);
-    }
+  // Bot Scan Button
+  const runBtn = document.getElementById('run-bot-scan-btn');
+  if (runBtn) {
+    runBtn.addEventListener('click', runManualBotScan);
+  }
 });

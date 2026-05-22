@@ -4,66 +4,66 @@ let currentUser = null;
 
 // Toast notification function
 function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+  const toast = document.createElement('div');
+  const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
 
-    toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 flex items-center space-x-3 max-w-md pointer-events-auto`;
-    toast.innerHTML = `
+  toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 flex items-center space-x-3 max-w-md pointer-events-auto`;
+  toast.innerHTML = `
         <i class="ti ti-${type === 'success' ? 'check' : type === 'error' ? 'x' : 'info-circle'} text-2xl"></i>
         <span class="font-medium">${message}</span>
     `;
 
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        container.className = 'fixed top-4 right-4 z-[100] flex flex-col space-y-4 pointer-events-none';
-        document.body.appendChild(container);
-    }
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'fixed top-4 right-4 z-[100] flex flex-col space-y-4 pointer-events-none';
+    document.body.appendChild(container);
+  }
     
-    container.appendChild(toast);
+  container.appendChild(toast);
 
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
 }
 
 // Check authentication on page load
 function checkAuthentication() {
-    authToken = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('userData');
+  authToken = localStorage.getItem('authToken');
+  const userData = localStorage.getItem('userData');
 
-    if (!authToken || !userData) {
-        showLoginForm();
-        return false;
+  if (!authToken || !userData) {
+    showLoginForm();
+    return false;
+  }
+
+  try {
+    currentUser = JSON.parse(userData);
+    // Set global variables in app.js scope
+    if (typeof window !== 'undefined') {
+      window.currentUserId = currentUser.id;
+      window.currentUserRole = currentUser.role;
+      window.currentUsername = currentUser.username;
     }
 
-    try {
-        currentUser = JSON.parse(userData);
-        // Set global variables in app.js scope
-        if (typeof window !== 'undefined') {
-            window.currentUserId = currentUser.id;
-            window.currentUserRole = currentUser.role;
-            window.currentUsername = currentUser.username;
-        }
-
-        hideLoginForm();
-        if (typeof updateDashboard === 'function') {
-            updateDashboard();
-        }
-        return true;
-    } catch (error) {
-        console.error('Error parsing user data:', error);
-        showLoginForm();
-        return false;
+    hideLoginForm();
+    if (typeof updateDashboard === 'function') {
+      updateDashboard();
     }
+    return true;
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    showLoginForm();
+    return false;
+  }
 }
 
 // Show login/register form
 function showLoginForm() {
-    const loginHTML = `
+  const loginHTML = `
         <div id="auth-container" class="fixed inset-0 bg-gray-950 bg-opacity-95 flex items-center justify-center z-50 p-4">
             <div class="bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden border border-gray-700/50 flex flex-col md:flex-row min-h-[650px]">
                 
@@ -270,325 +270,325 @@ function showLoginForm() {
         </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', loginHTML);
+  document.body.insertAdjacentHTML('beforeend', loginHTML);
 }
 
 // Hide login form
 function hideLoginForm() {
-    const authContainer = document.getElementById('auth-container');
-    if (authContainer) {
-        authContainer.remove();
-    }
+  const authContainer = document.getElementById('auth-container');
+  if (authContainer) {
+    authContainer.remove();
+  }
 }
 
 // Function to toggle password visibility
 window.togglePasswordVisibility = function(inputId, iconContainer) {
-    const input = document.getElementById(inputId);
-    const icon = iconContainer.querySelector('i');
-    if (input && icon) {
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('ti-eye');
-            icon.classList.add('ti-eye-off');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('ti-eye-off');
-            icon.classList.add('ti-eye');
-        }
+  const input = document.getElementById(inputId);
+  const icon = iconContainer.querySelector('i');
+  if (input && icon) {
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.remove('ti-eye');
+      icon.classList.add('ti-eye-off');
+    } else {
+      input.type = 'password';
+      icon.classList.remove('ti-eye-off');
+      icon.classList.add('ti-eye');
     }
+  }
 };
 
 // Switch between login and register tabs
 function switchAuthTab(tab) {
-    const loginTab = document.getElementById('login-tab');
-    const registerTab = document.getElementById('register-tab');
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const headerText = document.getElementById('auth-toggle-text');
+  const loginTab = document.getElementById('login-tab');
+  const registerTab = document.getElementById('register-tab');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const headerText = document.getElementById('auth-toggle-text');
 
-    if (tab === 'login') {
-        loginTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-orange-500 bg-gray-800 shadow-xl transition-all duration-300';
-        registerTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-gray-500 hover:text-gray-300 transition-all duration-300';
-        loginForm.classList.remove('hidden');
-        registerForm.classList.add('hidden');
-        if (headerText) headerText.textContent = 'Please sign in to your dashboard';
-    } else {
-        registerTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-orange-500 bg-gray-800 shadow-xl transition-all duration-300';
-        loginTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-gray-500 hover:text-gray-300 transition-all duration-300';
-        registerForm.classList.remove('hidden');
-        loginForm.classList.add('hidden');
-        if (headerText) headerText.textContent = 'Join the network and start earning';
-    }
+  if (tab === 'login') {
+    loginTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-orange-500 bg-gray-800 shadow-xl transition-all duration-300';
+    registerTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-gray-500 hover:text-gray-300 transition-all duration-300';
+    loginForm.classList.remove('hidden');
+    registerForm.classList.add('hidden');
+    if (headerText) headerText.textContent = 'Please sign in to your dashboard';
+  } else {
+    registerTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-orange-500 bg-gray-800 shadow-xl transition-all duration-300';
+    loginTab.className = 'flex-1 py-3 px-4 rounded-xl font-bold text-gray-500 hover:text-gray-300 transition-all duration-300';
+    registerForm.classList.remove('hidden');
+    loginForm.classList.add('hidden');
+    if (headerText) headerText.textContent = 'Join the network and start earning';
+  }
 }
 
 
 // Handle login
 async function handleLogin() {
-    const username = document.getElementById('login-username').value;
-    const password = document.getElementById('login-password').value;
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
 
-    if (!username || !password) {
-        showToast('Please enter your username and password', 'error');
-        return;
-    }
+  if (!username || !password) {
+    showToast('Please enter your username and password', 'error');
+    return;
+  }
 
-    // Clear any previous inline error
-    const loginErrorBox = document.getElementById('login-error');
-    const loginErrorMsg = document.getElementById('login-error-message');
-    if (loginErrorBox) loginErrorBox.classList.add('hidden');
+  // Clear any previous inline error
+  const loginErrorBox = document.getElementById('login-error');
+  const loginErrorMsg = document.getElementById('login-error-message');
+  if (loginErrorBox) loginErrorBox.classList.add('hidden');
 
-    try {
-        const response = await fetch('/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
-        });
+  try {
+    const response = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
 
-        const data = response.headers.get('content-type')?.includes('application/json') 
-            ? await response.json() 
-            : { error: await response.text() };
+    const data = response.headers.get('content-type')?.includes('application/json') 
+      ? await response.json() 
+      : { error: await response.text() };
 
-        if (response.ok) {
-            localStorage.setItem('authToken', data.token);
-            localStorage.setItem('userData', JSON.stringify(data.user));
+    if (response.ok) {
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('userData', JSON.stringify(data.user));
 
-            authToken = data.token;
-            currentUser = data.user;
-            window.currentUserId = data.user.id;
-            window.currentUserRole = data.user.role;
-            window.currentUsername = data.user.username;
+      authToken = data.token;
+      currentUser = data.user;
+      window.currentUserId = data.user.id;
+      window.currentUserRole = data.user.role;
+      window.currentUsername = data.user.username;
 
-            showToast('Login successful!', 'success');
-            hideLoginForm();
+      showToast('Login successful!', 'success');
+      hideLoginForm();
 
-            // Update header display immediately
-            if (typeof updateUserDisplay === 'function') {
-                updateUserDisplay();
-            }
+      // Update header display immediately
+      if (typeof updateUserDisplay === 'function') {
+        updateUserDisplay();
+      }
 
-            // Redirect based on role
-            if (data.user.role === 'admin') {
-                window.location.href = 'admin.html';
-            } else {
-                if (typeof updateDashboard === 'function') {
-                    updateDashboard();
-                }
-            }
-        } else {
-            // Check if verification is required
-            if (data.requires_verification) {
-                showToast(data.error || data.message || 'Please verify your email', 'info');
-                showOTPVerificationForm(data.email);
-                return;
-            }
-
-            // Show inline error under the fields
-            if (loginErrorBox && loginErrorMsg) {
-                loginErrorMsg.textContent = data.error || 'Invalid username or password. Please try again.';
-                loginErrorBox.classList.remove('hidden');
-            } else {
-                showToast(data.error || 'Login failed', 'error');
-            }
+      // Redirect based on role
+      if (data.user.role === 'admin') {
+        window.location.href = 'admin.html';
+      } else {
+        if (typeof updateDashboard === 'function') {
+          updateDashboard();
         }
-    } catch (error) {
-        console.error('Login error:', error);
-        showToast('Login error: ' + error.message, 'error');
+      }
+    } else {
+      // Check if verification is required
+      if (data.requires_verification) {
+        showToast(data.error || data.message || 'Please verify your email', 'info');
+        showOTPVerificationForm(data.email);
+        return;
+      }
+
+      // Show inline error under the fields
+      if (loginErrorBox && loginErrorMsg) {
+        loginErrorMsg.textContent = data.error || 'Invalid username or password. Please try again.';
+        loginErrorBox.classList.remove('hidden');
+      } else {
+        showToast(data.error || 'Login failed', 'error');
+      }
     }
+  } catch (error) {
+    console.error('Login error:', error);
+    showToast('Login error: ' + error.message, 'error');
+  }
 }
 
 // Handle registration
 async function handleRegister() {
-    const username = document.getElementById('register-username').value;
-    const password = document.getElementById('register-password').value;
-    const confirmPassword = document.getElementById('register-confirm-password').value;
-    const full_name = document.getElementById('register-fullname').value;
-    const email = document.getElementById('register-email').value;
-    const country = document.getElementById('register-country').value.trim();
-    const phoneCode = document.getElementById('register-phone-code').value;
-    const phoneNum = document.getElementById('register-phone').value.trim().replace(/\D/g, ''); // Remove non-digits
-    const role = document.getElementById('register-role').value;
+  const username = document.getElementById('register-username').value;
+  const password = document.getElementById('register-password').value;
+  const confirmPassword = document.getElementById('register-confirm-password').value;
+  const full_name = document.getElementById('register-fullname').value;
+  const email = document.getElementById('register-email').value;
+  const country = document.getElementById('register-country').value.trim();
+  const phoneCode = document.getElementById('register-phone-code').value;
+  const phoneNum = document.getElementById('register-phone').value.trim().replace(/\D/g, ''); // Remove non-digits
+  const role = document.getElementById('register-role').value;
 
-    const registerErrorBox = document.getElementById('register-error');
-    const registerErrorMsg = document.getElementById('register-error-message');
+  const registerErrorBox = document.getElementById('register-error');
+  const registerErrorMsg = document.getElementById('register-error-message');
     
-    // Helper to show inline error or toast fallback
-    const showRegError = (msg) => {
-        if (registerErrorBox && registerErrorMsg) {
-            registerErrorMsg.textContent = msg;
-            registerErrorBox.classList.remove('hidden');
-        } else {
-            showToast(msg, 'error');
+  // Helper to show inline error or toast fallback
+  const showRegError = (msg) => {
+    if (registerErrorBox && registerErrorMsg) {
+      registerErrorMsg.textContent = msg;
+      registerErrorBox.classList.remove('hidden');
+    } else {
+      showToast(msg, 'error');
+    }
+  };
+
+  if (registerErrorBox) registerErrorBox.classList.add('hidden');
+
+  if (!full_name || !username || !email || !password) {
+    showRegError('Please fill in all required fields (Full Name, Username, Email, Password)');
+    return;
+  }
+
+  if (!phoneNum || !phoneCode) {
+    showRegError('Please enter a valid phone number and select a country code');
+    return;
+  }
+
+  if (password.length < 6) {
+    showRegError('Password must be at least 6 characters long');
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    showRegError('Passwords do not match');
+    return;
+  }
+
+  // Add loading state to button
+  const registerBtn = document.querySelector('#register-form button');
+  const originalBtnText = registerBtn ? registerBtn.innerHTML : 'CREATE ACCOUNT';
+  if (registerBtn) {
+    registerBtn.disabled = true;
+    registerBtn.innerHTML = 'PROCESSING...';
+  }
+
+  const phone_number = phoneCode + phoneNum;
+
+  try {
+    const response = await fetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username,
+        password,
+        role,
+        full_name,
+        email,
+        phone_number: phone_number,
+        country
+      }),
+    });
+    const data = response.headers.get('content-type')?.includes('application/json') 
+      ? await response.json() 
+      : { error: await response.text() };
+
+    if (response.ok) {
+      if (data.requires_verification) {
+        showToast(data.message || 'Please verify your email', 'info');
+        showOTPVerificationForm(data.email);
+        return;
+      }
+
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('userData', JSON.stringify(data.user));
+
+      authToken = data.token;
+      currentUser = data.user;
+      window.currentUserId = data.user.id;
+      window.currentUserRole = data.user.role;
+      window.currentUsername = data.user.username;
+
+      showToast('Registration successful!', 'success');
+      hideLoginForm();
+
+      // Redirect based on role
+      if (data.user.role === 'admin') {
+        window.location.href = 'admin.html';
+      } else {
+        if (typeof updateDashboard === 'function') {
+          updateDashboard();
         }
-    };
-
-    if (registerErrorBox) registerErrorBox.classList.add('hidden');
-
-    if (!full_name || !username || !email || !password) {
-        showRegError('Please fill in all required fields (Full Name, Username, Email, Password)');
-        return;
+      }
+    } else {
+      const errorMsg = data.details ? data.details[0].message : (data.error || 'Registration failed');
+      showRegError(errorMsg);
     }
-
-    if (!phoneNum || !phoneCode) {
-        showRegError('Please enter a valid phone number and select a country code');
-        return;
-    }
-
-    if (password.length < 6) {
-        showRegError('Password must be at least 6 characters long');
-        return;
-    }
-
-    if (password !== confirmPassword) {
-        showRegError('Passwords do not match');
-        return;
-    }
-
-    // Add loading state to button
-    const registerBtn = document.querySelector('#register-form button');
-    const originalBtnText = registerBtn ? registerBtn.innerHTML : 'CREATE ACCOUNT';
+  } catch (error) {
+    console.error('Registration error:', error);
+    showRegError('Registration error: ' + error.message);
+  } finally {
+    // Restore button state
     if (registerBtn) {
-        registerBtn.disabled = true;
-        registerBtn.innerHTML = 'PROCESSING...';
+      registerBtn.disabled = false;
+      registerBtn.style.opacity = '1';
+      registerBtn.innerHTML = originalBtnText;
     }
-
-    const phone_number = phoneCode + phoneNum;
-
-    try {
-        const response = await fetch('/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username,
-                password,
-                role,
-                full_name,
-                email,
-                phone_number: phone_number,
-                country
-            }),
-        });
-        const data = response.headers.get('content-type')?.includes('application/json') 
-            ? await response.json() 
-            : { error: await response.text() };
-
-        if (response.ok) {
-            if (data.requires_verification) {
-                showToast(data.message || 'Please verify your email', 'info');
-                showOTPVerificationForm(data.email);
-                return;
-            }
-
-            localStorage.setItem('authToken', data.token);
-            localStorage.setItem('userData', JSON.stringify(data.user));
-
-            authToken = data.token;
-            currentUser = data.user;
-            window.currentUserId = data.user.id;
-            window.currentUserRole = data.user.role;
-            window.currentUsername = data.user.username;
-
-            showToast('Registration successful!', 'success');
-            hideLoginForm();
-
-            // Redirect based on role
-            if (data.user.role === 'admin') {
-                window.location.href = 'admin.html';
-            } else {
-                if (typeof updateDashboard === 'function') {
-                    updateDashboard();
-                }
-            }
-        } else {
-            const errorMsg = data.details ? data.details[0].message : (data.error || 'Registration failed');
-            showRegError(errorMsg);
-        }
-    } catch (error) {
-        console.error('Registration error:', error);
-        showRegError('Registration error: ' + error.message);
-    } finally {
-        // Restore button state
-        if (registerBtn) {
-            registerBtn.disabled = false;
-            registerBtn.style.opacity = '1';
-            registerBtn.innerHTML = originalBtnText;
-        }
-    }
+  }
 }
 
 // Logout function
 function logout() {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    authToken = null;
-    currentUser = null;
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('userData');
+  authToken = null;
+  currentUser = null;
 
-    // Clear global variables
-    if (typeof window !== 'undefined') {
-        window.currentUserId = null;
-        window.currentUserRole = null;
-        window.currentUsername = null;
-    }
+  // Clear global variables
+  if (typeof window !== 'undefined') {
+    window.currentUserId = null;
+    window.currentUserRole = null;
+    window.currentUsername = null;
+  }
 
-    showToast('Logged out successfully', 'info');
-    showLoginForm();
+  showToast('Logged out successfully', 'info');
+  showLoginForm();
 }
 
 // Helper function to make authenticated requests
 async function authenticatedFetch(url, options = {}) {
-    const token = localStorage.getItem('authToken');
-    const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers,
-    };
+  const token = localStorage.getItem('authToken');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
-    const finalUrl = url;
+  const finalUrl = url;
 
-    const response = await fetch(finalUrl, {
-        ...options,
-        headers,
-    });
+  const response = await fetch(finalUrl, {
+    ...options,
+    headers,
+  });
 
-    // If unauthorized, logout and show login form
-    if (response.status === 401 || response.status === 403) {
-        logout();
-    }
+  // If unauthorized, logout and show login form
+  if (response.status === 401 || response.status === 403) {
+    logout();
+  }
 
-    return response;
+  return response;
 }
 
 const EXCHANGE_RATE = 129; // 1 USD = 129 KES
 
 function getUserCurrency() {
-    try {
-        const user = JSON.parse(localStorage.getItem('userData'));
-        return user?.currency_preference || 'USD';
-    } catch { return 'USD'; }
+  try {
+    const user = JSON.parse(localStorage.getItem('userData'));
+    return user?.currency_preference || 'USD';
+  } catch { return 'USD'; }
 }
 
 function formatCurrency(amount) {
-    const currency = getUserCurrency();
-    const val = parseFloat(amount || 0);
-    if (currency === 'KES') {
-        return 'Ksh ' + (val * EXCHANGE_RATE).toFixed(2);
-    }
-    return '$' + val.toFixed(2);
+  const currency = getUserCurrency();
+  const val = parseFloat(amount || 0);
+  if (currency === 'KES') {
+    return 'Ksh ' + (val * EXCHANGE_RATE).toFixed(2);
+  }
+  return '$' + val.toFixed(2);
 }
 
 // Helper to parse currency string back to float (removes $ or Ksh)
 function parseCurrencyString(str) {
-    if (!str) return 0;
-    return parseFloat(str.replace(/[^0-9.-]+/g, ""));
+  if (!str) return 0;
+  return parseFloat(str.replace(/[^0-9.-]+/g, ''));
 }
 
 window.showOTPVerificationForm = function(email) {
-    const authContainer = document.getElementById('auth-container');
-    if (!authContainer) return;
+  const authContainer = document.getElementById('auth-container');
+  if (!authContainer) return;
 
-    authContainer.innerHTML = `
+  authContainer.innerHTML = `
         <div class="bg-gray-800 rounded-[2rem] shadow-2xl overflow-hidden flex max-w-4xl w-full mx-4 relative border border-gray-700/50 animate-fade-in p-8">
             <div class="flex-1 flex flex-col justify-center relative z-10 w-full">
                 <div class="text-center mb-8">
@@ -626,66 +626,66 @@ window.showOTPVerificationForm = function(email) {
 };
 
 window.handleOTPVerification = async function(email) {
-    const otp_code = document.getElementById('otp-code').value;
-    if (!otp_code || otp_code.length < 6) {
-        showToast('Please enter the 6-digit code', 'error');
-        return;
-    }
+  const otp_code = document.getElementById('otp-code').value;
+  if (!otp_code || otp_code.length < 6) {
+    showToast('Please enter the 6-digit code', 'error');
+    return;
+  }
     
-    try {
-        const response = await fetch('/auth/verify-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, otp_code })
-        });
-        const data = await response.json();
+  try {
+    const response = await fetch('/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp_code })
+    });
+    const data = await response.json();
         
-        if (response.ok) {
-            localStorage.setItem('authToken', data.token);
-            localStorage.setItem('userData', JSON.stringify(data.user));
-            authToken = data.token;
-            currentUser = data.user;
-            window.currentUserId = data.user.id;
-            window.currentUserRole = data.user.role;
-            window.currentUsername = data.user.username;
+    if (response.ok) {
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('userData', JSON.stringify(data.user));
+      authToken = data.token;
+      currentUser = data.user;
+      window.currentUserId = data.user.id;
+      window.currentUserRole = data.user.role;
+      window.currentUsername = data.user.username;
 
-            showToast('Email verified successfully!', 'success');
-            hideLoginForm();
-            if (typeof updateDashboard === 'function') updateDashboard();
-        } else {
-            showToast(data.error || 'Verification failed', 'error');
-        }
-    } catch (e) {
-        showToast('Connection error', 'error');
+      showToast('Email verified successfully!', 'success');
+      hideLoginForm();
+      if (typeof updateDashboard === 'function') updateDashboard();
+    } else {
+      showToast(data.error || 'Verification failed', 'error');
     }
+  } catch (e) {
+    showToast('Connection error', 'error');
+  }
 };
 
 window.resendOTP = async function(email) {
-    try {
-        const response = await fetch('/auth/resend-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-        const data = await response.json();
-        if (response.ok) {
-            showToast(data.message || 'OTP resent successfully', 'success');
-        } else {
-            showToast(data.error || 'Failed to resend OTP', 'error');
-        }
-    } catch (e) {
-        showToast('Connection error', 'error');
+  try {
+    const response = await fetch('/auth/resend-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await response.json();
+    if (response.ok) {
+      showToast(data.message || 'OTP resent successfully', 'success');
+    } else {
+      showToast(data.error || 'Failed to resend OTP', 'error');
     }
+  } catch (e) {
+    showToast('Connection error', 'error');
+  }
 };
 
 /**
  * Syncs all UI elements with the 'currency-label' class to the current preference.
  */
 function updateCurrencyLabels() {
-    const currency = getUserCurrency();
-    const labels = document.querySelectorAll('.currency-label');
-    labels.forEach(el => {
-        el.textContent = currency;
-    });
-    console.log(`[Currency] Labels updated to ${currency}`);
+  const currency = getUserCurrency();
+  const labels = document.querySelectorAll('.currency-label');
+  labels.forEach(el => {
+    el.textContent = currency;
+  });
+  console.log(`[Currency] Labels updated to ${currency}`);
 }
