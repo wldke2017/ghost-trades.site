@@ -71,8 +71,9 @@ router.post('/stkpush', authenticateToken, transactionLimiter, async (req, res) 
     let { phoneNumber } = req.body;
     if (phoneNumber) phoneNumber = phoneNumber.trim();
 
-    if (!amount || parseFloat(amount) <= 0) {
-      return res.status(400).json({ error: 'Amount must be greater than 0' });
+    const minMpesaKes = 5 * KES_TO_USD_RATE;
+    if (!amount || parseFloat(amount) < minMpesaKes) {
+      return res.status(400).json({ error: `Minimum deposit amount is ${minMpesaKes} KES ($5.00)` });
     }
 
     if (!phoneNumber || !/^254[0-9]{9}$/.test(phoneNumber)) {

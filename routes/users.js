@@ -43,7 +43,7 @@ const upload = multer({
 // Update Profile
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const { mpesa_number, currency_preference, full_name, email, phone_number, country } = req.body;
+    const { mpesa_number, currency_preference, full_name, phone_number, country } = req.body;
     const user = await User.findByPk(req.user.id);
 
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -51,7 +51,6 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (mpesa_number !== undefined) user.mpesa_number = mpesa_number;
     if (currency_preference !== undefined) user.currency_preference = currency_preference;
     if (full_name !== undefined) user.full_name = full_name;
-    if (email !== undefined) user.email = email;
     if (phone_number !== undefined) user.phone_number = phone_number;
     if (country !== undefined) user.country = country;
 

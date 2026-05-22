@@ -13,7 +13,7 @@ const walletService = require('../services/walletService');
 router.post('/card-initiate', authenticateToken, async (req, res) => {
   try {
     const { amount } = req.body;
-    if (!amount || amount <= 0) return res.status(400).json({ error: 'Valid amount required' });
+    if (!amount || parseFloat(amount) < 5) return res.status(400).json({ error: 'Minimum deposit amount is $5.00' });
 
     const tx_ref = `flw_dep_${Date.now()}_u${req.user.id}`;
         

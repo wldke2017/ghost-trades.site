@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const multer = require('multer');
-const fs = require('fs');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validator');
 const { uploadLimiter, transactionLimiter } = require('../middleware/rateLimiter');
@@ -58,6 +57,12 @@ router.post('/deposit', authenticateToken, uploadLimiter, transactionLimiter, up
       }
     }
 
+    const minDeposit = (metadata && metadata.currency === 'KES') ? (5 * EXCHANGE_RATE) : 5;
+    if (parseFloat(amount) < minDeposit) {
+      const formattedLimit = (metadata && metadata.currency === 'KES') ? `${minDeposit} KES` : `$${minDeposit.toFixed(2)}`;
+      return res.status(400).json({ error: `Minimum deposit amount is ${formattedLimit}` });
+    }
+
     const transactionRequest = await TransactionRequest.create({
       user_id: req.user.id,
       type: 'deposit',
@@ -96,6 +101,10 @@ router.post('/withdrawal', authenticateToken, transactionLimiter, validate('tran
     const { amount, notes } = req.body;
     let { phone } = req.body;
     if (phone) phone = phone.trim();
+
+    if (parseFloat(amount) < 7) {
+      return res.status(400).json({ error: 'Minimum withdrawal amount is $7.00' });
+    }
 
     if (!phone || phone.length < 7 || phone.length > 20) {
       return res.status(400).json({ error: 'Valid phone number or account identifier is required' });

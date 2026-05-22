@@ -717,6 +717,11 @@ async function initiateDeposit() {
 
   if (!amount || !phoneNum) return showToast('Please enter amount and phone', 'error');
 
+  const minDepositKes = 5 * (window.EXCHANGE_RATE || EXCHANGE_RATE || 129);
+  if (parseFloat(amount) < minDepositKes) {
+    return showToast(`Minimum deposit is Ksh ${minDepositKes.toFixed(2)} ($5.00)`, 'error');
+  }
+
   const statusDiv = document.getElementById('deposit-status');
   statusDiv.classList.remove('hidden');
 
@@ -752,6 +757,7 @@ async function requestWithdrawal() {
   const notes = document.getElementById('withdraw-notes')?.value || '';
 
   if (!amount || !phoneNum) return showToast('Please enter amount and phone number', 'error');
+  if (parseFloat(amount) < 7) return showToast('Minimum withdrawal is $7.00', 'error');
   if (!phoneNum || phoneNum.length < 7) {
     return showToast('Please enter a valid phone number', 'error');
   }
@@ -1005,7 +1011,7 @@ function switchDepositTab(tab) {
 
 async function initiateCardDeposit() {
   const amount = document.getElementById('card-deposit-amount').value;
-  if (!amount || amount <= 0) return showToast('Please enter a valid amount', 'error');
+  if (!amount || parseFloat(amount) < 5) return showToast('Minimum deposit is $5.00', 'error');
 
   try {
     showToast('Initiating secure payment...', 'info');
@@ -1054,7 +1060,8 @@ async function confirmManualDeposit(method) {
     const message = document.getElementById('agent-mpesa-message').value.trim();
     const screenshotFile = document.getElementById('agent-deposit-screenshot').files[0];
 
-    if (!amount || amount <= 0) return showToast('Please enter a valid amount sent.', 'error');
+    const minAgentKes = 5 * (window.EXCHANGE_RATE || EXCHANGE_RATE || 129);
+    if (!amount || parseFloat(amount) < minAgentKes) return showToast(`Minimum deposit is Ksh ${minAgentKes.toFixed(2)} ($5.00)`, 'error');
     if (!message && !screenshotFile) return showToast('Please provide an M-Pesa message or upload a screenshot.', 'error');
 
     formData.append('amount', amount);
@@ -1069,7 +1076,7 @@ async function confirmManualDeposit(method) {
     amount = amountInput ? amountInput.value : 0;
     const txid = document.getElementById('crypto-txid').value.trim();
 
-    if (!amount || amount <= 0) return showToast('Please enter a valid USD amount sent.', 'error');
+    if (!amount || parseFloat(amount) < 5) return showToast('Minimum deposit is $5.00', 'error');
     if (!txid) return showToast('Please enter the Transaction Hash (TXID).', 'error');
 
     formData.append('amount', amount);
