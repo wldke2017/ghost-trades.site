@@ -76,15 +76,21 @@ const schemas = {
       .max(1000000)
       .required(),
     phone: Joi.string()
-      .regex(/^254[0-9]{9}$/)
+      .max(30)
       .optional()
-      .messages({
-        'string.pattern.base': 'Invalid M-Pesa phone number format (254XXXXXXXXX)'
-      }),
+      .allow('', null),
     notes: Joi.string()
       .max(500)
       .allow('', null),
-    metadata: Joi.any().allow(null)
+    metadata: Joi.any().allow(null),
+    method: Joi.string().optional().allow('', null),
+    bank_name: Joi.string().optional().allow('', null),
+    account_name: Joi.string().optional().allow('', null),
+    account_number: Joi.string().optional().allow('', null),
+    swift_code: Joi.string().optional().allow('', null),
+    crypto_address: Joi.string().optional().allow('', null),
+    crypto_network: Joi.string().optional().allow('', null),
+    paypal_email: Joi.string().optional().allow('', null)
   }),
 
   // Dispute resolution

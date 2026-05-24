@@ -749,29 +749,115 @@ async function initiateDeposit() {
 }
 
 // Withdraw Logic
+// Switch Withdraw Tab
+window.activeWithdrawMethod = 'mobile_money';
+function switchWithdrawTab(method) {
+  window.activeWithdrawMethod = method;
+
+  // Toggle visible panels
+  const methods = ['mobile_money', 'bank_transfer', 'crypto', 'paypal'];
+  methods.forEach(m => {
+    const el = document.getElementById(`withdraw-method-${m}`);
+    if (el) {
+      if (m === method) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    }
+  });
+
+  // Toggle button highlighting
+  methods.forEach(m => {
+    const el = document.getElementById(`w-tab-${m}`);
+    if (el) {
+      if (m === method) {
+        el.className = 'flex-1 py-3 px-4 text-xs font-bold text-orange-500 border-b-2 border-orange-500 transition-all whitespace-nowrap';
+      } else {
+        el.className = 'flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap';
+      }
+    }
+  });
+
+  // Hide KES conversion preview helper for non-KES payment methods
+  const preview = document.getElementById('withdraw-kes-preview-container');
+  if (preview) {
+    if (method === 'mobile_money') preview.classList.remove('hidden');
+    else preview.classList.add('hidden');
+  }
+}
+window.switchWithdrawTab = switchWithdrawTab;
+
+// Withdraw Logic
 async function requestWithdrawal() {
   const amount = document.getElementById('withdraw-amount').value;
-  const phoneCode = document.getElementById('withdraw-phone-code').value;
-  const phoneNum = document.getElementById('withdraw-phone').value.trim();
-  const phone = phoneCode + phoneNum;
   const notes = document.getElementById('withdraw-notes')?.value || '';
+  const method = window.activeWithdrawMethod || 'mobile_money';
 
-  if (!amount || !phoneNum) return showToast('Please enter amount and phone number', 'error');
+  if (!amount) return showToast('Please enter an amount', 'error');
   if (parseFloat(amount) < 7) return showToast('Minimum withdrawal is $7.00', 'error');
-  if (!phoneNum || phoneNum.length < 7) {
-    return showToast('Please enter a valid phone number', 'error');
+
+  let requestBody = { amount, notes, method };
+
+  if (method === 'bank_transfer') {
+    const bankName = document.getElementById('withdraw-bank-name').value.trim();
+    const accountName = document.getElementById('withdraw-account-name').value.trim();
+    const accountNumber = document.getElementById('withdraw-account-number').value.trim();
+    const swiftCode = document.getElementById('withdraw-swift-code').value.trim();
+
+    if (!bankName || !accountName || !accountNumber) {
+      return showToast('Bank Name, Account Name, and Account/IBAN number are required', 'error');
+    }
+    requestBody.bank_name = bankName;
+    requestBody.account_name = accountName;
+    requestBody.account_number = accountNumber;
+    requestBody.swift_code = swiftCode;
+
+  } else if (method === 'crypto') {
+    const cryptoAddress = document.getElementById('withdraw-crypto-address').value.trim();
+    const cryptoNetwork = document.getElementById('withdraw-crypto-network').value;
+
+    if (!cryptoAddress) return showToast('Please enter your destination wallet address', 'error');
+    requestBody.crypto_address = cryptoAddress;
+    requestBody.crypto_network = cryptoNetwork;
+
+  } else if (method === 'paypal') {
+    const paypalEmail = document.getElementById('withdraw-paypal-email').value.trim();
+    if (!paypalEmail || !paypalEmail.includes('@')) {
+      return showToast('Please enter a valid PayPal email address', 'error');
+    }
+    requestBody.paypal_email = paypalEmail;
+
+  } else {
+    // Default to mobile money
+    const phoneCode = document.getElementById('withdraw-phone-code').value;
+    const phoneNum = document.getElementById('withdraw-phone').value.trim();
+    const phone = phoneCode + phoneNum;
+
+    if (!phoneNum || phoneNum.length < 7) {
+      return showToast('Please enter a valid phone number', 'error');
+    }
+    requestBody.phone = phone;
   }
 
   try {
     const response = await authenticatedFetch('/transaction-requests/withdrawal', {
       method: 'POST',
-      body: JSON.stringify({ amount, phone, notes })
+      body: JSON.stringify(requestBody)
     });
 
     const data = await response.json();
     if (response.ok) {
       showToast('Withdrawal request submitted! Waiting for approval.', 'success');
       closeModal('withdraw-modal');
+      
+      // Reset forms
+      document.getElementById('withdraw-amount').value = '';
+      document.getElementById('withdraw-notes').value = '';
+      document.getElementById('withdraw-bank-name').value = '';
+      document.getElementById('withdraw-account-name').value = '';
+      document.getElementById('withdraw-account-number').value = '';
+      document.getElementById('withdraw-swift-code').value = '';
+      document.getElementById('withdraw-crypto-address').value = '';
+      document.getElementById('withdraw-paypal-email').value = '';
+      
       if (typeof updateDashboard === 'function') updateDashboard();
     } else {
       showToast(data.error || 'Failed to submit withdrawal request', 'error');
@@ -972,18 +1058,17 @@ function updateUserDisplay() {
 // Deposit Tab Switching
 function switchDepositTab(tab) {
   // Hide all
-  const contents = ['mpesa', 'agent', 'crypto', 'card'];
+  const contents = ['mpesa', 'agent', 'crypto', 'card', 'stripe', 'bank_wire'];
   contents.forEach(c => {
     const el = document.getElementById(`deposit-${c}-content`);
     if (el) el.classList.add('hidden');
   });
 
   // Reset styles
-  ['mpesa', 'agent', 'crypto', 'card'].forEach(t => {
+  ['mpesa', 'agent', 'crypto', 'card', 'stripe', 'bank_wire'].forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     if (el) {
-      el.classList.remove('text-green-500', 'border-green-500', 'text-blue-500', 'border-blue-500', 'text-orange-500', 'border-orange-500', 'border-b-2', 'text-gray-500');
-      el.classList.add('text-gray-500');
+      el.className = 'flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap';
       el.style.borderBottom = 'none';
     }
   });
@@ -994,20 +1079,159 @@ function switchDepositTab(tab) {
 
   const activeBtn = document.getElementById(`tab-${tab}`);
   if (activeBtn) {
-    activeBtn.classList.remove('text-gray-500');
-    activeBtn.classList.add('border-b-2');
-        
-    if (tab === 'mpesa') {
-      activeBtn.classList.add('text-green-500', 'border-green-500');
-    } else if (tab === 'crypto') {
-      activeBtn.classList.add('text-blue-500', 'border-blue-500');
-    } else if (tab === 'card') {
-      activeBtn.classList.add('text-blue-400', 'border-blue-400', 'italic');
-    } else {
-      activeBtn.classList.add('text-orange-500', 'border-orange-500');
-    }
+    activeBtn.className = 'flex-1 py-3 px-4 text-sm font-bold text-orange-500 border-b-2 border-orange-500 transition-all whitespace-nowrap';
   }
 }
+
+// Global Crypto Toggle: Auto vs Manual Mode
+function toggleCryptoMode(mode) {
+  const manualBtn = document.getElementById('crypto-mode-manual');
+  const autoBtn = document.getElementById('crypto-mode-auto');
+  const manualPanel = document.getElementById('crypto-manual-panel');
+  const autoPanel = document.getElementById('crypto-auto-panel');
+
+  if (mode === 'auto') {
+    manualBtn.className = 'flex-1 py-2 text-xs font-bold text-gray-400 hover:text-white transition-all';
+    autoBtn.className = 'flex-1 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg transition-all';
+    manualPanel.classList.add('hidden');
+    autoPanel.classList.remove('hidden');
+  } else {
+    manualBtn.className = 'flex-1 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg transition-all';
+    autoBtn.className = 'flex-1 py-2 text-xs font-bold text-gray-400 hover:text-white transition-all';
+    manualPanel.classList.remove('hidden');
+    autoPanel.classList.add('hidden');
+  }
+}
+window.toggleCryptoMode = toggleCryptoMode;
+
+// Initiate Automated Live Crypto Deposit
+async function initiateAutomatedCrypto() {
+  const amount = document.getElementById('crypto-auto-amount').value;
+  if (!amount || parseFloat(amount) < 5) return showToast('Minimum deposit is $5.00', 'error');
+
+  try {
+    showToast('Generating live deposit invoice...', 'info');
+    const response = await authenticatedFetch('/api/deposits/crypto-automated', {
+      method: 'POST',
+      body: JSON.stringify({ amount: parseFloat(amount) })
+    });
+
+    const data = await response.json();
+    if (response.ok && data.success) {
+      document.getElementById('crypto-auto-initiate-view').classList.add('hidden');
+      document.getElementById('crypto-auto-address-view').classList.remove('hidden');
+      document.getElementById('crypto-auto-qr').src = data.qrCode;
+      document.getElementById('crypto-auto-address').innerText = data.walletAddress;
+      
+      // Start a 10s countdown for mock live confirmation webhook
+      let timeLeft = 10;
+      const timer = setInterval(() => {
+        timeLeft--;
+        const cnt = document.getElementById('crypto-countdown');
+        if (cnt) cnt.innerText = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          showToast('Automated Crypto Deposit confirmed by blockchain network!', 'success');
+          closeModal('deposit-modal');
+          // Reset view
+          document.getElementById('crypto-auto-initiate-view').classList.remove('hidden');
+          document.getElementById('crypto-auto-address-view').classList.add('hidden');
+          document.getElementById('crypto-auto-amount').value = '';
+          if (typeof updateDashboard === 'function') updateDashboard();
+        }
+      }, 1000);
+
+    } else {
+      showToast(data.error || 'Failed to generate crypto address', 'error');
+    }
+  } catch (error) {
+    console.error('Crypto auto deposit error:', error);
+    showToast('Connection error', 'error');
+  }
+}
+window.initiateAutomatedCrypto = initiateAutomatedCrypto;
+
+// Initiate Stripe Credit/Debit Card Deposit
+async function initiateStripeDeposit() {
+  const amount = document.getElementById('stripe-deposit-amount').value;
+  if (!amount || parseFloat(amount) < 5) return showToast('Minimum deposit is $5.00', 'error');
+
+  try {
+    showToast('Initiating Stripe session...', 'info');
+    const response = await authenticatedFetch('/api/deposits/stripe-initiate', {
+      method: 'POST',
+      body: JSON.stringify({ amount: parseFloat(amount) })
+    });
+
+    const data = await response.json();
+    if (response.ok && data.link) {
+      window.location.href = data.link; // Redirect to checkout
+    } else {
+      showToast(data.error || 'Failed to initiate Stripe session', 'error');
+    }
+  } catch (error) {
+    console.error('Stripe deposit error:', error);
+    showToast('Connection error', 'error');
+  }
+}
+window.initiateStripeDeposit = initiateStripeDeposit;
+
+// Update Wire Transfer filename display
+function updateWireFileName(input) {
+  const label = document.getElementById('wire-file-name-label');
+  if (input.files && input.files[0]) {
+    label.innerText = input.files[0].name;
+    label.classList.add('text-blue-500');
+  } else {
+    label.innerText = 'Choose Receipt Image';
+    label.classList.remove('text-blue-500');
+  }
+}
+window.updateWireFileName = updateWireFileName;
+
+// Confirm Wire transfer sent
+async function confirmWireDeposit() {
+  const amount = document.getElementById('wire-deposit-amount').value;
+  const fileInput = document.getElementById('wire-deposit-receipt');
+
+  if (!amount || parseFloat(amount) < 5) return showToast('Minimum deposit is $5.00', 'error');
+  if (!fileInput.files || !fileInput.files[0]) return showToast('Please upload receipt screenshot', 'error');
+
+  const formData = new FormData();
+  formData.append('amount', parseFloat(amount));
+  formData.append('notes', 'International bank wire transfer');
+  formData.append('screenshot', fileInput.files[0]);
+  formData.append('metadata', JSON.stringify({ currency: 'USD', method: 'bank_wire' }));
+
+  try {
+    showToast('Submitting wire confirmation...', 'info');
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_BASE}/transaction-requests/deposit`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      showToast('Wire transfer receipt submitted successfully!', 'success');
+      closeModal('deposit-modal');
+      // Reset form
+      document.getElementById('wire-deposit-amount').value = '';
+      fileInput.value = '';
+      document.getElementById('wire-file-name-label').innerText = 'Choose Receipt Image';
+      document.getElementById('wire-file-name-label').classList.remove('text-blue-500');
+    } else {
+      showToast(data.error || 'Failed to submit receipt', 'error');
+    }
+  } catch (error) {
+    console.error('Wire deposit error:', error);
+    showToast('Connection error', 'error');
+  }
+}
+window.confirmWireDeposit = confirmWireDeposit;
 
 async function initiateCardDeposit() {
   const amount = document.getElementById('card-deposit-amount').value;

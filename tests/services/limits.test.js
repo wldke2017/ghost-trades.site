@@ -215,4 +215,99 @@ describe('Limits and Security Validation Tests', () => {
       expect(response.body.error).toContain('Minimum deposit amount is 645 KES');
     });
   });
+
+  describe('POST /transaction-requests/withdrawal - Global Payout Validations', () => {
+    it('should allow bank transfer withdrawal request with valid bank details', async () => {
+      jest.spyOn(User, 'findByPk').mockResolvedValue({ id: 1, is_verified: true });
+      jest.spyOn(Wallet, 'findOne').mockResolvedValue({ available_balance: 100.00 });
+      jest.spyOn(TransactionRequest, 'create').mockResolvedValue({ id: 5, amount: 50.00 });
+
+      const response = await request(app)
+        .post('/transaction-requests/withdrawal')
+        .send({
+          amount: 50.00,
+          method: 'bank_transfer',
+          bank_name: 'Chase Bank',
+          account_name: 'John Doe',
+          account_number: '1234567890',
+          swift_code: 'CHASUS33'
+        });
+
+      expect(response.status).toBe(201);
+    });
+
+    it('should reject bank transfer withdrawal if bank details are missing', async () => {
+      const response = await request(app)
+        .post('/transaction-requests/withdrawal')
+        .send({
+          amount: 50.00,
+          method: 'bank_transfer',
+          bank_name: '',
+          account_name: 'John Doe'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Bank Name, Account Name, and Account/IBAN number are required');
+    });
+
+    it('should allow USDT crypto withdrawal with address and network details', async () => {
+      jest.spyOn(User, 'findByPk').mockResolvedValue({ id: 1, is_verified: true });
+      jest.spyOn(Wallet, 'findOne').mockResolvedValue({ available_balance: 100.00 });
+      jest.spyOn(TransactionRequest, 'create').mockResolvedValue({ id: 6, amount: 20.00 });
+
+      const response = await request(app)
+        .post('/transaction-requests/withdrawal')
+        .send({
+          amount: 20.00,
+          method: 'crypto',
+          crypto_address: 'TY1234567890',
+          crypto_network: 'TRC20'
+        });
+
+      expect(response.status).toBe(201);
+    });
+
+    it('should allow PayPal withdrawal with email details', async () => {
+      jest.spyOn(User, 'findByPk').mockResolvedValue({ id: 1, is_verified: true });
+      jest.spyOn(Wallet, 'findOne').mockResolvedValue({ available_balance: 100.00 });
+      jest.spyOn(TransactionRequest, 'create').mockResolvedValue({ id: 7, amount: 15.00 });
+
+      const response = await request(app)
+        .post('/transaction-requests/withdrawal')
+        .send({
+          amount: 15.00,
+          method: 'paypal',
+          paypal_email: 'test@paypal.com'
+        });
+
+      expect(response.status).toBe(201);
+    });
+  });
+
+  describe('POST /deposits/stripe-initiate & /crypto-automated', () => {
+    it('should initiate Stripe mock sandbox if Stripe keys are not configured', async () => {
+      jest.spyOn(TransactionRequest, 'create').mockResolvedValue({ id: 8, amount: 25.00 });
+
+      const response = await request(app)
+        .post('/deposits/stripe-initiate')
+        .send({ amount: 25.00 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.link).toContain('stripe-sandbox.html');
+    });
+
+    it('should return live wallet address and QR code for automated crypto deposits', async () => {
+      jest.spyOn(TransactionRequest, 'create').mockResolvedValue({ id: 9, amount: 10.00 });
+
+      const response = await request(app)
+        .post('/deposits/crypto-automated')
+        .send({ amount: 10.00 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.walletAddress).toContain('TRX_AUTO_ADDR_');
+      expect(response.body.qrCode).toContain('create-qr-code');
+    });
+  });
 });

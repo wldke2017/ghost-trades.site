@@ -568,7 +568,7 @@
                 </div>
 
                 <button onclick="updateProfileSettings()"
-                    class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-orange-500/20">
+                    class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-orange-500/20 mt-4">
                     Save All Changes
                 </button>
             </div>
@@ -577,7 +577,7 @@
 
     <!-- Deposit Modal -->
     <div id="deposit-modal"
-        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-slate-100">
         <div
             class="bg-gray-800 rounded-3xl max-w-md w-full border border-gray-700 shadow-2xl overflow-hidden animate-fade-in">
             <div class="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
@@ -590,16 +590,19 @@
             </div>
 
             <!-- Deposit Tabs -->
-            <div class="flex overflow-x-auto border-b border-gray-700">
+            <div class="flex overflow-x-auto border-b border-gray-700 custom-scrollbar">
                 <button onclick="switchDepositTab('agent')" id="tab-agent"
                     class="flex-1 py-3 px-4 text-sm font-bold text-orange-500 border-b-2 border-orange-500 transition-all whitespace-nowrap">Agent</button>
                 <button onclick="switchDepositTab('crypto')" id="tab-crypto"
                     class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Crypto</button>
+                <button onclick="switchDepositTab('stripe')" id="tab-stripe"
+                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Stripe/PayPal</button>
+                <button onclick="switchDepositTab('bank_wire')" id="tab-bank_wire"
+                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Bank Wire</button>
                 <button onclick="switchDepositTab('card')" id="tab-card"
-                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap italic">Global Card</button>
+                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap italic">Card (FLW)</button>
                 <button onclick="switchDepositTab('mpesa')" id="tab-mpesa"
-                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">M-Pesa
-                    Express</button>
+                    class="flex-1 py-3 px-4 text-sm font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">M-Pesa</button>
             </div>
 
             <div class="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
@@ -791,83 +794,211 @@
                 </div>
 
                 <!-- CRYPTO TAB -->
-                <div id="deposit-crypto-content" class="hidden space-y-6 animate-fade-in">
-                    <!-- Header -->
-                    <div class="text-center">
-                        <h4 class="text-xl font-bold text-white">Deposit USDT</h4>
-                        <p class="text-xs text-gray-400">Scan QR code or copy address</p>
+                <div id="deposit-crypto-content" class="hidden space-y-6 animate-fade-in text-slate-100">
+                    <!-- Automated / Manual Mode Selector Toggle -->
+                    <div class="flex bg-gray-900 p-1 rounded-xl border border-gray-700">
+                        <button onclick="toggleCryptoMode('manual')" id="crypto-mode-manual" class="flex-1 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg transition-all">Manual Transfer</button>
+                        <button onclick="toggleCryptoMode('auto')" id="crypto-mode-auto" class="flex-1 py-2 text-xs font-bold text-gray-400 hover:text-white transition-all">Automated Gateway</button>
                     </div>
 
-                    <!-- QR Code -->
-                    <div class="flex justify-center">
-                        <div class="bg-white p-3 rounded-xl shadow-lg shadow-blue-500/10">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=TAXazbRgUPdJvBkrRKZpZT8qD7erJAhaU1"
-                                alt="USDT TRC20 QR" class="w-40 h-40">
-                            <div class="mt-2 flex justify-center">
-                                <div
-                                    class="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center text-white font-bold border-2 border-white shadow-sm -mt-6">
-                                    <i class="ti ti-currency-dollar"></i>
+                    <!-- MANUAL CRYPTO PANEL -->
+                    <div id="crypto-manual-panel" class="space-y-6">
+                        <!-- Header -->
+                        <div class="text-center">
+                            <h4 class="text-xl font-bold text-white">Deposit USDT</h4>
+                            <p class="text-xs text-gray-400">Scan QR code or copy address</p>
+                        </div>
+
+                        <!-- QR Code -->
+                        <div class="flex justify-center">
+                            <div class="bg-white p-3 rounded-xl shadow-lg shadow-blue-500/10">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=TAXazbRgUPdJvBkrRKZpZT8qD7erJAhaU1"
+                                    alt="USDT TRC20 QR" class="w-40 h-40">
+                                <div class="mt-2 flex justify-center">
+                                    <div
+                                        class="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center text-white font-bold border-2 border-white shadow-sm -mt-6">
+                                        <i class="ti ti-currency-dollar"></i>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Network Info -->
-                    <div class="space-y-1 border-b border-gray-700 pb-4">
-                        <p class="text-xs text-gray-500">Network</p>
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <p class="text-white font-bold">TRX</p>
-                                <p class="text-xs text-gray-400">Tron (TRC20)</p>
+                        <!-- Network Info -->
+                        <div class="space-y-1 border-b border-gray-700 pb-4">
+                            <p class="text-xs text-gray-500">Network</p>
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-white font-bold">TRX</p>
+                                    <p class="text-xs text-gray-400">Tron (TRC20)</p>
+                                </div>
+                                <i class="ti ti-arrows-exchange text-gray-500"></i>
                             </div>
-                            <i class="ti ti-arrows-exchange text-gray-500"></i>
                         </div>
-                    </div>
 
-                    <!-- Address Info -->
-                    <div class="space-y-2">
-                        <p class="text-xs text-gray-500">Deposit Address</p>
-                        <div
-                            class="flex items-center justify-between bg-gray-900 border border-gray-700 rounded-xl p-3 hover:border-blue-500/50 transition-colors">
-                            <p id="crypto-address-display"
-                                class="font-mono text-sm font-bold text-white break-all tracking-wide">
-                                <span class="text-yellow-400">TAXazbRgUPdJvBkrRKZpZT8qD7erJAhaU1</span>
-                            </p>
-                            <button onclick="copyToClipboard('crypto-address-display')"
-                                class="text-gray-400 hover:text-white p-2 transition-colors">
-                                <i class="ti ti-copy text-xl"></i>
+                        <!-- Address Info -->
+                        <div class="space-y-2">
+                            <p class="text-xs text-gray-500">Deposit Address</p>
+                            <div
+                                class="flex items-center justify-between bg-gray-900 border border-gray-700 rounded-xl p-3 hover:border-blue-500/50 transition-colors">
+                                <p id="crypto-address-display"
+                                    class="font-mono text-sm font-bold text-white break-all tracking-wide">
+                                    <span class="text-yellow-400">TAXazbRgUPdJvBkrRKZpZT8qD7erJAhaU1</span>
+                                </p>
+                                <button onclick="copyToClipboard('crypto-address-display')"
+                                    class="text-gray-400 hover:text-white p-2 transition-colors">
+                                    <i class="ti ti-copy text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- TXID Input -->
+                        <button onclick="document.getElementById('txid-area').classList.toggle('hidden')"
+                            class="text-xs text-blue-400 hover:text-blue-300 w-full text-center py-2">
+                            I have made the transfer
+                        </button>
+
+                        <div id="txid-area" class="hidden space-y-4 pt-2 border-t border-gray-700">
+                            <div class="space-y-2">
+                                <label class="block text-xs font-bold text-gray-500 uppercase">Amount (USD)</label>
+                                <input type="number" id="crypto-amount" placeholder="e.g. 50"
+                                    class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-xs font-bold text-gray-500 uppercase">Transaction Hash
+                                    (TXID)</label>
+                                <input type="text" id="crypto-txid" placeholder="Enter transaction hash..."
+                                    class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
+                            </div>
+
+                            <button onclick="confirmManualDeposit('Crypto Deposit')"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-600/20">
+                                Confirm Deposit
                             </button>
                         </div>
                     </div>
 
-                    <!-- TXID Input -->
-                    <button onclick="document.getElementById('txid-area').classList.toggle('hidden')"
-                        class="text-xs text-blue-400 hover:text-blue-300 w-full text-center py-2">
-                        I have made the transfer
+                    <!-- AUTOMATED LIVE CRYPTO PANEL -->
+                    <div id="crypto-auto-panel" class="hidden space-y-6 animate-fade-in">
+                        <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                            <p class="text-xs text-blue-300 leading-relaxed font-medium">Generate a unique temporary address. Funds will credit instantly once blockchain confirmations complete.</p>
+                        </div>
+
+                        <div class="space-y-4" id="crypto-auto-initiate-view">
+                            <div class="space-y-2">
+                                <label class="block text-xs font-bold text-gray-500 uppercase">Amount to Deposit (USD)</label>
+                                <input type="number" id="crypto-auto-amount" placeholder="e.g. 50"
+                                    class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-4 text-xl font-mono text-white focus:outline-none focus:border-blue-500 transition-colors">
+                            </div>
+                            <button onclick="initiateAutomatedCrypto()"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-600/20">
+                                Generate Automated Invoice
+                            </button>
+                        </div>
+
+                        <!-- Generated Address View (Hidden by default) -->
+                        <div id="crypto-auto-address-view" class="hidden space-y-6">
+                            <div class="flex justify-center">
+                                <div class="bg-white p-3 rounded-xl shadow-lg shadow-blue-500/10">
+                                    <img id="crypto-auto-qr" src="" alt="Live QR" class="w-40 h-40">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <p class="text-xs text-gray-500">Live Destination Address</p>
+                                <div class="flex items-center justify-between bg-gray-900 border border-gray-700 rounded-xl p-3">
+                                    <p id="crypto-auto-address" class="font-mono text-xs font-bold text-yellow-400 break-all select-all"></p>
+                                    <button onclick="copyToClipboard('crypto-auto-address')" class="text-gray-400 hover:text-white p-2">
+                                        <i class="ti ti-copy text-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center space-y-2">
+                                <div class="flex justify-center items-center gap-2">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                    <p class="text-xs text-emerald-400 font-bold">Listening for Blockchain network...</p>
+                                </div>
+                                <p class="text-[10px] text-gray-400">Sandbox Auto-Payment triggers automatically in <span id="crypto-countdown" class="font-mono font-bold text-white">10</span> seconds.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STRIPE / PAYPAL TAB -->
+                <div id="deposit-stripe-content" class="hidden space-y-6 animate-fade-in text-slate-100">
+                    <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 flex items-center space-x-3">
+                        <i class="ti ti-credit-card text-indigo-400 text-2xl"></i>
+                        <div>
+                            <p class="font-bold text-white">Stripe / PayPal Checkout</p>
+                            <p class="text-xs text-indigo-400">Global Credit Card, Apple Pay & PayPal</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount to Deposit (USD)</label>
+                        <input type="number" id="stripe-deposit-amount" placeholder="e.g. 50"
+                            class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-4 text-xl font-mono text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                        <p class="text-[10px] text-gray-500 mt-2 px-1">Supports instant card payments, Google Pay, and PayPal from any country globally.</p>
+                    </div>
+
+                    <button onclick="initiateStripeDeposit()"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-600/20">
+                        Initiate Global Payment
                     </button>
+                </div>
 
-                    <div id="txid-area" class="hidden space-y-4 pt-2 border-t border-gray-700">
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase">Amount (USD)</label>
-                            <input type="number" id="crypto-amount" placeholder="e.g. 50"
+                <!-- GLOBAL BANK WIRE TAB -->
+                <div id="deposit-bank_wire-content" class="hidden space-y-6 animate-fade-in text-slate-100">
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                        <p class="text-xs text-blue-300 leading-relaxed font-medium">Send international bank wire transfers directly to our corporate custody accounts. Wire deposits are credited manually within 1-2 business days.</p>
+                    </div>
+
+                    <!-- SVB Wire details -->
+                    <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 space-y-3">
+                        <div class="flex justify-between border-b border-gray-800 pb-2">
+                            <span class="text-xs text-gray-500 font-bold">Bank Name</span>
+                            <span class="text-xs text-white font-bold">Silicon Valley Bank (SVB)</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-800 pb-2">
+                            <span class="text-xs text-gray-500 font-bold">Swift/BIC Code</span>
+                            <span class="text-xs text-yellow-400 font-mono font-bold select-all">SVBICU33XXX</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-800 pb-2">
+                            <span class="text-xs text-gray-500 font-bold">Account / IBAN</span>
+                            <span class="text-xs text-yellow-400 font-mono font-bold select-all">US12 SVB 0123 4567 8901 23</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-xs text-gray-500 font-bold">Reference Code</span>
+                            <span id="bank-wire-ref" class="text-xs text-emerald-400 font-bold select-all">ESCROW-DEP-USER</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 pt-2 border-t border-gray-800">
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Amount Sent (USD)</label>
+                            <input type="number" id="wire-deposit-amount" placeholder="e.g. 500"
                                 class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
                         </div>
+                        
                         <div class="space-y-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase">Transaction Hash
-                                (TXID)</label>
-                            <input type="text" id="crypto-txid" placeholder="Enter transaction hash..."
-                                class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Upload Wire Receipt Screenshot</label>
+                            <input type="file" id="wire-deposit-receipt" accept="image/*" class="hidden" onchange="updateWireFileName(this)">
+                            <button onclick="document.getElementById('wire-deposit-receipt').click()"
+                                class="w-full py-3 px-4 border-2 border-dashed border-gray-700 rounded-xl text-gray-400 hover:text-white hover:border-blue-500/50 transition-all flex items-center justify-center gap-2 text-sm">
+                                <i class="ti ti-camera"></i>
+                                <span id="wire-file-name-label">Choose Receipt Image</span>
+                            </button>
                         </div>
 
-                        <button onclick="confirmManualDeposit('Crypto Deposit')"
+                        <button onclick="confirmWireDeposit()"
                             class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-600/20">
-                            Confirm Deposit
+                            Confirm Wire Sent
                         </button>
                     </div>
                 </div>
 
                 <!-- CARD TAB (FLUTTERWAVE) -->
-                <div id="deposit-card-content" class="hidden space-y-6 animate-fade-in">
+                <div id="deposit-card-content" class="hidden space-y-6 animate-fade-in text-slate-100">
                     <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center space-x-3">
                         <div class="flex space-x-1">
                             <i class="ti ti-brand-visa text-blue-400 text-2xl"></i>
@@ -900,15 +1031,19 @@
         class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div
             class="bg-gray-800 rounded-3xl max-w-md w-full border border-gray-700 shadow-2xl overflow-hidden animate-fade-in">
-            <div class="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
-                <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                    <i class="ti ti-cash text-orange-500"></i> Withdraw Funds
-                </h3>
-                <button onclick="closeModal('withdraw-modal')" class="text-gray-500 hover:text-white transition-colors">
-                    <i class="ti ti-x text-2xl"></i>
-                </button>
+            <!-- Withdraw Modal Tabs -->
+            <div class="flex overflow-x-auto border-b border-gray-700 custom-scrollbar">
+                <button onclick="switchWithdrawTab('mobile_money')" id="w-tab-mobile_money"
+                    class="flex-1 py-3 px-4 text-xs font-bold text-orange-500 border-b-2 border-orange-500 transition-all whitespace-nowrap">Mobile Money</button>
+                <button onclick="switchWithdrawTab('bank_transfer')" id="w-tab-bank_transfer"
+                    class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">Wire Transfer</button>
+                <button onclick="switchWithdrawTab('crypto')" id="w-tab-crypto"
+                    class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">USDT Payout</button>
+                <button onclick="switchWithdrawTab('paypal')" id="w-tab-paypal"
+                    class="flex-1 py-3 px-4 text-xs font-bold text-gray-500 hover:text-gray-300 transition-all whitespace-nowrap">PayPal</button>
             </div>
-            <div class="p-8 space-y-6">
+
+            <div class="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 <!-- Withdrawal Restriction Warning -->
                 <div id="withdraw-restricted-msg" class="hidden bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
                     <div class="flex items-start gap-3">
@@ -931,6 +1066,7 @@
                     </div>
                 </div>
 
+                <!-- Input Amount (Universal) -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (USD)</label>
                     <div class="relative">
@@ -938,27 +1074,87 @@
                         <input type="number" id="withdraw-amount" placeholder="0.00"
                             class="w-full bg-gray-900 border border-gray-600 rounded-xl pl-8 pr-4 py-4 text-xl font-mono text-white focus:outline-none focus:border-orange-500 transition-colors">
                     </div>
-                    <p class="text-xs text-gray-400 font-bold mt-2 text-right">≈ <span
+                    <p class="text-xs text-gray-400 font-bold mt-2 text-right" id="withdraw-kes-preview-container">≈ <span
                             id="withdraw-kes-preview">0</span> KES</p>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Withdraw to Phone</label>
-                    <div class="flex gap-2">
-                        <select id="withdraw-phone-code" class="w-24 bg-gray-900 border border-gray-700 rounded-xl px-2 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-all">
-                            <option value="254">🇰🇪 +254</option>
-                            <option value="234">🇳🇬 +234</option>
-                            <option value="1">🇺🇸 +1</option>
-                            <option value="44">🇬🇧 +44</option>
-                            <option value="27">🇿🇦 +27</option>
-                            <option value="256">🇺🇬 +256</option>
-                            <option value="255">🇹🇿 +255</option>
-                        </select>
-                        <input type="text" id="withdraw-phone" placeholder="712345678"
-                            class="flex-1 bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors font-mono">
+                <!-- DYNAMIC FIELDS -->
+                
+                <!-- 1. MOBILE MONEY PANEL -->
+                <div id="withdraw-method-mobile_money" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Withdraw to Phone</label>
+                        <div class="flex gap-2">
+                            <select id="withdraw-phone-code" class="w-24 bg-gray-900 border border-gray-700 rounded-xl px-2 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition-all">
+                                <option value="254">🇰🇪 +254</option>
+                                <option value="234">🇳🇬 +234</option>
+                                <option value="1">🇺🇸 +1</option>
+                                <option value="44">🇬🇧 +44</option>
+                                <option value="27">🇿🇦 +27</option>
+                                <option value="256">🇺🇬 +256</option>
+                                <option value="255">🇹🇿 +255</option>
+                            </select>
+                            <input type="text" id="withdraw-phone" placeholder="712345678"
+                                class="flex-1 bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors font-mono">
+                        </div>
                     </div>
                 </div>
 
+                <!-- 2. WIRE TRANSFER PANEL -->
+                <div id="withdraw-method-bank_transfer" class="hidden space-y-4">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Bank Name</label>
+                            <input type="text" id="withdraw-bank-name" placeholder="e.g. Chase Bank, Barclays"
+                                class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Account Holder Name</label>
+                            <input type="text" id="withdraw-account-name" placeholder="e.g. John Doe"
+                                class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Account Number / IBAN</label>
+                            <input type="text" id="withdraw-account-number" placeholder="e.g. GB23BARC..."
+                                class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-xs text-white font-mono focus:outline-none focus:border-orange-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Swift / BIC Code (Optional)</label>
+                            <input type="text" id="withdraw-swift-code" placeholder="e.g. BARCGB22"
+                                class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-xs text-white font-mono focus:outline-none focus:border-orange-500 transition-colors">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. USDT / CRYPTO PANEL -->
+                <div id="withdraw-method-crypto" class="hidden space-y-4">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Crypto Network</label>
+                            <select id="withdraw-crypto-network" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500 transition-all">
+                                <option value="TRC20">Tron (TRC-20) - Low Fee</option>
+                                <option value="ERC20">Ethereum (ERC-20)</option>
+                                <option value="BEP20">Binance Smart Chain (BSC BEP-20)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Destination Address (USDT)</label>
+                            <input type="text" id="withdraw-crypto-address" placeholder="e.g. TY123... or 0x456..."
+                                class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-xs text-white font-mono focus:outline-none focus:border-orange-500 transition-colors">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. PAYPAL PANEL -->
+                <div id="withdraw-method-paypal" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">PayPal Email Address</label>
+                        <input type="email" id="withdraw-paypal-email" placeholder="e.g. user@example.com"
+                            class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500 transition-colors font-mono">
+                    </div>
+                </div>
+
+                <!-- Notes & Fee (Universal) -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Notes (Optional)</label>
                     <input type="text" id="withdraw-notes" placeholder="e.g. My weekly profit"
@@ -967,8 +1163,7 @@
 
                 <div class="bg-blue-900/30 p-3 rounded-lg flex items-start space-x-2">
                     <i class="ti ti-info-circle text-blue-400 text-lg flex-shrink-0"></i>
-                    <p class="text-xs text-blue-200">Withdrawals are processed within 24 hours. A transaction fee of 1%
-                        applies.</p>
+                    <p class="text-xs text-blue-200">Withdrawals are processed within 24 hours. A transaction fee of 1% applies.</p>
                 </div>
 
                 <button id="withdraw-confirm-btn" onclick="requestWithdrawal()"

@@ -98,16 +98,53 @@ router.post('/deposit', authenticateToken, uploadLimiter, transactionLimiter, up
 // Create withdrawal request
 router.post('/withdrawal', authenticateToken, transactionLimiter, validate('transactionRequest'), async (req, res) => {
   try {
-    const { amount, notes } = req.body;
-    let { phone } = req.body;
-    if (phone) phone = phone.trim();
+    const { amount, notes, method } = req.body;
+    let requestMetadata = {};
 
     if (parseFloat(amount) < 7) {
       return res.status(400).json({ error: 'Minimum withdrawal amount is $7.00' });
     }
 
-    if (!phone || phone.length < 7 || phone.length > 20) {
-      return res.status(400).json({ error: 'Valid phone number or account identifier is required' });
+    // Dynamic validations depending on method
+    if (method === 'bank_transfer') {
+      const { bank_name, account_name, account_number, swift_code } = req.body;
+      if (!bank_name || !account_name || !account_number) {
+        return res.status(400).json({ error: 'Bank Name, Account Name, and Account/IBAN number are required' });
+      }
+      requestMetadata = { 
+        method: 'bank_transfer', 
+        bank_name: bank_name.trim(), 
+        account_name: account_name.trim(), 
+        account_number: account_number.trim(), 
+        swift_code: swift_code ? swift_code.trim() : '' 
+      };
+    } else if (method === 'crypto') {
+      const { crypto_address, crypto_network } = req.body;
+      if (!crypto_address || !crypto_network) {
+        return res.status(400).json({ error: 'Crypto wallet address and network are required' });
+      }
+      requestMetadata = { 
+        method: 'crypto', 
+        crypto_address: crypto_address.trim(), 
+        crypto_network: crypto_network.trim() 
+      };
+    } else if (method === 'paypal') {
+      const { paypal_email } = req.body;
+      if (!paypal_email || !paypal_email.includes('@')) {
+        return res.status(400).json({ error: 'Valid PayPal email is required' });
+      }
+      requestMetadata = { 
+        method: 'paypal', 
+        paypal_email: paypal_email.trim() 
+      };
+    } else {
+      // Default to mobile money (backward compatible)
+      let { phone } = req.body;
+      if (phone) phone = phone.trim();
+      if (!phone || phone.length < 7 || phone.length > 20) {
+        return res.status(400).json({ error: 'Valid phone number is required' });
+      }
+      requestMetadata = { method: 'mobile_money', phone };
     }
 
     const user = await User.findByPk(req.user.id);
@@ -130,7 +167,7 @@ router.post('/withdrawal', authenticateToken, transactionLimiter, validate('tran
       type: 'withdrawal',
       amount: parseFloat(amount),
       notes: notes || null,
-      metadata: { phone },
+      metadata: requestMetadata,
       status: 'pending'
     });
 
