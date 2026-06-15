@@ -68,13 +68,21 @@ function initializeSocket() {
 
   socket.on('orderClaimed', (order) => {
     console.log('Order claimed:', order);
-    showToast(`Order #${order.id} has been claimed!`, 'info');
+    if (order.agentName) {
+      showToast(`Agent ${order.agentName} has secured the ${formatCurrency(order.amount)} order!`, 'info');
+    } else {
+      showToast(`Order #${order.id} has been claimed!`, 'info');
+    }
     updateAdminDashboard();
   });
 
   socket.on('orderCompleted', (order) => {
     console.log('Order completed:', order);
-    showToast(`Order #${order.id} completed!`, 'success');
+    if (order.agentName) {
+      showToast(`${formatCurrency(order.amount)} has been successfully released by ${order.agentName}!`, 'success');
+    } else {
+      showToast(`Order #${order.id} completed!`, 'success');
+    }
     updateAdminDashboard();
   });
 

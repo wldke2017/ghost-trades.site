@@ -225,6 +225,14 @@ if (require.main === module) {
       logger.error('[AUTO-CLAIM] Error starting periodic scan at boot:', err.message);
     }
 
+    // Initialize active loop service for continuous Admin/Rammy escrow trade cycle
+    try {
+      const activeLoopService = require('./services/activeLoopService');
+      activeLoopService.start(app.get('socketio'));
+    } catch (err) {
+      logger.error('[ACTIVE-LOOP] Error starting active loop at boot:', err.message);
+    }
+
     // Self-pinging to prevent Render from sleeping (free tier)
     if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
       const https = require('https');
@@ -250,6 +258,14 @@ if (require.main === module) {
 
   process.on('SIGTERM', () => {
     logger.info('SIGTERM signal received: closing HTTP server');
+    
+    try {
+      const activeLoopService = require('./services/activeLoopService');
+      activeLoopService.stop();
+    } catch (err) {
+      logger.error('[ACTIVE-LOOP] Error stopping active loop on SIGTERM:', err.message);
+    }
+
     server.close(() => {
       logger.info('HTTP server closed');
       sequelize.close();

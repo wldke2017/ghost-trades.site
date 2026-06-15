@@ -983,6 +983,22 @@ function setupSocketRequest() {
     fetchAvailableOrders();
   });
 
+  socket.on('orderClaimed', order => {
+    if (order.agentName) {
+      showToast(`Agent ${order.agentName} has secured the ${formatCurrency(order.amount)} order!`, 'info');
+    }
+    fetchAvailableOrders();
+    fetchActiveOrders();
+  });
+
+  socket.on('orderCompleted', order => {
+    if (order.agentName) {
+      showToast(`${formatCurrency(order.amount)} has been successfully released by ${order.agentName}!`, 'success');
+    }
+    fetchAvailableOrders();
+    fetchActiveOrders();
+  });
+
   socket.on('walletUpdated', data => {
     if (data.user_id == window.currentUserId) {
       fetchWalletBalance();
