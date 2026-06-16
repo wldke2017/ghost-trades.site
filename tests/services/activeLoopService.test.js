@@ -4,53 +4,21 @@ const sequelize = require('../../db');
 const User = require('../../models/user');
 const Wallet = require('../../models/wallet');
 const Order = require('../../models/order');
+const { ORDER_STATUS } = require('../../config/constants');
 
-// Mock orderService methods to isolate loop logic
+// Mock orderService to isolate loop logic from DB
 jest.mock('../../services/orderService', () => ({
   createOrder: jest.fn(),
   claimOrder: jest.fn(),
   completeOrder: jest.fn()
 }));
 
-describe('Active Loop Service', () => {
-  let admin, rammy;
-
-  beforeAll(async () => {
-    // Sync database (if database is connected)
-    try {
-      await sequelize.sync({ force: true });
-    } catch (e) {
-      // Ignore connection errors if database is not running in sandbox
-    }
-
-    // Seed test Admin user manually if sync worked
-    try {
-      admin = await User.create({
-        username: 'Admin',
-        password: 'AdminPassword123!',
-        role: 'admin',
-        is_verified: true
-      });
-    } catch (e) {
-      // Mocked fallback for sandbox environments where DB is not running
-      admin = { id: 1, username: 'Admin' };
-    }
-  });
-
-  afterAll(async () => {
-    try {
-      await sequelize.close();
-    } catch (e) {
-      // Ignore
-    }
-  });
+describe('Active Loop Service (Pool Manager)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset service state
     activeLoopService._setIsRunning(false);
-    activeLoopService._setCurrentPhase('CREATE');
-    activeLoopService._setCurrentOrderDetails(null);
+    activeLoopService._setActiveSlots(0);
     activeLoopService._setBuyerIsAdmin(true);
   });
 
@@ -59,210 +27,179 @@ describe('Active Loop Service', () => {
     jest.restoreAllMocks();
   });
 
+  // ── ensureRammyAccount ────────────────────────────────────────────
   describe('ensureRammyAccount', () => {
-    it('should create the Rammy account if it does not exist', async () => {
-      // Mock the findOrCreate and findOne calls if database is not connected
-      const userFindOrCreateSpy = jest.spyOn(User, 'findOrCreate').mockResolvedValue([
-        { id: 2, username: 'Rammy', role: 'middleman' },
-        true
+    it('should create the Rammy account and wallet if not existing', async () => {
+      const findOrCreateSpy = jest.spyOn(User, 'findOrCreate').mockResolvedValue([
+        { id: 2, username: 'Rammy', role: 'middleman' }, true
       ]);
-      const walletFindOneSpy = jest.spyOn(Wallet, 'findOne').mockResolvedValue(null);
+      const walletFindSpy = jest.spyOn(Wallet, 'findOne').mockResolvedValue(null);
       const walletCreateSpy = jest.spyOn(Wallet, 'create').mockResolvedValue({ user_id: 2 });
 
-      const rammyUser = await activeLoopService._ensureRammyAccount();
+      const user = await activeLoopService._ensureRammyAccount();
 
-      expect(rammyUser.username).toBe('Rammy');
-      expect(userFindOrCreateSpy).toHaveBeenCalled();
-      expect(walletFindOneSpy).toHaveBeenCalled();
+      expect(user.username).toBe('Rammy');
+      expect(findOrCreateSpy).toHaveBeenCalled();
       expect(walletCreateSpy).toHaveBeenCalled();
+    });
 
-      userFindOrCreateSpy.mockRestore();
-      walletFindOneSpy.mockRestore();
-      walletCreateSpy.mockRestore();
+    it('should not recreate wallet if it already exists', async () => {
+      jest.spyOn(User, 'findOrCreate').mockResolvedValue([
+        { id: 2, username: 'Rammy' }, false
+      ]);
+      jest.spyOn(Wallet, 'findOne').mockResolvedValue({ user_id: 2, available_balance: '5000.00' });
+      const walletCreateSpy = jest.spyOn(Wallet, 'create').mockResolvedValue({});
+
+      await activeLoopService._ensureRammyAccount();
+
+      expect(walletCreateSpy).not.toHaveBeenCalled();
     });
   });
 
+  // ── checkAndTopupBalances ─────────────────────────────────────────
   describe('checkAndTopupBalances', () => {
-    it('should top up wallet balances if they fall below $2,000.00', async () => {
-      const userFindOneSpy = jest.spyOn(User, 'findOne').mockImplementation(({ where }) => {
+    it('should top up Admin wallet when below $5,000', async () => {
+      jest.spyOn(User, 'findOne').mockImplementation(({ where }) => {
         if (where.username === 'Admin') return Promise.resolve({ id: 1, username: 'Admin' });
         if (where.username === 'Rammy') return Promise.resolve({ id: 2, username: 'Rammy' });
         return Promise.resolve(null);
       });
-
-      const mockAdminWallet = { user_id: 1, available_balance: '1500.00', save: jest.fn() };
-      const mockRammyWallet = { user_id: 2, available_balance: '20000.00', save: jest.fn() };
-
-      const walletFindOneSpy = jest.spyOn(Wallet, 'findOne').mockImplementation(({ where }) => {
-        if (where.user_id === 1) return Promise.resolve(mockAdminWallet);
-        if (where.user_id === 2) return Promise.resolve(mockRammyWallet);
+      const adminWallet = { user_id: 1, available_balance: '1200.00', save: jest.fn() };
+      const rammyWallet = { user_id: 2, available_balance: '25000.00', save: jest.fn() };
+      jest.spyOn(Wallet, 'findOne').mockImplementation(({ where }) => {
+        if (where.user_id === 1) return Promise.resolve(adminWallet);
+        if (where.user_id === 2) return Promise.resolve(rammyWallet);
         return Promise.resolve(null);
       });
 
       await activeLoopService._checkAndTopupBalances();
 
-      expect(mockAdminWallet.available_balance).toBe(20000.00);
-      expect(mockAdminWallet.save).toHaveBeenCalled();
-      expect(mockRammyWallet.save).not.toHaveBeenCalled(); // Rammy is already at 20000
-
-      userFindOneSpy.mockRestore();
-      walletFindOneSpy.mockRestore();
+      expect(adminWallet.available_balance).toBe(50000);
+      expect(adminWallet.save).toHaveBeenCalled();
+      expect(rammyWallet.save).not.toHaveBeenCalled();
     });
-  });
 
-  describe('runLoopStep - CREATE phase', () => {
-    it('should create an order using Admin (buyer) and transition to CLAIM phase', async () => {
-      activeLoopService._setIsRunning(true);
-      activeLoopService._setCurrentPhase('CREATE');
-
-      const userFindOneSpy = jest.spyOn(User, 'findOne').mockImplementation(({ where }) => {
-        if (where.username === 'Admin') return Promise.resolve({ id: 1, username: 'Admin' });
-        if (where.username === 'Rammy') return Promise.resolve({ id: 2, username: 'Rammy' });
+    it('should not top up wallets already above threshold', async () => {
+      jest.spyOn(User, 'findOne').mockImplementation(({ where }) => {
+        if (where.username === 'Admin') return Promise.resolve({ id: 1 });
+        if (where.username === 'Rammy') return Promise.resolve({ id: 2 });
+        return Promise.resolve(null);
+      });
+      const adminWallet = { user_id: 1, available_balance: '20000.00', save: jest.fn() };
+      const rammyWallet = { user_id: 2, available_balance: '15000.00', save: jest.fn() };
+      jest.spyOn(Wallet, 'findOne').mockImplementation(({ where }) => {
+        if (where.user_id === 1) return Promise.resolve(adminWallet);
+        if (where.user_id === 2) return Promise.resolve(rammyWallet);
         return Promise.resolve(null);
       });
 
-      const mockWallet = { available_balance: '20000.00', locked_balance: '0.00' };
-      const walletFindOneSpy = jest.spyOn(Wallet, 'findOne').mockResolvedValue(mockWallet);
+      await activeLoopService._checkAndTopupBalances();
 
-      const mockOrder = {
-        id: 123,
-        amount: '150.00',
-        toJSON: () => ({ id: 123, amount: '150.00' })
-      };
-      orderService.createOrder.mockResolvedValue({
-        order: mockOrder,
-        wallet: { available_balance: 19850, locked_balance: 150 }
-      });
-
-      const mockIo = { emit: jest.fn() };
-
-      // Mock setTimeout to capture the callback but NOT execute it (prevents cascade)
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn(() => 999);
-
-      await activeLoopService._runLoopStep(mockIo);
-
-      expect(orderService.createOrder).toHaveBeenCalledWith(1, expect.any(Number), expect.any(String), mockIo);
-      
-      const lastCallAmount = orderService.createOrder.mock.calls[0][1];
-      expect(lastCallAmount).toBeGreaterThanOrEqual(18.00);
-
-      // After CREATE, phase transitions to CLAIM and setTimeout is called to schedule next step
-      expect(global.setTimeout).toHaveBeenCalled();
-      expect(activeLoopService._getCurrentPhase()).toBe('CLAIM');
-      expect(activeLoopService._getCurrentOrderDetails()).toBeDefined();
-      expect(activeLoopService._getCurrentOrderDetails().orderId).toBe(123);
-      expect(mockIo.emit).toHaveBeenCalledWith('orderCreated', expect.objectContaining({
-        id: 123,
-        agentName: expect.any(String)
-      }));
-
-      // Cleanup
-      global.setTimeout = originalSetTimeout;
-      userFindOneSpy.mockRestore();
-      walletFindOneSpy.mockRestore();
+      expect(adminWallet.save).not.toHaveBeenCalled();
+      expect(rammyWallet.save).not.toHaveBeenCalled();
     });
   });
 
-  describe('runLoopStep - CLAIM phase', () => {
-    it('should claim the order using Rammy (middleman) and transition to RELEASE phase', async () => {
+  // ── runOrderCycle ─────────────────────────────────────────────────
+  describe('runOrderCycle', () => {
+    it('should execute CREATE → CLAIM → HOLD → RELEASE and decrement activeSlots', async () => {
       activeLoopService._setIsRunning(true);
-      activeLoopService._setCurrentPhase('CLAIM');
-      activeLoopService._setCurrentOrderDetails({
-        orderId: 123,
-        amount: 150.00,
-        buyerId: 1,
-        middlemanId: 2,
-        agentName: 'Sarah Jenkins'
-      });
+      activeLoopService._setActiveSlots(1);
 
-      const userFindOneSpy = jest.spyOn(User, 'findOne').mockImplementation(({ where }) => {
-        if (where.username === 'Admin') return Promise.resolve({ id: 1, username: 'Admin' });
-        if (where.username === 'Rammy') return Promise.resolve({ id: 2, username: 'Rammy' });
+      jest.spyOn(User, 'findOne').mockImplementation(({ where }) => {
+        if (where.username === 'Admin') return Promise.resolve({ id: 1 });
+        if (where.username === 'Rammy') return Promise.resolve({ id: 2 });
         return Promise.resolve(null);
       });
+      jest.spyOn(Wallet, 'findOne').mockResolvedValue({ available_balance: '50000.00', save: jest.fn() });
 
-      const mockOrder = {
-        id: 123,
-        amount: '150.00',
-        toJSON: () => ({ id: 123, amount: '150.00' })
-      };
-      orderService.claimOrder.mockResolvedValue({
-        order: mockOrder,
-        wallet: { available_balance: 19850, locked_balance: 150 }
-      });
+      const mockOrder = { id: 42, amount: '120.00', buyer_id: 1, middleman_id: 2, toJSON: () => ({ id: 42, amount: '120.00', buyer_id: 1, middleman_id: 2 }) };
 
-      const mockIo = { emit: jest.fn() };
-
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn(() => 999);
-
-      await activeLoopService._runLoopStep(mockIo);
-
-      expect(orderService.claimOrder).toHaveBeenCalledWith(2, 123);
-      expect(global.setTimeout).toHaveBeenCalled();
-      expect(activeLoopService._getCurrentPhase()).toBe('RELEASE');
-      expect(mockIo.emit).toHaveBeenCalledWith('orderClaimed', expect.objectContaining({
-        id: 123,
-        agentName: 'Sarah Jenkins'
-      }));
-
-      global.setTimeout = originalSetTimeout;
-      userFindOneSpy.mockRestore();
-    });
-  });
-
-  describe('runLoopStep - RELEASE phase', () => {
-    it('should complete the order, swap roles, reset details, and transition to CREATE phase', async () => {
-      activeLoopService._setIsRunning(true);
-      activeLoopService._setCurrentPhase('RELEASE');
-      activeLoopService._setBuyerIsAdmin(true);
-      activeLoopService._setCurrentOrderDetails({
-        orderId: 123,
-        amount: 150.00,
-        buyerId: 1,
-        middlemanId: 2,
-        agentName: 'Sarah Jenkins'
-      });
-
-      const userFindOneSpy = jest.spyOn(User, 'findOne').mockImplementation(({ where }) => {
-        if (where.username === 'Admin') return Promise.resolve({ id: 1, username: 'Admin' });
-        if (where.username === 'Rammy') return Promise.resolve({ id: 2, username: 'Rammy' });
-        return Promise.resolve(null);
-      });
-
-      const mockOrder = {
-        id: 123,
-        buyer_id: 1,
-        middleman_id: 2,
-        amount: '150.00',
-        toJSON: () => ({ id: 123, buyer_id: 1, middleman_id: 2, amount: '150.00' })
-      };
+      orderService.createOrder.mockResolvedValue({ order: mockOrder, wallet: { available_balance: 49880, locked_balance: 120 } });
+      orderService.claimOrder.mockResolvedValue({ order: mockOrder, wallet: { available_balance: 49880, locked_balance: 120 } });
       orderService.completeOrder.mockResolvedValue({
         order: mockOrder,
-        buyerWallet: { available_balance: 19850, locked_balance: 0 },
-        middlemanWallet: { available_balance: 20150, locked_balance: 0 }
+        buyerWallet: { available_balance: 49997, locked_balance: 0 },
+        middlemanWallet: { available_balance: 49997, locked_balance: 0 }
       });
 
+      jest.spyOn(Order, 'count').mockResolvedValue(10);
+      jest.spyOn(Order, 'findAll').mockResolvedValue([]);
+
+      // Override setTimeout globally so all delays fire in 0ms (avoids fake timer issues with async/await)
+      const origSetTimeout = global.setTimeout;
+      global.setTimeout = (fn, _delay) => origSetTimeout(fn, 0);
+
       const mockIo = { emit: jest.fn() };
+      await activeLoopService._runOrderCycle(mockIo, 1, 2);
 
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn(() => 999);
+      global.setTimeout = origSetTimeout;
 
-      await activeLoopService._runLoopStep(mockIo);
+      expect(orderService.createOrder).toHaveBeenCalledWith(1, expect.any(Number), expect.any(String), mockIo);
+      expect(orderService.createOrder.mock.calls[0][1]).toBeGreaterThanOrEqual(18);
+      expect(orderService.claimOrder).toHaveBeenCalledWith(2, 42);
+      expect(orderService.completeOrder).toHaveBeenCalledWith(42);
+      expect(activeLoopService._getActiveSlots()).toBe(0);
+      expect(mockIo.emit).toHaveBeenCalledWith('orderCreated',  expect.objectContaining({ id: 42, agentName: expect.any(String) }));
+      expect(mockIo.emit).toHaveBeenCalledWith('orderClaimed',  expect.objectContaining({ id: 42, agentName: expect.any(String) }));
+      expect(mockIo.emit).toHaveBeenCalledWith('orderCompleted',expect.objectContaining({ id: 42 }));
+    }, 15000); // extended timeout since delays become 0ms real async calls
 
-      expect(orderService.completeOrder).toHaveBeenCalledWith(123);
-      expect(global.setTimeout).toHaveBeenCalled();
-      expect(activeLoopService._getCurrentPhase()).toBe('CREATE');
-      expect(activeLoopService._getCurrentOrderDetails()).toBeNull();
-      expect(activeLoopService._getBuyerIsAdmin()).toBe(false); // Roles swapped
-      expect(mockIo.emit).toHaveBeenCalledWith('orderCompleted', expect.objectContaining({
-        id: 123,
-        agentName: 'Sarah Jenkins'
-      }));
+    it('should never create an order below $18.00', async () => {
+      activeLoopService._setIsRunning(true);
+      activeLoopService._setActiveSlots(1);
 
-      global.setTimeout = originalSetTimeout;
-      userFindOneSpy.mockRestore();
+      jest.spyOn(User, 'findOne').mockImplementation(({ where }) => {
+        if (where.username === 'Admin') return Promise.resolve({ id: 1 });
+        if (where.username === 'Rammy') return Promise.resolve({ id: 2 });
+        return Promise.resolve(null);
+      });
+      jest.spyOn(Wallet, 'findOne').mockResolvedValue({ available_balance: '50000.00', save: jest.fn() });
+      jest.spyOn(Order, 'count').mockResolvedValue(8);
+      jest.spyOn(Order, 'findAll').mockResolvedValue([]);
+
+      const capturedAmounts = [];
+      orderService.createOrder.mockImplementation((buyerId, amount) => {
+        capturedAmounts.push(amount);
+        return Promise.reject(new Error('stop after capture'));
+      });
+
+      jest.useFakeTimers();
+      const cyclePromise = activeLoopService._runOrderCycle({ emit: jest.fn() }, 1, 2);
+      jest.runAllTimers();
+      await cyclePromise;
+
+      capturedAmounts.forEach(amt => {
+        expect(amt).toBeGreaterThanOrEqual(18.0);
+        expect(amt).toBeLessThanOrEqual(300.0);
+      });
+
+      jest.useRealTimers();
+    });
+  });
+
+  // ── broadcastStats ────────────────────────────────────────────────
+  describe('broadcastStats', () => {
+    it('should emit statsUpdated with correct counts', async () => {
+      jest.spyOn(Order, 'count')
+        .mockResolvedValueOnce(500)  // totalCreated
+        .mockResolvedValueOnce(10)   // totalPending
+        .mockResolvedValueOnce(8)    // totalClaimed
+        .mockResolvedValueOnce(482); // totalSettled
+      jest.spyOn(Order, 'findAll').mockResolvedValue([
+        { amount: '100.00' }, { amount: '200.00' }
+      ]);
+
+      const mockIo = { emit: jest.fn() };
+      await activeLoopService._broadcastStats(mockIo);
+
+      expect(mockIo.emit).toHaveBeenCalledWith('statsUpdated', {
+        totalCreated: 500,
+        totalPending: 10,
+        totalClaimed: 8,
+        totalSettled: 482,
+        totalCommission: expect.any(String)
+      });
     });
   });
 });

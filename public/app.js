@@ -1005,6 +1005,21 @@ function setupSocketRequest() {
     }
   });
 
+  // Live platform stats — updates "In Progress" and all counters instantly
+  socket.on('statsUpdated', stats => {
+    const createdEl    = document.getElementById('global-total-created');
+    const pendingEl    = document.getElementById('global-total-pending');
+    const claimedEl    = document.getElementById('global-total-claimed');
+    const settledEl    = document.getElementById('global-total-settled');
+    const commissionEl = document.getElementById('global-total-commission');
+
+    if (createdEl)    createdEl.innerText    = stats.totalCreated;
+    if (pendingEl)    pendingEl.innerText    = stats.totalPending;
+    if (claimedEl)    claimedEl.innerText    = stats.totalClaimed;
+    if (settledEl)    settledEl.innerText    = stats.totalSettled;
+    if (commissionEl) commissionEl.innerText = formatCurrency(stats.totalCommission);
+  });
+
   socket.on('support_ticket_created', data => {
     showToast('New Support Ticket Created', 'info');
     if(!document.getElementById('support-modal').classList.contains('hidden')){

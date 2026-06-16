@@ -4,310 +4,309 @@ const Wallet = require('../models/wallet');
 const { ORDER_STATUS } = require('../config/constants');
 const logger = require('../utils/logger');
 
-// List of claiming agent names (diverse set of local and global names)
+// ─────────────────────────────────────────────────────────────
+//  Configuration
+// ─────────────────────────────────────────────────────────────
+const TARGET_POOL_SIZE = 10;   // keep ~10 orders CLAIMED at all times
+const MIN_POOL_SIZE    = 8;    // never drop below 8 in-progress
+const STAGGER_MS       = 3000; // ms between each initial spawn
+const MONITOR_INTERVAL = 15000; // ms between pool-size health checks
+
+// Phase timings (ms)
+const CLAIM_DELAY_MIN   =  8000;
+const CLAIM_DELAY_MAX   = 18000;
+const HOLD_DELAY_MIN    = 90000;  // 1.5 min hold (keeps "In Progress" high)
+const HOLD_DELAY_MAX    = 180000; // 3 min hold
+const COOLDOWN_MIN      = 10000;  // 10s before spawning replacement
+const COOLDOWN_MAX      = 25000;
+
+// Diverse agent name pool
 const AGENT_NAMES = [
-  'David Kiprop',
-  'Sarah Jenkins',
-  'Michael Mwangi',
-  'Elena Rostova',
-  'Charles Ochieng',
-  'Chloe Dupont',
-  'Yusuf Ali',
-  'Amanda Silva',
-  'Kenji Tanaka',
-  'Amina Juma',
-  'Marcus Vance',
-  'Priya Patel',
-  'Jonathan Vance',
-  'Grace Wambui',
-  'Carlos Mendez',
-  'Fatima Al-Sayed',
-  'John Kamau',
-  'Alice Miller',
-  'Hiroshi Tanaka',
-  'Sophie Dubois',
-  'George Njoroge',
-  'Emma Watson',
-  'Lucas Rodriguez',
-  'Daniel Kimani',
-  'Olga Ivanova',
-  'Tariq Mahmoud'
+  'David Kiprop',   'Sarah Jenkins',  'Michael Mwangi', 'Elena Rostova',
+  'Charles Ochieng','Chloe Dupont',   'Yusuf Ali',      'Amanda Silva',
+  'Kenji Tanaka',   'Amina Juma',     'Marcus Vance',   'Priya Patel',
+  'Jonathan Adeyemi','Grace Wambui',  'Carlos Mendez',  'Fatima Al-Sayed',
+  'John Kamau',     'Alice Miller',   'Hiroshi Tanaka', 'Sophie Dubois',
+  'George Njoroge', 'Emma Watson',    'Lucas Rodriguez','Daniel Kimani',
+  'Olga Ivanova',   'Tariq Mahmoud',  'Aiko Yamamoto',  'Felix Otieno',
+  'Isabella Ferreira','Ahmed Hassan'
 ];
 
-let loopTimeout = null;
-let currentPhase = 'CREATE'; // 'CREATE', 'CLAIM', 'RELEASE'
-let currentOrderDetails = null; // { orderId, amount, buyerId, middlemanId, agentName }
-let isRunning = false;
+// ─────────────────────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────────────────────
+let isRunning       = false;
+let monitorTimer    = null;
+let activeSlots     = 0;   // number of concurrent order-cycles running
+let buyerIsAdmin    = true; // alternate roles across slots
 
-// We alternate roles:
-// Circle 1: buyer = Admin, middleman = Rammy
-// Circle 2: buyer = Rammy, middleman = Admin
-let buyerIsAdmin = true;
+// ─────────────────────────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────────────────────────
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function randAmount() {
+  // $18.00 – $300.00, 2 decimal places
+  return parseFloat((18 + Math.random() * 282).toFixed(2));
+}
+function randAgent() {
+  return AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
+}
 
 /**
- * Ensures Rammy user exists and has a wallet
+ * Emit a live global-stats update to all connected browsers so the
+ * "In Progress" counter refreshes without a page reload.
  */
-async function ensureRammyAccount() {
+async function broadcastStats(io) {
+  if (!io) return;
   try {
-    const [rammyUser, created] = await User.findOrCreate({
-      where: { username: 'Rammy' },
-      defaults: {
-        username: 'Rammy',
-        password: 'RammySecurePassword123!', // gets hashed by hook
-        role: 'middleman', // standard middleman role
-        is_verified: true
-      }
+    const totalCreated = await Order.count();
+    const totalPending = await Order.count({ where: { status: ORDER_STATUS.PENDING } });
+    const totalClaimed = await Order.count({ where: { status: ORDER_STATUS.CLAIMED } });
+    const totalSettled = await Order.count({ where: { status: ORDER_STATUS.COMPLETED } });
+    const allCompleted = await Order.findAll({ where: { status: ORDER_STATUS.COMPLETED }, attributes: ['amount'] });
+    const totalCommission = allCompleted.reduce((s, o) => s + parseFloat(o.amount) * 0.025, 0);
+
+    io.emit('statsUpdated', {
+      totalCreated,
+      totalPending,
+      totalClaimed,
+      totalSettled,
+      totalCommission: totalCommission.toFixed(2)
     });
-
-    if (created) {
-      logger.info('[ACTIVE-LOOP] Rammy account seeded');
-    }
-    
-    // Ensure wallet exists (should be created by hook, but check just in case)
-    const wallet = await Wallet.findOne({ where: { user_id: rammyUser.id } });
-    if (!wallet) {
-      await Wallet.create({
-        user_id: rammyUser.id,
-        available_balance: 0.00,
-        locked_balance: 0.00
-      });
-      logger.info('[ACTIVE-LOOP] Wallet created for Rammy');
-    }
-    return rammyUser;
-  } catch (err) {
-    logger.error('[ACTIVE-LOOP] Error ensuring Rammy account:', err);
-    throw err;
+  } catch (e) {
+    logger.warn('[ACTIVE-LOOP] broadcastStats error:', e.message);
   }
 }
 
-/**
- * Checks balance and tops up Admin and Rammy accounts if below threshold
- */
+// ─────────────────────────────────────────────────────────────
+//  Account seeding & balance management
+// ─────────────────────────────────────────────────────────────
+async function ensureRammyAccount() {
+  const [rammyUser, created] = await User.findOrCreate({
+    where: { username: 'Rammy' },
+    defaults: {
+      username: 'Rammy',
+      password: 'RammySecurePassword123!',
+      role: 'middleman',
+      is_verified: true
+    }
+  });
+  if (created) logger.info('[ACTIVE-LOOP] Rammy account seeded');
+
+  const wallet = await Wallet.findOne({ where: { user_id: rammyUser.id } });
+  if (!wallet) {
+    await Wallet.create({ user_id: rammyUser.id, available_balance: 0, locked_balance: 0 });
+    logger.info('[ACTIVE-LOOP] Wallet created for Rammy');
+  }
+  return rammyUser;
+}
+
 async function checkAndTopupBalances() {
-  try {
-    const admin = await User.findOne({ where: { username: 'Admin' } });
-    const rammy = await User.findOne({ where: { username: 'Rammy' } });
+  const TOPUP_TO    = 50000; // top up to $50k — supports large concurrent pools
+  const TOPUP_BELOW =  5000; // trigger when < $5k available
 
-    if (!admin) {
-      logger.warn('[ACTIVE-LOOP] Admin user not found. Cannot topup Admin wallet.');
-    } else {
-      let adminWallet = await Wallet.findOne({ where: { user_id: admin.id } });
-      if (!adminWallet) {
-        adminWallet = await Wallet.create({
-          user_id: admin.id,
-          available_balance: 20000.00,
-          locked_balance: 0.00
-        });
-      } else if (parseFloat(adminWallet.available_balance) < 2000.00) {
-        adminWallet.available_balance = 20000.00;
-        await adminWallet.save();
-        logger.info(`[ACTIVE-LOOP] Admin wallet topped up to $20,000.00`);
-      }
+  for (const username of ['Admin', 'Rammy']) {
+    const user = await User.findOne({ where: { username } });
+    if (!user) continue;
+
+    let wallet = await Wallet.findOne({ where: { user_id: user.id } });
+    if (!wallet) {
+      wallet = await Wallet.create({ user_id: user.id, available_balance: TOPUP_TO, locked_balance: 0 });
+      logger.info(`[ACTIVE-LOOP] Wallet created for ${username} at $${TOPUP_TO}`);
+      continue;
     }
 
-    if (!rammy) {
-      logger.warn('[ACTIVE-LOOP] Rammy user not found. Cannot topup Rammy wallet.');
-    } else {
-      let rammyWallet = await Wallet.findOne({ where: { user_id: rammy.id } });
-      if (!rammyWallet) {
-        rammyWallet = await Wallet.create({
-          user_id: rammy.id,
-          available_balance: 20000.00,
-          locked_balance: 0.00
-        });
-      } else if (parseFloat(rammyWallet.available_balance) < 2000.00) {
-        rammyWallet.available_balance = 20000.00;
-        await rammyWallet.save();
-        logger.info(`[ACTIVE-LOOP] Rammy wallet topped up to $20,000.00`);
-      }
+    if (parseFloat(wallet.available_balance) < TOPUP_BELOW) {
+      wallet.available_balance = TOPUP_TO;
+      await wallet.save();
+      logger.info(`[ACTIVE-LOOP] ${username} wallet topped up to $${TOPUP_TO}`);
     }
-  } catch (err) {
-    logger.error('[ACTIVE-LOOP] Error checking/topping up wallets:', err);
   }
 }
 
-/**
- * Initiates the loop workflow step
- */
-async function runLoopStep(io) {
+// ─────────────────────────────────────────────────────────────
+//  Single order cycle  (CREATE → CLAIM → HOLD → RELEASE)
+// ─────────────────────────────────────────────────────────────
+async function runOrderCycle(io, buyerId, middlemanId) {
   if (!isRunning) return;
 
-  // Import orderService inside step to avoid circular dependency issues at boot
   const orderService = require('./orderService');
+  const agentName    = randAgent();
+  const amount       = randAmount();
+  const description  = `Secured Escrow Trade #${rand(1000, 99999)}`;
+
+  let orderId = null;
+
+  try {
+    // ── Phase 1: CREATE ───────────────────────────────────────
+    await checkAndTopupBalances();
+
+    const createResult = await orderService.createOrder(buyerId, amount, description, io);
+    orderId = createResult.order.id;
+
+    if (io) {
+      io.emit('orderCreated', { ...createResult.order.toJSON(), agentName });
+      io.emit('walletUpdated', { user_id: buyerId, ...createResult.wallet });
+    }
+
+    logger.info(`[ACTIVE-LOOP] ✔ Created order #${orderId} ($${amount}) — agent: ${agentName}`);
+
+    // ── Phase 2: CLAIM ────────────────────────────────────────
+    await new Promise(r => setTimeout(r, rand(CLAIM_DELAY_MIN, CLAIM_DELAY_MAX)));
+    if (!isRunning) return;
+
+    const claimResult = await orderService.claimOrder(middlemanId, orderId);
+
+    if (io) {
+      io.emit('orderClaimed', { ...claimResult.order.toJSON(), agentName });
+      io.emit('walletUpdated', { user_id: middlemanId, ...claimResult.wallet });
+    }
+
+    await broadcastStats(io); // live-update "In Progress" counter
+
+    logger.info(`[ACTIVE-LOOP] ✔ Claimed  order #${orderId} — ${agentName}`);
+
+    // ── Phase 3: HOLD (keep in CLAIMED so "In Progress" stays high) ──
+    await new Promise(r => setTimeout(r, rand(HOLD_DELAY_MIN, HOLD_DELAY_MAX)));
+    if (!isRunning) return;
+
+    // ── Phase 4: RELEASE ──────────────────────────────────────
+    const releaseResult = await orderService.completeOrder(orderId);
+
+    if (io) {
+      io.emit('orderCompleted', { ...releaseResult.order.toJSON(), agentName });
+      io.emit('walletUpdated', { user_id: releaseResult.order.middleman_id, ...releaseResult.middlemanWallet });
+      io.emit('walletUpdated', { user_id: releaseResult.order.buyer_id,     ...releaseResult.buyerWallet });
+    }
+
+    await broadcastStats(io);
+
+    logger.info(`[ACTIVE-LOOP] ✔ Released order #${orderId} — ${agentName}`);
+
+  } catch (err) {
+    logger.error(`[ACTIVE-LOOP] Error in order cycle (order #${orderId || 'NEW'}):`, err.message);
+  } finally {
+    activeSlots--;
+
+    // Spawn a replacement after a short cooldown so the pool self-replenishes
+    if (isRunning) {
+      const cooldown = rand(COOLDOWN_MIN, COOLDOWN_MAX);
+      setTimeout(() => spawnSlot(io), cooldown);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Spawn one concurrent cycle slot (alternating buyer/middleman)
+// ─────────────────────────────────────────────────────────────
+async function spawnSlot(io) {
+  if (!isRunning) return;
 
   try {
     const admin = await User.findOne({ where: { username: 'Admin' } });
     const rammy = await User.findOne({ where: { username: 'Rammy' } });
-
     if (!admin || !rammy) {
-      logger.warn('[ACTIVE-LOOP] Admin or Rammy account missing. Rescheduling step.');
-      loopTimeout = setTimeout(() => runLoopStep(io), 15000);
+      logger.warn('[ACTIVE-LOOP] Admin or Rammy missing — cannot spawn slot');
       return;
     }
 
-    if (currentPhase === 'CREATE') {
-      // Step 1: Check and top up balances
-      await checkAndTopupBalances();
+    const buyerId      = buyerIsAdmin ? admin.id : rammy.id;
+    const middlemanId  = buyerIsAdmin ? rammy.id  : admin.id;
+    buyerIsAdmin       = !buyerIsAdmin; // alternate each slot
 
-      // Determine buyer and middleman for this cycle
-      const buyerId = buyerIsAdmin ? admin.id : rammy.id;
-      const middlemanId = buyerIsAdmin ? rammy.id : admin.id;
-
-      // Random order amount >= $18
-      const amount = parseFloat((18.00 + Math.random() * 282.00).toFixed(2));
-      const description = `Automated Escrow Trade #${Math.floor(1000 + Math.random() * 9000)}`;
-
-      logger.info(`[ACTIVE-LOOP] Creating order: buyerId=${buyerId}, amount=${amount}`);
-
-      const result = await orderService.createOrder(buyerId, amount, description, io);
-      const order = result.order;
-
-      // Select a random agent name for the claim phase
-      const agentName = AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
-
-      currentOrderDetails = {
-        orderId: order.id,
-        amount: amount,
-        buyerId: buyerId,
-        middlemanId: middlemanId,
-        agentName: agentName
-      };
-
-      if (io) {
-        const orderForEmit = { ...order.toJSON(), agentName };
-        io.emit('orderCreated', orderForEmit);
-        io.emit('walletUpdated', {
-          user_id: buyerId,
-          available_balance: result.wallet.available_balance,
-          locked_balance: result.wallet.locked_balance
-        });
-      }
-
-      currentPhase = 'CLAIM';
-      // Wait 8-15 seconds before claiming
-      const claimDelay = Math.floor(8000 + Math.random() * 7000);
-      logger.info(`[ACTIVE-LOOP] Order #${order.id} created. Next: CLAIM in ${claimDelay/1000}s`);
-      loopTimeout = setTimeout(() => runLoopStep(io), claimDelay);
-
-    } else if (currentPhase === 'CLAIM') {
-      if (!currentOrderDetails) {
-        currentPhase = 'CREATE';
-        loopTimeout = setTimeout(() => runLoopStep(io), 5000);
-        return;
-      }
-
-      const { orderId, middlemanId, agentName } = currentOrderDetails;
-      logger.info(`[ACTIVE-LOOP] Claiming order #${orderId} using middlemanId=${middlemanId}`);
-
-      const result = await orderService.claimOrder(middlemanId, orderId);
-      const order = result.order;
-
-      if (io) {
-        const orderForEmit = { ...order.toJSON(), agentName };
-        io.emit('orderClaimed', orderForEmit);
-        io.emit('walletUpdated', {
-          user_id: middlemanId,
-          available_balance: result.wallet.available_balance,
-          locked_balance: result.wallet.locked_balance
-        });
-      }
-
-      currentPhase = 'RELEASE';
-      // Wait 15-30 seconds before releasing
-      const releaseDelay = Math.floor(15000 + Math.random() * 15000);
-      logger.info(`[ACTIVE-LOOP] Order #${orderId} claimed. Next: RELEASE in ${releaseDelay/1000}s`);
-      loopTimeout = setTimeout(() => runLoopStep(io), releaseDelay);
-
-    } else if (currentPhase === 'RELEASE') {
-      if (!currentOrderDetails) {
-        currentPhase = 'CREATE';
-        loopTimeout = setTimeout(() => runLoopStep(io), 5000);
-        return;
-      }
-
-      const { orderId, agentName } = currentOrderDetails;
-      logger.info(`[ACTIVE-LOOP] Completing/releasing order #${orderId}`);
-
-      const result = await orderService.completeOrder(orderId);
-      const order = result.order;
-
-      if (io) {
-        const orderForEmit = { ...order.toJSON(), agentName };
-        io.emit('orderCompleted', orderForEmit);
-        io.emit('walletUpdated', {
-          user_id: order.middleman_id,
-          available_balance: result.middlemanWallet.available_balance,
-          locked_balance: result.middlemanWallet.locked_balance
-        });
-        io.emit('walletUpdated', {
-          user_id: order.buyer_id,
-          available_balance: result.buyerWallet.available_balance,
-          locked_balance: result.buyerWallet.locked_balance
-        });
-      }
-
-      // Cycle completed! Reset state, swap roles, prepare for next creation
-      currentPhase = 'CREATE';
-      currentOrderDetails = null;
-      buyerIsAdmin = !buyerIsAdmin; // Swap roles
-
-      // Wait 45-90 seconds before starting the next circle
-      const nextCycleDelay = Math.floor(45000 + Math.random() * 45000);
-      logger.info(`[ACTIVE-LOOP] Circle completed. Next circle starts in ${nextCycleDelay/1000}s`);
-      loopTimeout = setTimeout(() => runLoopStep(io), nextCycleDelay);
-    }
-
+    activeSlots++;
+    runOrderCycle(io, buyerId, middlemanId); // fire-and-forget
   } catch (err) {
-    logger.error('[ACTIVE-LOOP] Error in loop step:', err);
-    // On error, reset to CREATE phase, swap roles (or retry) and schedule next attempt in 15 seconds
-    currentPhase = 'CREATE';
-    currentOrderDetails = null;
-    buyerIsAdmin = !buyerIsAdmin;
-    loopTimeout = setTimeout(() => runLoopStep(io), 15000);
+    logger.error('[ACTIVE-LOOP] spawnSlot error:', err.message);
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+//  Pool health monitor — ensures we never drop below MIN_POOL_SIZE
+// ─────────────────────────────────────────────────────────────
+async function monitorPool(io) {
+  if (!isRunning) return;
+
+  try {
+    // Count CLAIMED orders that actually belong to Admin/Rammy cycle
+    const claimedCount = await Order.count({ where: { status: ORDER_STATUS.CLAIMED } });
+
+    logger.info(`[ACTIVE-LOOP] Pool health: ${claimedCount} claimed, ${activeSlots} active slots`);
+
+    // If below minimum, spawn extra slots immediately
+    const deficit = MIN_POOL_SIZE - claimedCount;
+    if (deficit > 0) {
+      logger.info(`[ACTIVE-LOOP] Pool below minimum (${claimedCount} < ${MIN_POOL_SIZE}). Spawning ${deficit} extra slot(s).`);
+      for (let i = 0; i < deficit; i++) {
+        await new Promise(r => setTimeout(r, i * 1500)); // stagger by 1.5s each
+        spawnSlot(io);
+      }
+    }
+
+    await broadcastStats(io);
+  } catch (err) {
+    logger.error('[ACTIVE-LOOP] Monitor error:', err.message);
+  }
+
+  // Schedule next health check
+  if (isRunning) {
+    monitorTimer = setTimeout(() => monitorPool(io), MONITOR_INTERVAL);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Public API
+// ─────────────────────────────────────────────────────────────
 module.exports = {
   async start(io) {
     if (isRunning) {
-      logger.info('[ACTIVE-LOOP] Loop is already running.');
+      logger.info('[ACTIVE-LOOP] Already running.');
       return;
     }
-
     isRunning = true;
-    logger.info('[ACTIVE-LOOP] Initializing Active Escrow Loop service...');
+    logger.info(`[ACTIVE-LOOP] Starting pool manager (target: ${TARGET_POOL_SIZE} concurrent orders)...`);
 
     try {
       await ensureRammyAccount();
       await checkAndTopupBalances();
-      
-      // Start loop execution
-      runLoopStep(io);
+
+      // Stagger the initial spawn of TARGET_POOL_SIZE slots so DB isn't hammered
+      for (let i = 0; i < TARGET_POOL_SIZE; i++) {
+        setTimeout(() => spawnSlot(io), i * STAGGER_MS);
+      }
+
+      // Start the pool health monitor after all slots have had time to settle
+      const monitorStart = TARGET_POOL_SIZE * STAGGER_MS + 30000;
+      setTimeout(() => monitorPool(io), monitorStart);
+
+      logger.info(`[ACTIVE-LOOP] ${TARGET_POOL_SIZE} order slots spawned (staggered over ${TARGET_POOL_SIZE * STAGGER_MS / 1000}s). Monitor starts in ${monitorStart / 1000}s.`);
     } catch (err) {
-      logger.error('[ACTIVE-LOOP] Initialization failed:', err);
+      logger.error('[ACTIVE-LOOP] Initialization failed:', err.message);
     }
   },
 
   stop() {
     if (!isRunning) return;
     isRunning = false;
-    if (loopTimeout) {
-      clearTimeout(loopTimeout);
-      loopTimeout = null;
+    if (monitorTimer) {
+      clearTimeout(monitorTimer);
+      monitorTimer = null;
     }
-    logger.info('[ACTIVE-LOOP] Loop service stopped.');
+    activeSlots = 0;
+    logger.info('[ACTIVE-LOOP] Pool manager stopped.');
   },
 
-  // Exported for unit testing only
-  _ensureRammyAccount: ensureRammyAccount,
-  _checkAndTopupBalances: checkAndTopupBalances,
-  _runLoopStep: runLoopStep,
-  _getIsRunning: () => isRunning,
-  _setIsRunning: (val) => { isRunning = val; },
-  _setBuyerIsAdmin: (val) => { buyerIsAdmin = val; },
-  _getBuyerIsAdmin: () => buyerIsAdmin,
-  _getCurrentPhase: () => currentPhase,
-  _setCurrentPhase: (val) => { currentPhase = val; },
-  _getCurrentOrderDetails: () => currentOrderDetails,
-  _setCurrentOrderDetails: (val) => { currentOrderDetails = val; }
+  // ── Test hooks ─────────────────────────────────────────────
+  _ensureRammyAccount:     ensureRammyAccount,
+  _checkAndTopupBalances:  checkAndTopupBalances,
+  _broadcastStats:         broadcastStats,
+  _runOrderCycle:          runOrderCycle,
+  _getIsRunning:           () => isRunning,
+  _setIsRunning:           (v) => { isRunning = v; },
+  _getActiveSlots:         () => activeSlots,
+  _setActiveSlots:         (v) => { activeSlots = v; },
+  _getBuyerIsAdmin:        () => buyerIsAdmin,
+  _setBuyerIsAdmin:        (v) => { buyerIsAdmin = v; }
 };

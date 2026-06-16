@@ -136,6 +136,13 @@ function initializeSocket() {
     }
   });
 
+  // Live stats — keeps "In Progress" and admin stat cards current
+  socket.on('statsUpdated', (stats) => {
+    // Update admin stat card (stat-active-orders shows CLAIMED count)
+    const activeOrdersEl = document.getElementById('stat-active-orders');
+    if (activeOrdersEl) activeOrdersEl.textContent = stats.totalClaimed;
+  });
+
   socket.on('disconnect', () => {
     console.log('Disconnected from WebSocket');
   });
