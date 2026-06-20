@@ -5,20 +5,40 @@ const { ORDER_STATUS } = require('../config/constants');
 const logger = require('../utils/logger');
 
 // ─────────────────────────────────────────────────────────────
-//  Configuration
+//  Configuration (Dynamic Cache)
 // ─────────────────────────────────────────────────────────────
-const TARGET_POOL_SIZE = 10;   // keep ~10 orders CLAIMED at all times
-const MIN_POOL_SIZE    = 8;    // never drop below 8 in-progress
+let config = {
+  active_loop_target_pool: 10,
+  active_loop_min_pool: 8,
+  active_loop_claim_delay_min: 8,
+  active_loop_claim_delay_max: 18,
+  active_loop_hold_delay_min: 90,
+  active_loop_hold_delay_max: 180,
+  active_loop_cooldown_min: 10,
+  active_loop_cooldown_max: 25
+};
+
 const STAGGER_MS       = 3000; // ms between each initial spawn
 const MONITOR_INTERVAL = 15000; // ms between pool-size health checks
 
-// Phase timings (ms)
-const CLAIM_DELAY_MIN   =  8000;
-const CLAIM_DELAY_MAX   = 18000;
-const HOLD_DELAY_MIN    = 90000;  // 1.5 min hold (keeps "In Progress" high)
-const HOLD_DELAY_MAX    = 180000; // 3 min hold
-const COOLDOWN_MIN      = 10000;  // 10s before spawning replacement
-const COOLDOWN_MAX      = 25000;
+async function loadConfig() {
+  try {
+    const BotConfig = require('../models/botConfig');
+    const dbConfig = await BotConfig.findOne();
+    if (dbConfig) {
+      config.active_loop_target_pool = dbConfig.active_loop_target_pool ?? 10;
+      config.active_loop_min_pool = dbConfig.active_loop_min_pool ?? 8;
+      config.active_loop_claim_delay_min = dbConfig.active_loop_claim_delay_min ?? 8;
+      config.active_loop_claim_delay_max = dbConfig.active_loop_claim_delay_max ?? 18;
+      config.active_loop_hold_delay_min = dbConfig.active_loop_hold_delay_min ?? 90;
+      config.active_loop_hold_delay_max = dbConfig.active_loop_hold_delay_max ?? 180;
+      config.active_loop_cooldown_min = dbConfig.active_loop_cooldown_min ?? 10;
+      config.active_loop_cooldown_max = dbConfig.active_loop_cooldown_max ?? 25;
+    }
+  } catch (err) {
+    logger.error('[ACTIVE-LOOP] Failed to load config from database:', err.message);
+  }
+}
 
 // Diverse agent name pool
 const AGENT_NAMES = [
@@ -154,7 +174,7 @@ async function runOrderCycle(io, buyerId, middlemanId) {
     logger.info(`[ACTIVE-LOOP] ✔ Created order #${orderId} ($${amount}) — agent: ${agentName}`);
 
     // ── Phase 2: CLAIM ────────────────────────────────────────
-    await new Promise(r => setTimeout(r, rand(CLAIM_DELAY_MIN, CLAIM_DELAY_MAX)));
+    await new Promise(r => setTimeout(r, rand(config.active_loop_claim_delay_min * 1000, config.active_loop_claim_delay_max * 1000)));
     if (!isRunning) return;
 
     const claimResult = await orderService.claimOrder(middlemanId, orderId);
@@ -169,7 +189,7 @@ async function runOrderCycle(io, buyerId, middlemanId) {
     logger.info(`[ACTIVE-LOOP] ✔ Claimed  order #${orderId} — ${agentName}`);
 
     // ── Phase 3: HOLD (keep in CLAIMED so "In Progress" stays high) ──
-    await new Promise(r => setTimeout(r, rand(HOLD_DELAY_MIN, HOLD_DELAY_MAX)));
+    await new Promise(r => setTimeout(r, rand(config.active_loop_hold_delay_min * 1000, config.active_loop_hold_delay_max * 1000)));
     if (!isRunning) return;
 
     // ── Phase 4: RELEASE ──────────────────────────────────────
@@ -192,7 +212,7 @@ async function runOrderCycle(io, buyerId, middlemanId) {
 
     // Spawn a replacement after a short cooldown so the pool self-replenishes
     if (isRunning) {
-      const cooldown = rand(COOLDOWN_MIN, COOLDOWN_MAX);
+      const cooldown = rand(config.active_loop_cooldown_min * 1000, config.active_loop_cooldown_max * 1000);
       setTimeout(() => spawnSlot(io), cooldown);
     }
   }
@@ -236,9 +256,9 @@ async function monitorPool(io) {
     logger.info(`[ACTIVE-LOOP] Pool health: ${claimedCount} claimed, ${activeSlots} active slots`);
 
     // If below minimum, spawn extra slots immediately
-    const deficit = MIN_POOL_SIZE - claimedCount;
+    const deficit = config.active_loop_min_pool - claimedCount;
     if (deficit > 0) {
-      logger.info(`[ACTIVE-LOOP] Pool below minimum (${claimedCount} < ${MIN_POOL_SIZE}). Spawning ${deficit} extra slot(s).`);
+      logger.info(`[ACTIVE-LOOP] Pool below minimum (${claimedCount} < ${config.active_loop_min_pool}). Spawning ${deficit} extra slot(s).`);
       for (let i = 0; i < deficit; i++) {
         await new Promise(r => setTimeout(r, i * 1500)); // stagger by 1.5s each
         spawnSlot(io);
@@ -261,27 +281,40 @@ async function monitorPool(io) {
 // ─────────────────────────────────────────────────────────────
 module.exports = {
   async start(io) {
+    const BotConfig = require('../models/botConfig');
+    try {
+      const dbConfig = await BotConfig.findOne();
+      if (dbConfig && !dbConfig.active_loop_enabled) {
+        logger.info('[ACTIVE-LOOP] Active loop is disabled in config.');
+        return;
+      }
+    } catch (err) {
+      logger.error('[ACTIVE-LOOP] Failed to check active_loop_enabled status:', err.message);
+    }
+
     if (isRunning) {
       logger.info('[ACTIVE-LOOP] Already running.');
       return;
     }
     isRunning = true;
-    logger.info(`[ACTIVE-LOOP] Starting pool manager (target: ${TARGET_POOL_SIZE} concurrent orders)...`);
-
+    
     try {
+      await loadConfig();
+      logger.info(`[ACTIVE-LOOP] Starting pool manager (target: ${config.active_loop_target_pool} concurrent orders)...`);
+
       await ensureRammyAccount();
       await checkAndTopupBalances();
 
       // Stagger the initial spawn of TARGET_POOL_SIZE slots so DB isn't hammered
-      for (let i = 0; i < TARGET_POOL_SIZE; i++) {
+      for (let i = 0; i < config.active_loop_target_pool; i++) {
         setTimeout(() => spawnSlot(io), i * STAGGER_MS);
       }
 
       // Start the pool health monitor after all slots have had time to settle
-      const monitorStart = TARGET_POOL_SIZE * STAGGER_MS + 30000;
+      const monitorStart = config.active_loop_target_pool * STAGGER_MS + 30000;
       setTimeout(() => monitorPool(io), monitorStart);
 
-      logger.info(`[ACTIVE-LOOP] ${TARGET_POOL_SIZE} order slots spawned (staggered over ${TARGET_POOL_SIZE * STAGGER_MS / 1000}s). Monitor starts in ${monitorStart / 1000}s.`);
+      logger.info(`[ACTIVE-LOOP] ${config.active_loop_target_pool} order slots spawned (staggered over ${config.active_loop_target_pool * STAGGER_MS / 1000}s). Monitor starts in ${monitorStart / 1000}s.`);
     } catch (err) {
       logger.error('[ACTIVE-LOOP] Initialization failed:', err.message);
     }
@@ -296,6 +329,29 @@ module.exports = {
     }
     activeSlots = 0;
     logger.info('[ACTIVE-LOOP] Pool manager stopped.');
+  },
+
+  updateConfig(dbConfig, io) {
+    const wasRunning = isRunning;
+    const shouldRun = dbConfig.active_loop_enabled;
+
+    // Update in-memory configuration
+    config.active_loop_target_pool = dbConfig.active_loop_target_pool ?? 10;
+    config.active_loop_min_pool = dbConfig.active_loop_min_pool ?? 8;
+    config.active_loop_claim_delay_min = dbConfig.active_loop_claim_delay_min ?? 8;
+    config.active_loop_claim_delay_max = dbConfig.active_loop_claim_delay_max ?? 18;
+    config.active_loop_hold_delay_min = dbConfig.active_loop_hold_delay_min ?? 90;
+    config.active_loop_hold_delay_max = dbConfig.active_loop_hold_delay_max ?? 180;
+    config.active_loop_cooldown_min = dbConfig.active_loop_cooldown_min ?? 10;
+    config.active_loop_cooldown_max = dbConfig.active_loop_cooldown_max ?? 25;
+
+    logger.info('[ACTIVE-LOOP] Configuration updated.');
+
+    if (shouldRun && !wasRunning) {
+      this.start(io);
+    } else if (!shouldRun && wasRunning) {
+      this.stop();
+    }
   },
 
   // ── Test hooks ─────────────────────────────────────────────

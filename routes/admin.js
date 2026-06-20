@@ -286,7 +286,16 @@ router.get('/bot-config', authenticateToken, isAdmin, async (req, res) => {
         release_delay_max: 20,
         auto_claim_enabled: true,
         periodic_scan_enabled: false,
-        scan_interval: 5
+        scan_interval: 5,
+        active_loop_enabled: true,
+        active_loop_target_pool: 10,
+        active_loop_min_pool: 8,
+        active_loop_claim_delay_min: 8,
+        active_loop_claim_delay_max: 18,
+        active_loop_hold_delay_min: 90,
+        active_loop_hold_delay_max: 180,
+        active_loop_cooldown_min: 10,
+        active_loop_cooldown_max: 25
       });
     }
 
@@ -311,7 +320,16 @@ router.put('/bot-config', authenticateToken, isAdmin, async (req, res) => {
       release_delay_max,
       auto_claim_enabled,
       periodic_scan_enabled,
-      scan_interval
+      scan_interval,
+      active_loop_enabled,
+      active_loop_target_pool,
+      active_loop_min_pool,
+      active_loop_claim_delay_min,
+      active_loop_claim_delay_max,
+      active_loop_hold_delay_min,
+      active_loop_hold_delay_max,
+      active_loop_cooldown_min,
+      active_loop_cooldown_max
     } = req.body;
 
     let config = await BotConfig.findOne();
@@ -325,13 +343,27 @@ router.put('/bot-config', authenticateToken, isAdmin, async (req, res) => {
     config.periodic_scan_enabled = periodic_scan_enabled ?? config.periodic_scan_enabled;
     config.scan_interval = scan_interval ?? config.scan_interval;
 
+    config.active_loop_enabled = active_loop_enabled ?? config.active_loop_enabled;
+    config.active_loop_target_pool = active_loop_target_pool ?? config.active_loop_target_pool;
+    config.active_loop_min_pool = active_loop_min_pool ?? config.active_loop_min_pool;
+    config.active_loop_claim_delay_min = active_loop_claim_delay_min ?? config.active_loop_claim_delay_min;
+    config.active_loop_claim_delay_max = active_loop_claim_delay_max ?? config.active_loop_claim_delay_max;
+    config.active_loop_hold_delay_min = active_loop_hold_delay_min ?? config.active_loop_hold_delay_min;
+    config.active_loop_hold_delay_max = active_loop_hold_delay_max ?? config.active_loop_hold_delay_max;
+    config.active_loop_cooldown_min = active_loop_cooldown_min ?? config.active_loop_cooldown_min;
+    config.active_loop_cooldown_max = active_loop_cooldown_max ?? config.active_loop_cooldown_max;
+
     await config.save();
 
     // Notify autoClaimService to restart or update its worker
     const autoClaimService = require('../services/autoClaimService');
     autoClaimService.updateConfig(config, req.app.get('socketio'));
 
-    res.json({ message: 'Bot configuration updated successfully', config });
+    // Notify activeLoopService to update configuration or start/stop in real-time
+    const activeLoopService = require('../services/activeLoopService');
+    activeLoopService.updateConfig(config, req.app.get('socketio'));
+
+    res.json({ message: 'Bot and active loop configuration updated successfully', config });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

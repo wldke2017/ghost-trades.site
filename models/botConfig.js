@@ -42,6 +42,51 @@ const BotConfig = sequelize.define('BotConfig', {
     type: DataTypes.INTEGER,
     defaultValue: 5,
     comment: 'Scan interval in minutes'
+  },
+  active_loop_enabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    comment: 'Enable active escrow generator loop'
+  },
+  active_loop_target_pool: {
+    type: DataTypes.INTEGER,
+    defaultValue: 10,
+    comment: 'Target pool size for active loop'
+  },
+  active_loop_min_pool: {
+    type: DataTypes.INTEGER,
+    defaultValue: 8,
+    comment: 'Minimum pool size before spawning extra slots'
+  },
+  active_loop_claim_delay_min: {
+    type: DataTypes.INTEGER,
+    defaultValue: 8,
+    comment: 'Minimum claim delay in seconds'
+  },
+  active_loop_claim_delay_max: {
+    type: DataTypes.INTEGER,
+    defaultValue: 18,
+    comment: 'Maximum claim delay in seconds'
+  },
+  active_loop_hold_delay_min: {
+    type: DataTypes.INTEGER,
+    defaultValue: 90,
+    comment: 'Minimum hold delay in seconds'
+  },
+  active_loop_hold_delay_max: {
+    type: DataTypes.INTEGER,
+    defaultValue: 180,
+    comment: 'Maximum hold delay in seconds'
+  },
+  active_loop_cooldown_min: {
+    type: DataTypes.INTEGER,
+    defaultValue: 10,
+    comment: 'Minimum cooldown delay in seconds'
+  },
+  active_loop_cooldown_max: {
+    type: DataTypes.INTEGER,
+    defaultValue: 25,
+    comment: 'Maximum cooldown delay in seconds'
   }
 }, {
   tableName: 'bot_configs',

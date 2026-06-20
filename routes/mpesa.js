@@ -195,54 +195,39 @@ router.post('/callback', async (req, res) => {
 
       const transaction = await sequelize.transaction();
       try {
-        let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
-        if (!wallet) {
-          wallet = await Wallet.create({ user_id: userId, available_balance: 0, locked_balance: 0 }, { transaction });
-        }
-
-        const balanceBefore = parseFloat(wallet.available_balance);
-        wallet.available_balance = balanceBefore + usdAmount;
-        await wallet.save({ transaction });
-
-        // Record Transaction
-        await Transaction.create({
-          user_id: userId,
-          type: 'DEPOSIT',
-          amount: usdAmount,
-          balance_before: balanceBefore,
-          balance_after: wallet.available_balance,
-          description: `M-Pesa Deposit (${mpesaReceipt}) - KES ${kesAmount}`
-        }, { transaction });
+        const user = await User.findByPk(userId, { transaction });
+        const username = user ? user.username : 'User';
 
         // Create TransactionRequest for history
-        await TransactionRequest.create({
+        const transactionRequest = await TransactionRequest.create({
           user_id: userId,
           type: 'deposit',
           amount: usdAmount,
-          status: 'approved',
+          status: 'pending',
           notes: `M-Pesa Payment: ${mpesaReceipt}`,
-          admin_notes: 'Auto-approved via M-Pesa Callback',
-          reviewed_at: new Date(),
+          admin_notes: 'M-Pesa payment callback received. Pending admin approval.',
           metadata: { mpesa_receipt: mpesaReceipt, kes_amount: kesAmount, checkout_id: CheckoutRequestID }
         }, { transaction });
 
         // Update Log
         await initialLog.save({ transaction });
 
-        // Welcome Bonus Check ($3 first deposit gets $5)
-        await walletService.checkAndApplyWelcomeBonus(userId, usdAmount, transaction);
-
-        // Reload the wallet model to reflect the newly updated balance
-        await wallet.reload({ transaction });
-
         await transaction.commit();
 
         // WebSocket Notification
         if (io) {
           io.to(`user_${userId}`).emit('walletUpdated', {
-            available_balance: wallet.available_balance,
-            locked_balance: wallet.locked_balance,
-            message: `Your deposit of $${usdAmount} (KES ${kesAmount}) via M-Pesa was successful!`
+            user_id: userId,
+            message: `Your deposit of $${usdAmount} (KES ${kesAmount}) via M-Pesa is pending admin approval.`
+          });
+
+          io.emit('newTransactionRequest', {
+            id: transactionRequest.id,
+            type: 'deposit',
+            user_id: userId,
+            username: username,
+            amount: usdAmount,
+            metadata: transactionRequest.metadata
           });
         }
       } catch (err) {

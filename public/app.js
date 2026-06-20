@@ -728,7 +728,7 @@ async function initiateDeposit() {
   try {
     // Convert KES to USD for backend if needed, but backend expects Amount (usually local currency for STK)
     // Usually STK Push takes amount in KES.
-    const response = await authenticatedFetch('/api/stkpush', {
+    const response = await authenticatedFetch('/api/mpesa/stkpush', {
       method: 'POST',
       body: JSON.stringify({ amount, phoneNumber: phone })
     });
@@ -1162,7 +1162,7 @@ async function initiateAutomatedCrypto() {
         if (cnt) cnt.innerText = timeLeft;
         if (timeLeft <= 0) {
           clearInterval(timer);
-          showToast('Automated Crypto Deposit confirmed by blockchain network!', 'success');
+          showToast('Automated Crypto Deposit detected! Pending admin approval.', 'success');
           closeModal('deposit-modal');
           // Reset view
           document.getElementById('crypto-auto-initiate-view').classList.remove('hidden');

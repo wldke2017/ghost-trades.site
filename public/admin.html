@@ -554,6 +554,91 @@
             </div>
         </div>
 
+        <!-- Active Loop (Ghost Trading) Configuration (Admin) -->
+        <div class="bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-700 mt-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                        <i class="ti ti-refresh text-2xl text-orange-600 dark:text-orange-400"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Ghost Trading Pool (Active Loop)</h2>
+                        <p class="text-sm text-gray-300">Control simulated background transaction flow</p>
+                    </div>
+                </div>
+                <button onclick="saveBotConfig()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-all font-bold text-sm shadow-lg shadow-orange-500/20">
+                    Save Loop Settings
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Parameters -->
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Pool & Timing Controls</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400">Target Pool Size</label>
+                            <input type="number" id="active-loop-target-pool" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-orange-500 transition-all">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400">Min Pool Size</label>
+                            <input type="number" id="active-loop-min-pool" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-orange-500 transition-all">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400">Min Claim Delay (s)</label>
+                            <input type="number" id="active-loop-claim-min" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-orange-500 transition-all">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400">Max Claim Delay (s)</label>
+                            <input type="number" id="active-loop-claim-max" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-orange-500 transition-all">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400">Min Hold Delay (s)</label>
+                            <input type="number" id="active-loop-hold-min" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-orange-500 transition-all">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400">Max Hold Delay (s)</label>
+                            <input type="number" id="active-loop-hold-max" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-orange-500 transition-all">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400">Min Cooldown (s)</label>
+                            <input type="number" id="active-loop-cooldown-min" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-orange-500 transition-all">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400">Max Cooldown (s)</label>
+                            <input type="number" id="active-loop-cooldown-max" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-orange-500 transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status & Toggle -->
+                <div class="space-y-4 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Loop Execution</h3>
+                        <div class="flex items-center justify-between p-4 bg-gray-900/50 rounded-2xl border border-gray-700/50 hover:bg-gray-900/80 transition-all">
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-white mb-1">Active Loop Status</p>
+                                <p class="text-[10px] text-gray-400">Generate continuous background orders</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <input type="checkbox" id="active-loop-toggle" class="sr-only peer">
+                                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest peer-checked-label-off">Off</span>
+                                <label for="active-loop-toggle" class="relative inline-flex items-center cursor-pointer">
+                                    <div class="custom-toggle-btn"></div>
+                                </label>
+                                <span class="text-[10px] font-bold text-gray-500/50 uppercase tracking-widest peer-checked-label-on">On</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-900/30 p-4 rounded-xl border border-gray-700/50 text-xs text-gray-400 space-y-2">
+                        <p class="font-bold text-white"><i class="ti ti-info-circle text-orange-400 mr-1"></i> About Ghost Trading</p>
+                        <p>The Active Loop automatically creates simulated orders between Admin and Rammy accounts. These orders are held in the pool to simulate real user volume, helping you maintain a baseline of 8+ concurrent active orders on the dashboard at all times.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Balance Adjustment Modal -->

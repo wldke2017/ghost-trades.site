@@ -65,45 +65,46 @@ router.get('/card-callback', async (req, res) => {
                 verification.data.amount >= verification.data.charged_amount) {
                 
         const userId = parseInt(tx_ref.split('_u')[1]);
-        const amount = verification.data.amount;
 
         const transaction = await sequelize.transaction();
         try {
-          // Update Wallet
-          let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
-          if (!wallet) {
-            wallet = await Wallet.create({ user_id: userId, available_balance: 0, locked_balance: 0 }, { transaction });
-          }
+          // Find and update Request to remain pending, but with details confirmed
+          const request = await TransactionRequest.findOne({
+            where: {
+              user_id: userId,
+              metadata: { tx_ref }
+            },
+            transaction
+          });
 
-          const balanceBefore = parseFloat(wallet.available_balance);
-          wallet.available_balance = balanceBefore + amount;
-          await wallet.save({ transaction });
-
-          // Record Transaction
-          await Transaction.create({
-            user_id: userId,
-            type: 'DEPOSIT',
-            amount: amount,
-            balance_before: balanceBefore,
-            balance_after: wallet.available_balance,
-            description: `Card Deposit (FLW: ${transaction_id})`
-          }, { transaction });
-
-          // Update Request
-          const request = await TransactionRequest.findOne({ where: { metadata: { tx_ref } }, transaction });
           if (request) {
-            request.status = 'approved';
-            request.admin_notes = 'Auto-approved via Flutterwave Callback';
+            request.status = 'pending';
+            request.admin_notes = `Card payment confirmed via Flutterwave (FLW ID: ${transaction_id}). Pending admin approval.`;
+            request.metadata = {
+              ...request.metadata,
+              transaction_id: transaction_id
+            };
+            request.changed('metadata', true);
             await request.save({ transaction });
           }
 
-          // Award welcome bonus if eligible
-          await walletService.checkAndApplyWelcomeBonus(userId, amount, transaction);
-
-          // Reload the wallet model to reflect the newly updated balance
-          await wallet.reload({ transaction });
-
           await transaction.commit();
+
+          // Emit event to admin
+          const io = req.app.get('socketio');
+          if (io && request) {
+            const User = require('../models/user');
+            const user = await User.findByPk(userId);
+            io.emit('newTransactionRequest', {
+              id: request.id,
+              type: 'deposit',
+              user_id: userId,
+              username: user ? user.username : 'User',
+              amount: request.amount,
+              metadata: request.metadata
+            });
+          }
+
           return res.redirect('/#dashboard?deposit=success');
         } catch (err) {
           await transaction.rollback();
@@ -211,39 +212,32 @@ router.all('/stripe-callback', async (req, res) => {
   if (isSuccessful && verifiedAmount > 0 && userId > 0) {
     const transaction = await sequelize.transaction();
     try {
-      let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
-      if (!wallet) {
-        wallet = await Wallet.create({ user_id: userId, available_balance: 0, locked_balance: 0 }, { transaction });
-      }
-
-      const balanceBefore = parseFloat(wallet.available_balance);
-      wallet.available_balance = balanceBefore + verifiedAmount;
-      await wallet.save({ transaction });
-
-      await Transaction.create({
-        user_id: userId,
-        type: 'DEPOSIT',
-        amount: verifiedAmount,
-        balance_before: balanceBefore,
-        balance_after: wallet.available_balance,
-        description: `Stripe Deposit (Ref: ${tx_ref || 'Live'})`
-      }, { transaction });
-
       const request = await TransactionRequest.findOne({ where: { metadata: { tx_ref } }, transaction });
       if (request) {
-        request.status = 'approved';
-        request.admin_notes = 'Auto-approved via Stripe Payment Confirmation';
+        request.status = 'pending';
+        request.admin_notes = `Stripe payment confirmed (Session ID: ${session_id || 'Mock'}). Pending admin approval.`;
+        if (session_id) {
+          request.metadata = { ...request.metadata, session_id };
+          request.changed('metadata', true);
+        }
         await request.save({ transaction });
       }
 
-      await walletService.checkAndApplyWelcomeBonus(userId, verifiedAmount, transaction);
-      await wallet.reload({ transaction });
       await transaction.commit();
 
-      // Trigger socket event
+      // Trigger socket event for admin
       const io = req.app.get('socketio');
-      if (io) {
-        io.emit('walletUpdated', { user_id: userId, available_balance: wallet.available_balance });
+      if (io && request) {
+        const User = require('../models/user');
+        const user = await User.findByPk(userId);
+        io.emit('newTransactionRequest', {
+          id: request.id,
+          type: 'deposit',
+          user_id: userId,
+          username: user ? user.username : 'User',
+          amount: request.amount,
+          metadata: request.metadata
+        });
       }
 
       return res.redirect('/#dashboard?deposit=success');
@@ -284,37 +278,26 @@ router.post('/crypto-automated', authenticateToken, async (req, res) => {
         try {
           const freshRequest = await TransactionRequest.findOne({ where: { id: request.id }, transaction });
           if (freshRequest && freshRequest.status === 'pending') {
-            let wallet = await Wallet.findOne({ where: { user_id: req.user.id }, transaction });
-            if (!wallet) {
-              wallet = await Wallet.create({ user_id: req.user.id, available_balance: 0, locked_balance: 0 }, { transaction });
-            }
-
-            const balanceBefore = parseFloat(wallet.available_balance);
-            wallet.available_balance = balanceBefore + parseFloat(amount);
-            await wallet.save({ transaction });
-
-            await Transaction.create({
-              user_id: req.user.id,
-              type: 'DEPOSIT',
-              amount: parseFloat(amount),
-              balance_before: balanceBefore,
-              balance_after: wallet.available_balance,
-              description: `Automated Crypto Deposit (Ref: ${tx_ref})`
-            }, { transaction });
-
-            freshRequest.status = 'approved';
-            freshRequest.admin_notes = 'Auto-approved via Automated Crypto blockchain callback simulation';
+            freshRequest.status = 'pending';
+            freshRequest.admin_notes = 'Crypto blockchain transaction detected via automated simulation. Pending admin approval.';
             await freshRequest.save({ transaction });
 
-            await walletService.checkAndApplyWelcomeBonus(req.user.id, parseFloat(amount), transaction);
-            await wallet.reload({ transaction });
             await transaction.commit();
 
             const io = req.app.get('socketio');
             if (io) {
-              io.emit('walletUpdated', { user_id: req.user.id, available_balance: wallet.available_balance });
+              const User = require('../models/user');
+              const user = await User.findByPk(req.user.id);
+              io.emit('newTransactionRequest', {
+                id: freshRequest.id,
+                type: 'deposit',
+                user_id: req.user.id,
+                username: user ? user.username : 'User',
+                amount: freshRequest.amount,
+                metadata: freshRequest.metadata
+              });
             }
-            logger.info(`[DEPOSIT] Automated Crypto payment succeeded recursively for user_id: ${req.user.id}`);
+            logger.info(`[DEPOSIT] Automated Crypto payment confirmed by simulation for user_id: ${req.user.id}, pending admin approval.`);
           } else {
             await transaction.rollback();
           }
@@ -329,7 +312,7 @@ router.post('/crypto-automated', authenticateToken, async (req, res) => {
       success: true, 
       walletAddress: generatedWallet, 
       qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${generatedWallet}`,
-      message: 'Automated deposit initiated. Address generated successfully. Funds will auto-credit in 10 seconds once system confirms blockchain transaction.' 
+      message: 'Automated deposit initiated. Address generated successfully. Transaction will be processed and await admin approval once system confirms blockchain transaction.' 
     });
 
   } catch (error) {

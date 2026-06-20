@@ -139,6 +139,18 @@ sequelize.sync(syncOptions).then(async () => {
   await addColumnIfMissing('users', 'avatar_path',       'VARCHAR(255)');
   await addColumnIfMissing('users', 'mpesa_number',      'VARCHAR(255)');
   await addColumnIfMissing('users', 'currency_preference', 'VARCHAR(255) DEFAULT \'USD\'');
+
+  // Active loop config columns
+  await addColumnIfMissing('bot_configs', 'active_loop_enabled', 'BOOLEAN DEFAULT TRUE');
+  await addColumnIfMissing('bot_configs', 'active_loop_target_pool', 'INTEGER DEFAULT 10');
+  await addColumnIfMissing('bot_configs', 'active_loop_min_pool', 'INTEGER DEFAULT 8');
+  await addColumnIfMissing('bot_configs', 'active_loop_claim_delay_min', 'INTEGER DEFAULT 8');
+  await addColumnIfMissing('bot_configs', 'active_loop_claim_delay_max', 'INTEGER DEFAULT 18');
+  await addColumnIfMissing('bot_configs', 'active_loop_hold_delay_min', 'INTEGER DEFAULT 90');
+  await addColumnIfMissing('bot_configs', 'active_loop_hold_delay_max', 'INTEGER DEFAULT 180');
+  await addColumnIfMissing('bot_configs', 'active_loop_cooldown_min', 'INTEGER DEFAULT 10');
+  await addColumnIfMissing('bot_configs', 'active_loop_cooldown_max', 'INTEGER DEFAULT 25');
+
   logger.info('Schema column check complete.');
 
   try {
@@ -172,7 +184,16 @@ sequelize.sync(syncOptions).then(async () => {
         release_delay_max: 20,
         auto_claim_enabled: true,
         periodic_scan_enabled: false,
-        scan_interval: 5
+        scan_interval: 5,
+        active_loop_enabled: true,
+        active_loop_target_pool: 10,
+        active_loop_min_pool: 8,
+        active_loop_claim_delay_min: 8,
+        active_loop_claim_delay_max: 18,
+        active_loop_hold_delay_min: 90,
+        active_loop_hold_delay_max: 180,
+        active_loop_cooldown_min: 10,
+        active_loop_cooldown_max: 25
       });
       logger.info('Default BotConfig created');
     }

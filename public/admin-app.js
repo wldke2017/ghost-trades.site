@@ -1269,6 +1269,17 @@ async function fetchBotConfig() {
       document.getElementById('bot-periodic-scan-toggle').checked = config.periodic_scan_enabled;
       document.getElementById('bot-scan-interval').value = config.scan_interval;
 
+      // Active Loop Configuration
+      document.getElementById('active-loop-toggle').checked = config.active_loop_enabled;
+      document.getElementById('active-loop-target-pool').value = config.active_loop_target_pool;
+      document.getElementById('active-loop-min-pool').value = config.active_loop_min_pool;
+      document.getElementById('active-loop-claim-min').value = config.active_loop_claim_delay_min;
+      document.getElementById('active-loop-claim-max').value = config.active_loop_claim_delay_max;
+      document.getElementById('active-loop-hold-min').value = config.active_loop_hold_delay_min;
+      document.getElementById('active-loop-hold-max').value = config.active_loop_hold_delay_max;
+      document.getElementById('active-loop-cooldown-min').value = config.active_loop_cooldown_min;
+      document.getElementById('active-loop-cooldown-max').value = config.active_loop_cooldown_max;
+
       // Update status labels
       const botAccEl = document.getElementById('bot-account-name');
       if (botAccEl) {
@@ -1333,10 +1344,13 @@ async function runManualBotScan() {
 }
 
 async function saveBotConfig() {
-  const btn = document.getElementById('save-bot-config-btn');
-  const originalText = btn.innerText;
-  btn.disabled = true;
-  btn.innerText = 'Saving...';
+  const saveButtons = document.querySelectorAll('button[onclick="saveBotConfig()"]');
+  const originalTexts = Array.from(saveButtons).map(b => b.innerText);
+  
+  saveButtons.forEach(btn => {
+    btn.disabled = true;
+    btn.innerText = 'Saving...';
+  });
 
   const config = {
     claim_delay_min: parseInt(document.getElementById('bot-claim-min').value),
@@ -1345,7 +1359,17 @@ async function saveBotConfig() {
     release_delay_max: parseInt(document.getElementById('bot-release-max').value),
     auto_claim_enabled: document.getElementById('bot-auto-claim-toggle').checked,
     periodic_scan_enabled: document.getElementById('bot-periodic-scan-toggle').checked,
-    scan_interval: parseInt(document.getElementById('bot-scan-interval').value)
+    scan_interval: parseInt(document.getElementById('bot-scan-interval').value),
+
+    active_loop_enabled: document.getElementById('active-loop-toggle').checked,
+    active_loop_target_pool: parseInt(document.getElementById('active-loop-target-pool').value),
+    active_loop_min_pool: parseInt(document.getElementById('active-loop-min-pool').value),
+    active_loop_claim_delay_min: parseInt(document.getElementById('active-loop-claim-min').value),
+    active_loop_claim_delay_max: parseInt(document.getElementById('active-loop-claim-max').value),
+    active_loop_hold_delay_min: parseInt(document.getElementById('active-loop-hold-min').value),
+    active_loop_hold_delay_max: parseInt(document.getElementById('active-loop-hold-max').value),
+    active_loop_cooldown_min: parseInt(document.getElementById('active-loop-cooldown-min').value),
+    active_loop_cooldown_max: parseInt(document.getElementById('active-loop-cooldown-max').value)
   };
 
   try {
@@ -1355,7 +1379,7 @@ async function saveBotConfig() {
     });
 
     if (res.ok) {
-      showToast('Bot configuration saved!', 'success');
+      showToast('Configuration saved successfully!', 'success');
       fetchBotConfig(); // Refresh status indicators
     } else {
       const err = await res.json();
@@ -1364,8 +1388,10 @@ async function saveBotConfig() {
   } catch (e) {
     showToast('Connection error', 'error');
   } finally {
-    btn.disabled = false;
-    btn.innerText = originalText;
+    saveButtons.forEach((btn, index) => {
+      btn.disabled = false;
+      btn.innerText = originalTexts[index];
+    });
   }
 }
 
