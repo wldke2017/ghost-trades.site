@@ -81,12 +81,18 @@ function randAgent() {
 async function broadcastStats(io) {
   if (!io) return;
   try {
-    const totalCreated = await Order.count();
-    const totalPending = await Order.count({ where: { status: ORDER_STATUS.PENDING } });
-    const totalClaimed = await Order.count({ where: { status: ORDER_STATUS.CLAIMED } });
-    const totalSettled = await Order.count({ where: { status: ORDER_STATUS.COMPLETED } });
+    const baseCreated = 41066;
+    const basePending = 443;
+    const baseClaimed = 73;
+    const baseSettled = 40548;
+    const baseCommission = 147795.03;
+
+    const totalCreated = baseCreated + await Order.count();
+    const totalPending = basePending + await Order.count({ where: { status: ORDER_STATUS.PENDING } });
+    const totalClaimed = baseClaimed + await Order.count({ where: { status: ORDER_STATUS.CLAIMED } });
+    const totalSettled = baseSettled + await Order.count({ where: { status: ORDER_STATUS.COMPLETED } });
     const allCompleted = await Order.findAll({ where: { status: ORDER_STATUS.COMPLETED }, attributes: ['amount'] });
-    const totalCommission = allCompleted.reduce((s, o) => s + parseFloat(o.amount) * 0.025, 0);
+    const totalCommission = baseCommission + allCompleted.reduce((s, o) => s + parseFloat(o.amount) * 0.025, 0);
 
     io.emit('statsUpdated', {
       totalCreated,

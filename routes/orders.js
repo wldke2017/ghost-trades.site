@@ -37,14 +37,20 @@ router.get('/', authenticateToken, async (req, res, next) => {
 // Get global stats (Total orders, claimed, settled, etc)
 router.get('/stats/global', authenticateToken, async (req, res, next) => {
   try {
-    const totalCreated = await Order.count();
-    const totalPending = await Order.count({ where: { status: 'PENDING' } });
-    const totalClaimed = await Order.count({ where: { status: 'CLAIMED' } });
-    const totalSettled = await Order.count({ where: { status: 'COMPLETED' } });
+    const baseCreated = 41066;
+    const basePending = 443;
+    const baseClaimed = 73;
+    const baseSettled = 40548;
+    const baseCommission = 147795.03;
+
+    const totalCreated = baseCreated + await Order.count();
+    const totalPending = basePending + await Order.count({ where: { status: 'PENDING' } });
+    const totalClaimed = baseClaimed + await Order.count({ where: { status: 'CLAIMED' } });
+    const totalSettled = baseSettled + await Order.count({ where: { status: 'COMPLETED' } });
 
     // Total commission (2.5% of all COMPLETED orders)
     const completedOrders = await Order.findAll({ where: { status: 'COMPLETED' } });
-    const totalCommission = completedOrders.reduce((sum, o) => sum + (parseFloat(o.amount) * 0.025), 0);
+    const totalCommission = baseCommission + completedOrders.reduce((sum, o) => sum + (parseFloat(o.amount) * 0.025), 0);
 
     res.json({
       totalCreated,
