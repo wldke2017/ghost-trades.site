@@ -164,33 +164,6 @@
                 <div class="hidden lg:flex items-center space-x-4">
                     <!-- User Profile -->
                     <div
-
-<body class="bg-gray-900 text-white min-h-screen">
-
-    <!-- Header -->
-    <header class="glass-effect sticky top-0 z-40 border-b border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <!-- Branding -->
-                <div class="flex items-center space-x-3">
-                    <div
-                        class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-                        <i class="ti ti-shield-lock text-2xl text-white"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-black tracking-tight text-white">SecureEscrow</h1>
-                        <div class="flex items-center space-x-1">
-                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Middleman Portal
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Desktop Menu -->
-                <div class="hidden lg:flex items-center space-x-4">
-                    <!-- User Profile -->
-                    <div
                         class="flex items-center space-x-3 bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-700/50">
                         <div
                             class="w-8 h-8 rounded-full bg-gradient-to-r from-gray-700 to-gray-600 flex items-center justify-center border border-gray-600">
@@ -1435,7 +1408,7 @@
     <!-- Mobile Bottom Navigation -->
     <div class="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-xl border-t border-gray-800 z-50 pb-safe">
         <div class="flex justify-around items-center h-16">
-            <a href="#" class="flex flex-col items-center justify-center w-full h-full text-orange-500">
+            <a href="#" onclick="closeModal('settings-modal')" class="flex flex-col items-center justify-center w-full h-full text-orange-500">
                 <i class="ti ti-home text-2xl mb-1"></i>
                 <span class="text-[10px] font-bold">Home</span>
             </a>
@@ -1443,7 +1416,7 @@
                 <i class="ti ti-search text-2xl mb-1"></i>
                 <span class="text-[10px] font-medium">Browse</span>
             </a>
-            <a href="#" onclick="openModal('settings-modal')" class="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-white transition-colors">
+            <a href="#" onclick="openSettingsModal()" class="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-white transition-colors">
                 <i class="ti ti-user text-2xl mb-1"></i>
                 <span class="text-[10px] font-medium">Profile</span>
             </a>
