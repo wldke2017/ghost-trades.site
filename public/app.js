@@ -1116,20 +1116,27 @@ function setupEventListeners() {
 }
 
 
-// Update header username
+// Update header username and greeting
 function updateUserDisplay() {
   if (typeof window !== 'undefined' && window.currentUsername) {
     const usernameEl = document.getElementById('header-username');
+    const greetingEl = document.getElementById('header-greeting');
+
+    if (greetingEl) {
+      const hour = new Date().getHours();
+      let greeting = 'Good evening,';
+      if (hour < 12) greeting = 'Good morning,';
+      else if (hour < 18) greeting = 'Good afternoon,';
+      greetingEl.textContent = greeting;
+    }
+
     if (usernameEl) {
-      // Note: we keep the original structure from index.html
       const badge = document.getElementById('header-verified-badge');
       if (currentUser && currentUser.is_verified) {
         if (badge) badge.classList.remove('hidden');
       } else {
         if (badge) badge.classList.add('hidden');
       }
-      // Update node text if needed, but here we just update name
-      // The first child is the text node in our new structure
       usernameEl.childNodes[0].textContent = window.currentUsername + ' ';
     }
   }
