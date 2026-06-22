@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateDashboard();
   setupSocketRequest();
   setupEventListeners();
+  initEarningsChart();
 });
 
 // Update Dashboard Data
@@ -86,8 +87,14 @@ async function fetchWalletBalance() {
       const availEl = document.getElementById('balance-available');
       const lockedEl = document.getElementById('balance-locked');
 
-      if (availEl) availEl.textContent = formatCurrency(wallet.available_balance);
-      if (lockedEl) lockedEl.textContent = formatCurrency(wallet.locked_balance);
+      if (availEl) {
+        availEl.textContent = formatCurrency(wallet.available_balance);
+        flashElement('balance-available');
+      }
+      if (lockedEl) {
+        lockedEl.textContent = formatCurrency(wallet.locked_balance);
+        flashElement('balance-locked');
+      }
     }
   } catch (error) {
     console.error('Error fetching wallet balance:', error);
@@ -109,8 +116,28 @@ async function fetchPersonalStats() {
 
       if (depositedEl) depositedEl.innerText = formatCurrency(stats.totalDeposited);
       if (withdrawnEl) withdrawnEl.innerText = formatCurrency(stats.totalWithdrawn);
-      if (earnedEl) earnedEl.innerText = formatCurrency(stats.totalEarned);
+      if (earnedEl) {
+        earnedEl.innerText = formatCurrency(stats.totalEarned);
+        flashElement('stat-total-earned');
+      }
       if (completedEl) completedEl.innerText = stats.ordersDone;
+
+      // Update Chart dataset dynamically based on earnings
+      if (earningsChart) {
+        const baseVal = parseFloat(stats.totalEarned) || 0;
+        const count = parseInt(stats.ordersDone) || 0;
+        const dailyData = [
+          Math.max(0, baseVal * 0.15),
+          Math.max(0, baseVal * 0.35),
+          Math.max(0, baseVal * 0.25),
+          Math.max(0, baseVal * 0.55),
+          Math.max(0, baseVal * 0.45),
+          Math.max(0, baseVal * 0.75),
+          baseVal
+        ];
+        earningsChart.data.datasets[0].data = dailyData;
+        earningsChart.update();
+      }
 
       // Trigger Welcome Bonus if eligible (totalDeposited is 0)
       const depVal = parseFloat(stats.totalDeposited) || 0;
@@ -165,6 +192,15 @@ async function fetchGlobalStats() {
       if (claimedEl) claimedEl.innerText = stats.totalClaimed;
       if (settledEl) settledEl.innerText = stats.totalSettled;
       if (commissionEl) commissionEl.innerText = formatCurrency(stats.totalCommission);
+
+      // Update progress bar
+      const total = parseInt(stats.totalCreated) || 0;
+      const settled = parseInt(stats.totalSettled) || 0;
+      const progressPercent = total > 0 ? Math.round((settled / total) * 100) : 0;
+      const progressTextEl = document.getElementById('platform-progress-text');
+      const progressBarEl = document.getElementById('platform-progress-bar');
+      if (progressTextEl) progressTextEl.innerText = progressPercent + '%';
+      if (progressBarEl) progressBarEl.style.width = progressPercent + '%';
     }
   } catch (e) { console.error('Error global stats:', e); }
 }
@@ -1040,6 +1076,19 @@ function setupSocketRequest() {
       showToast('New message from Support', 'info');
     }
   });
+
+  // Real-time approval/rejection toasts
+  socket.on('transactionApproved', data => {
+    const typeLabel = data.type === 'deposit' ? 'Deposit' : 'Withdrawal';
+    showToast(`✅ Your ${typeLabel} of ${formatCurrency(data.amount)} has been approved!`, 'success');
+    fetchWalletBalance();
+  });
+
+  socket.on('transactionRejected', data => {
+    const typeLabel = data.type === 'deposit' ? 'Deposit' : 'Withdrawal';
+    showToast(`❌ Your ${typeLabel} of ${formatCurrency(data.amount)} was rejected. Reason: ${data.reason}`, 'error');
+    fetchWalletBalance();
+  });
 }
 
 // --- Utils ---
@@ -1645,4 +1694,54 @@ function escapeHTML(str) {
       '"': '&quot;'
     }[tag] || tag)
   );
+}
+
+// --- Earnings Sparkline Chart (Chart.js) ---
+let earningsChart = null;
+
+function initEarningsChart() {
+  const ctxEl = document.getElementById('earningsChart');
+  if (!ctxEl) return;
+  const ctx = ctxEl.getContext('2d');
+  
+  earningsChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      datasets: [{
+        data: [0, 0, 0, 0, 0, 0, 0],
+        borderColor: '#f97316',
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 0,
+        fill: true,
+        backgroundColor: (context) => {
+          const chart = context.chart;
+          const {ctx, chartArea} = chart;
+          if (!chartArea) return null;
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          gradient.addColorStop(0, 'rgba(249, 115, 22, 0.2)');
+          gradient.addColorStop(1, 'rgba(249, 115, 22, 0)');
+          return gradient;
+        }
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false }
+      }
+    }
+  });
+}
+
+function flashElement(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('animate-update');
+  void el.offsetWidth; // trigger reflow
+  el.classList.add('animate-update');
 }

@@ -413,6 +413,7 @@ async function updateAdminDashboard() {
   await loadDisputes();
   await fetchAdminSupportTickets();
   await fetchBotConfig();
+  fetchAdminAuditLogs();
   updateSystemHealthCards();
   updateUserDisplay();
   updateCurrencyLabels();
@@ -755,7 +756,62 @@ async function loadTransactionRequests() {
       listContainer.classList.remove('hidden');
       emptyState.classList.add('hidden');
 
-      listContainer.innerHTML = requests.map(req => `
+      listContainer.innerHTML = requests.map(req => {
+        // Build metadata details block
+        let metaHtml = '';
+        if (req.type === 'withdrawal' && req.metadata) {
+          const m = req.metadata;
+          if (m.method === 'mobile_money' && m.phone) {
+            metaHtml = `
+              <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/40 rounded-lg border border-blue-100 dark:border-blue-800">
+                <p class="text-xs text-blue-600 dark:text-blue-400 uppercase font-black tracking-wider mb-1"><i class="ti ti-phone mr-1"></i>M-Pesa Payout</p>
+                <p class="text-lg font-bold text-blue-900 dark:text-blue-100">${m.phone}</p>
+              </div>`;
+          } else if (m.method === 'bank_transfer') {
+            metaHtml = `
+              <div class="mb-3 p-3 bg-indigo-50 dark:bg-indigo-900/40 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                <p class="text-xs text-indigo-600 dark:text-indigo-400 uppercase font-black tracking-wider mb-2"><i class="ti ti-building-bank mr-1"></i>Bank Transfer</p>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div><span class="text-gray-400">Bank:</span> <strong class="text-white">${m.bank_name || 'N/A'}</strong></div>
+                  <div><span class="text-gray-400">Account:</span> <strong class="text-white">${m.account_name || 'N/A'}</strong></div>
+                  <div><span class="text-gray-400">Number:</span> <strong class="text-white">${m.account_number || 'N/A'}</strong></div>
+                  <div><span class="text-gray-400">SWIFT:</span> <strong class="text-white">${m.swift_code || '—'}</strong></div>
+                </div>
+              </div>`;
+          } else if (m.method === 'crypto') {
+            metaHtml = `
+              <div class="mb-3 p-3 bg-orange-50 dark:bg-orange-900/40 rounded-lg border border-orange-100 dark:border-orange-800">
+                <p class="text-xs text-orange-600 dark:text-orange-400 uppercase font-black tracking-wider mb-2"><i class="ti ti-currency-bitcoin mr-1"></i>Crypto Payout (${m.crypto_network || 'Unknown'})</p>
+                <p class="text-sm font-mono text-orange-900 dark:text-orange-100 break-all">${m.crypto_address || 'N/A'}</p>
+              </div>`;
+          } else if (m.method === 'paypal') {
+            metaHtml = `
+              <div class="mb-3 p-3 bg-sky-50 dark:bg-sky-900/40 rounded-lg border border-sky-100 dark:border-sky-800">
+                <p class="text-xs text-sky-600 dark:text-sky-400 uppercase font-black tracking-wider mb-1"><i class="ti ti-brand-paypal mr-1"></i>PayPal</p>
+                <p class="text-lg font-bold text-sky-900 dark:text-sky-100">${m.paypal_email || 'N/A'}</p>
+              </div>`;
+          }
+        } else if (req.type === 'deposit' && req.metadata) {
+          const m = req.metadata;
+          let depositDetails = [];
+          if (m.mpesa_receipt) depositDetails.push(`<span class="text-gray-400">M-Pesa Receipt:</span> <strong class="text-white">${m.mpesa_receipt}</strong>`);
+          if (m.flw_ref) depositDetails.push(`<span class="text-gray-400">Flutterwave Ref:</span> <strong class="text-white">${m.flw_ref}</strong>`);
+          if (m.tx_ref) depositDetails.push(`<span class="text-gray-400">TX Ref:</span> <strong class="text-white">${m.tx_ref}</strong>`);
+          if (m.stripe_session) depositDetails.push(`<span class="text-gray-400">Stripe Session:</span> <strong class="text-white font-mono text-xs">${m.stripe_session}</strong>`);
+          if (m.invoice_id) depositDetails.push(`<span class="text-gray-400">Crypto Invoice:</span> <strong class="text-white font-mono text-xs">${m.invoice_id}</strong>`);
+          if (m.wallet_address) depositDetails.push(`<span class="text-gray-400">Wallet:</span> <strong class="text-white font-mono text-xs">${m.wallet_address}</strong>`);
+          if (m.currency) depositDetails.push(`<span class="text-gray-400">Currency:</span> <strong class="text-white">${m.currency}</strong>`);
+          if (m.source) depositDetails.push(`<span class="text-gray-400">Source:</span> <strong class="text-white">${m.source}</strong>`);
+          if (depositDetails.length > 0) {
+            metaHtml = `
+              <div class="mb-3 p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg border border-emerald-100 dark:border-emerald-800">
+                <p class="text-xs text-emerald-600 dark:text-emerald-400 uppercase font-black tracking-wider mb-2"><i class="ti ti-receipt mr-1"></i>Deposit Details</p>
+                <div class="space-y-1 text-sm">${depositDetails.join('<br>')}</div>
+              </div>`;
+          }
+        }
+
+        return `
                 <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center space-x-3">
@@ -764,7 +820,7 @@ async function loadTransactionRequests() {
                             </div>
                             <div>
                                 <p class="font-bold text-gray-900 dark:text-white">${req.type.toUpperCase()} REQUEST</p>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">From: <strong>${req.user.username}</strong></p>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">From: <strong>${req.user.username}</strong> (ID: ${req.user.id})</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-500">${new Date(req.createdAt).toLocaleString()}</p>
                             </div>
                         </div>
@@ -796,17 +852,7 @@ async function loadTransactionRequests() {
                         </div>
                     </div>
                     
-                    ${req.type === 'withdrawal' && req.metadata && req.metadata.phone ? `
-                        <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/40 rounded-lg border border-blue-100 dark:border-blue-800 flex items-center justify-between">
-                            <div>
-                                <p class="text-xs text-blue-600 dark:text-blue-400 uppercase font-black tracking-wider mb-1">Payout M-Pesa Number</p>
-                                <p class="text-lg font-bold text-blue-900 dark:text-blue-100">${req.metadata.phone}</p>
-                            </div>
-                            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
-                                <i class="ti ti-phone text-blue-600 dark:text-blue-400"></i>
-                            </div>
-                        </div>
-                    ` : ''}
+                    ${metaHtml}
                     
                     ${req.notes ? `
                         <div class="mb-3 p-3 bg-white dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600">
@@ -836,7 +882,8 @@ async function loadTransactionRequests() {
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `;
+      }).join('');
     }
   } catch (error) {
     console.error('Error loading transaction requests:', error);
@@ -1627,6 +1674,59 @@ async function releaseAllOrders() {
       }
     }
   );
+}
+
+// --- Audit Logs ---
+async function fetchAdminAuditLogs() {
+  try {
+    const response = await authenticatedFetch('/admin/audit-logs');
+    if (!response.ok) throw new Error('Failed to fetch audit logs');
+    const logs = await response.json();
+    const tbody = document.getElementById('audit-logs-body');
+    if (!tbody) return;
+
+    if (logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-500">No audit logs yet.</td></tr>';
+      return;
+    }
+
+    const actionColors = {
+      'transaction_approved': 'text-green-400',
+      'transaction_rejected': 'text-red-400',
+      'wallet_deposit': 'text-emerald-400',
+      'wallet_withdrawal': 'text-orange-400',
+      'user_status_changed': 'text-yellow-400',
+      'bot_config_updated': 'text-indigo-400',
+    };
+
+    tbody.innerHTML = logs.map(log => {
+      const time = new Date(log.createdAt).toLocaleString();
+      const admin = log.User ? log.User.username : `UID ${log.user_id}`;
+      const action = log.action || 'unknown';
+      const colorClass = actionColors[action] || 'text-gray-300';
+      let details = '—';
+      if (log.metadata) {
+        const m = log.metadata;
+        const parts = [];
+        if (m.request_id) parts.push(`Req #${m.request_id}`);
+        if (m.target_user) parts.push(`User #${m.target_user}`);
+        if (m.amount) parts.push(`$${parseFloat(m.amount).toFixed(2)}`);
+        if (m.status) parts.push(m.status);
+        details = parts.length > 0 ? parts.join(' · ') : JSON.stringify(m).substring(0, 60);
+      }
+
+      return `<tr class="hover:bg-gray-800/50 transition-colors">
+        <td class="px-4 py-2 text-xs text-gray-400 whitespace-nowrap">${time}</td>
+        <td class="px-4 py-2 text-sm font-semibold text-white">${admin}</td>
+        <td class="px-4 py-2 text-sm font-mono ${colorClass}">${action.replace(/_/g, ' ')}</td>
+        <td class="px-4 py-2 text-xs text-gray-400">${details}</td>
+      </tr>`;
+    }).join('');
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    const tbody = document.getElementById('audit-logs-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">Failed to load audit logs.</td></tr>';
+  }
 }
 
 // Initializations

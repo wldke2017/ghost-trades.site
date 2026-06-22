@@ -409,4 +409,19 @@ router.post('/bot/set-active', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
+// System Audit Logs
+router.get('/audit-logs', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const ActivityLog = require('../models/activityLog');
+    const logs = await ActivityLog.findAll({
+      include: [{ model: User, attributes: ['id', 'username'] }],
+      order: [['createdAt', 'DESC']],
+      limit: 100
+    });
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

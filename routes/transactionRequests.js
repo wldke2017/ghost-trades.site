@@ -156,37 +156,58 @@ router.post('/withdrawal', authenticateToken, transactionLimiter, validate('tran
       });
     }
 
-    const wallet = await Wallet.findOne({ where: { user_id: req.user.id } });
+    // Use a DB transaction to atomically lock the balance
+    const dbTx = await sequelize.transaction();
+    try {
+      const wallet = await Wallet.findOne({ where: { user_id: req.user.id }, transaction: dbTx });
 
-    if (!wallet || parseFloat(wallet.available_balance) < parseFloat(amount)) {
-      return res.status(400).json({ error: 'Insufficient available balance' });
-    }
+      if (!wallet || parseFloat(wallet.available_balance) < parseFloat(amount)) {
+        await dbTx.rollback();
+        return res.status(400).json({ error: 'Insufficient available balance' });
+      }
 
-    const transactionRequest = await TransactionRequest.create({
-      user_id: req.user.id,
-      type: 'withdrawal',
-      amount: parseFloat(amount),
-      notes: notes || null,
-      metadata: requestMetadata,
-      status: 'pending'
-    });
-
-    const io = req.app.get('socketio');
-    if (io) {
-      io.emit('newTransactionRequest', {
-        id: transactionRequest.id,
-        type: 'withdrawal',
+      const transactionRequest = await TransactionRequest.create({
         user_id: req.user.id,
-        username: req.user.username,
-        amount: transactionRequest.amount,
-        metadata: transactionRequest.metadata
-      });
-    }
+        type: 'withdrawal',
+        amount: parseFloat(amount),
+        notes: notes || null,
+        metadata: requestMetadata,
+        status: 'pending'
+      }, { transaction: dbTx });
 
-    res.status(201).json({
-      message: 'Withdrawal request submitted successfully. Waiting for admin approval.',
-      request: transactionRequest
-    });
+      // Lock the withdrawal amount: move from available → locked
+      wallet.available_balance = parseFloat(wallet.available_balance) - parseFloat(amount);
+      wallet.locked_balance = parseFloat(wallet.locked_balance || 0) + parseFloat(amount);
+      await wallet.save({ transaction: dbTx });
+
+      await dbTx.commit();
+
+      const io = req.app.get('socketio');
+      if (io) {
+        io.emit('newTransactionRequest', {
+          id: transactionRequest.id,
+          type: 'withdrawal',
+          user_id: req.user.id,
+          username: req.user.username,
+          amount: transactionRequest.amount,
+          metadata: transactionRequest.metadata
+        });
+        // Notify user of updated balances
+        io.to(`user_${req.user.id}`).emit('walletUpdated', {
+          user_id: req.user.id,
+          available_balance: wallet.available_balance,
+          locked_balance: wallet.locked_balance
+        });
+      }
+
+      res.status(201).json({
+        message: 'Withdrawal request submitted successfully. Waiting for admin approval.',
+        request: transactionRequest
+      });
+    } catch (innerError) {
+      if (dbTx) await dbTx.rollback();
+      throw innerError;
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -224,7 +245,6 @@ router.post('/:id/review', authenticateToken, isAdmin, validate('reviewTransacti
         wallet = await Wallet.create({ user_id: transactionRequest.user_id, available_balance: 0, locked_balance: 0 }, { transaction });
       }
 
-      const balanceBefore = parseFloat(wallet.available_balance);
       let creditAmount = parseFloat(transactionRequest.amount);
 
       // Handle currency conversion if metadata indicates KES
@@ -247,28 +267,40 @@ router.post('/:id/review', authenticateToken, isAdmin, validate('reviewTransacti
       }
 
       if (transactionRequest.type === 'deposit') {
+        // Deposit approval: credit available_balance
+        const balanceBefore = parseFloat(wallet.available_balance);
         wallet.available_balance = balanceBefore + creditAmount;
-      } else {
-        if (balanceBefore < creditAmount) {
-          throw new Error('Insufficient balance for withdrawal');
-        }
-        wallet.available_balance = balanceBefore - creditAmount;
-      }
+        await wallet.save({ transaction });
 
-      await wallet.save({ transaction });
+        await Transaction.create({
+          user_id: transactionRequest.user_id,
+          type: 'DEPOSIT',
+          amount: creditAmount,
+          balance_before: balanceBefore,
+          balance_after: wallet.available_balance,
+          description: 'Deposit approved by admin'
+        }, { transaction });
 
-      await Transaction.create({
-        user_id: transactionRequest.user_id,
-        type: transactionRequest.type.toUpperCase(),
-        amount: transactionRequest.type === 'deposit' ? creditAmount : -creditAmount,
-        balance_before: balanceBefore,
-        balance_after: wallet.available_balance,
-        description: `${transactionRequest.type === 'deposit' ? 'Deposit' : 'Withdrawal'} approved by admin`
-      }, { transaction });
-
-      if (transactionRequest.type === 'deposit') {
         const walletService = require('../services/walletService');
         await walletService.checkAndApplyWelcomeBonus(transactionRequest.user_id, creditAmount, transaction);
+      } else {
+        // Withdrawal approval: funds already moved to locked_balance — deduct from locked
+        const lockedBefore = parseFloat(wallet.locked_balance || 0);
+        if (lockedBefore < creditAmount) {
+          throw new Error('Insufficient locked balance for withdrawal approval');
+        }
+        const balanceBefore = parseFloat(wallet.available_balance);
+        wallet.locked_balance = lockedBefore - creditAmount;
+        await wallet.save({ transaction });
+
+        await Transaction.create({
+          user_id: transactionRequest.user_id,
+          type: 'WITHDRAWAL',
+          amount: -creditAmount,
+          balance_before: balanceBefore,
+          balance_after: wallet.available_balance,
+          description: 'Withdrawal approved by admin'
+        }, { transaction });
       }
 
       await wallet.reload({ transaction });
@@ -282,9 +314,43 @@ router.post('/:id/review', authenticateToken, isAdmin, validate('reviewTransacti
           available_balance: wallet.available_balance,
           locked_balance: wallet.locked_balance
         });
+        // Real-time toast to user
+        io.to(`user_${transactionRequest.user_id}`).emit('transactionApproved', {
+          type: transactionRequest.type,
+          amount: creditAmount
+        });
       }
     } else {
+      // Rejection: if withdrawal, return locked funds to available
+      if (transactionRequest.type === 'withdrawal') {
+        let wallet = await Wallet.findOne({ where: { user_id: transactionRequest.user_id }, transaction });
+        if (wallet) {
+          const refundAmount = parseFloat(transactionRequest.amount);
+          wallet.available_balance = parseFloat(wallet.available_balance) + refundAmount;
+          wallet.locked_balance = parseFloat(wallet.locked_balance || 0) - refundAmount;
+          await wallet.save({ transaction });
+
+          const io = req.app.get('socketio');
+          if (io) {
+            io.emit('walletUpdated', {
+              user_id: transactionRequest.user_id,
+              available_balance: wallet.available_balance,
+              locked_balance: wallet.locked_balance
+            });
+          }
+        }
+      }
       transactionRequest.status = 'rejected';
+
+      // Real-time rejection toast to user
+      const io = req.app.get('socketio');
+      if (io) {
+        io.to(`user_${transactionRequest.user_id}`).emit('transactionRejected', {
+          type: transactionRequest.type,
+          amount: parseFloat(transactionRequest.amount),
+          reason: admin_notes || 'No reason provided'
+        });
+      }
     }
 
     transactionRequest.admin_notes = admin_notes || null;
